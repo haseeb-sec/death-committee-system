@@ -22,10 +22,12 @@ class Committee(Base):
 
     members: Mapped[list["Member"]] = relationship(
         back_populates="committee",
-        cascade="all, delete-orphan",
     )
 
     contribution_rates: Mapped[list["ContributionRate"]] = relationship(
         back_populates="committee",
-        cascade="all, delete-orphan",
+    )
+
+    accounts: Mapped[list["Account"]] = relationship(
+        back_populates="committee",
     )

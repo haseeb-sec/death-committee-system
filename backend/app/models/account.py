@@ -30,10 +30,19 @@ class Account(Base):
         nullable=False,
     )
 
+    committee_id: Mapped[int | None] = mapped_column(
+        ForeignKey("committees.id"),
+        nullable=True,
+    )
+
     member_id: Mapped[int | None] = mapped_column(
         ForeignKey("members.id"),
         nullable=True,
         unique=True,
+    )
+
+    committee: Mapped["Committee | None"] = relationship(
+        back_populates="accounts",
     )
 
     member: Mapped["Member | None"] = relationship(
