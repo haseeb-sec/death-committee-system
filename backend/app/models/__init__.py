@@ -1,10 +1,16 @@
-from app.models.account import Account, AccountType
-from app.models.journal_entry import JournalEntry
-from app.models.journal_line import JournalLine
+from .account import Account, AccountType
+from .committee import Committee
+from .contribution_rate import ContributionRate
+from .journal_entry import JournalEntry
+from .journal_line import JournalLine
+from .member import Member
 
 __all__ = [
     "Account",
     "AccountType",
+    "Committee",
+    "ContributionRate",
     "JournalEntry",
     "JournalLine",
+    "Member",
 ]

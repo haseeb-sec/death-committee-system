@@ -1,8 +1,8 @@
 from enum import Enum
 
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 
@@ -28,4 +28,14 @@ class Account(Base):
     account_type: Mapped[AccountType] = mapped_column(
         SQLEnum(AccountType),
         nullable=False,
+    )
+
+    member_id: Mapped[int | None] = mapped_column(
+        ForeignKey("members.id"),
+        nullable=True,
+        unique=True,
+    )
+
+    member: Mapped["Member | None"] = relationship(
+        back_populates="account",
     )
