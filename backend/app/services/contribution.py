@@ -37,6 +37,11 @@ def record_contribution(
             f"Member not found: {member_id}"
         )
 
+    if not member.committee.is_active:
+        raise AccountingError(
+            f"Committee is not active: {member.committee_id}"
+        )
+
     if not member.is_active:
         raise AccountingError(
             f"Member is not active: {member_id}"
@@ -45,6 +50,36 @@ def record_contribution(
     if contribution_date < member.joined_on:
         raise AccountingError(
             "Contribution date cannot be before member joining date."
+        )
+
+    existing_contribution = db.scalars(
+        select(JournalEntry)
+        .join(
+            JournalLine,
+            JournalLine.journal_entry_id == JournalEntry.id,
+        )
+        .where(
+            JournalLine.account_id == member.account.id
+            if member.account is not None
+            else False,
+            JournalLine.amount < 0,
+            JournalEntry.entry_date >= datetime.combine(
+                contribution_date,
+                datetime.min.time(),
+            ),
+            JournalEntry.entry_date < datetime.combine(
+                contribution_date,
+                datetime.max.time(),
+            ),
+            JournalEntry.description
+            == f"Member contribution: {member.name}",
+        )
+    ).first()
+
+    if existing_contribution is not None:
+        raise AccountingError(
+            f"Contribution already recorded for member "
+            f"on {contribution_date}."
         )
 
     rate = db.scalars(
