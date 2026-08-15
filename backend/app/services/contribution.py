@@ -138,3 +138,31 @@ def get_member_contributions(
     ).unique().all()
 
     return entries
+
+
+def get_member_contribution_total(
+    db: Session,
+    *,
+    member_id: int,
+) -> int:
+    """
+    Return the total amount contributed by a member.
+
+    Contributions are stored as negative amounts on the
+    member account, so the returned total is converted
+    to a positive amount.
+    """
+
+    contributions = get_member_contributions(
+        db,
+        member_id=member_id,
+    )
+
+    total = 0
+
+    for entry in contributions:
+        for line in entry.lines:
+            if line.amount < 0:
+                total += -line.amount
+
+    return total
