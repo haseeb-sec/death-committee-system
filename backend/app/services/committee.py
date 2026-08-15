@@ -39,3 +39,31 @@ def create_committee(
     db.flush()
 
     return committee
+
+
+def close_committee(
+    db: Session,
+    *,
+    committee_id: int,
+) -> Committee:
+    """
+    Close an active committee without deleting its historical data.
+    """
+
+    committee = db.get(Committee, committee_id)
+
+    if committee is None:
+        raise AccountingError(
+            f"Committee not found: {committee_id}"
+        )
+
+    if not committee.is_active:
+        raise AccountingError(
+            f"Committee is already inactive: {committee_id}"
+        )
+
+    committee.is_active = False
+
+    db.flush()
+
+    return committee
