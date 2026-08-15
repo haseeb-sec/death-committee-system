@@ -57,3 +57,41 @@ def add_member(
     db.flush()
 
     return member
+
+
+def leave_member(
+    db: Session,
+    *,
+    member_id: int,
+    leaving_date: date,
+) -> Member:
+    """
+    Mark a member as having left the committee.
+
+    The member and their account are preserved so that
+    historical transactions remain available.
+    """
+
+    member = db.get(Member, member_id)
+
+    if member is None:
+        raise AccountingError(
+            f"Member not found: {member_id}"
+        )
+
+    if not member.is_active:
+        raise AccountingError(
+            f"Member is already inactive: {member_id}"
+        )
+
+    if leaving_date < member.joined_on:
+        raise AccountingError(
+            "Leaving date cannot be before joining date."
+        )
+
+    member.left_on = leaving_date
+    member.is_active = False
+
+    db.flush()
+
+    return member
