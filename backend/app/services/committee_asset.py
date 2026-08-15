@@ -1,15 +1,20 @@
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import (
+    Account,
+    AccountType,
     AssetParticipation,
     AssetValuation,
     CommitteeAsset,
     Member,
 )
-from app.services.accounting import AccountingError
+from app.services.accounting import (
+    AccountingError,
+    create_journal_entry,
+)
 
 
 def add_committee_asset(
@@ -22,8 +27,9 @@ def add_committee_asset(
     description: str | None = None,
 ) -> CommitteeAsset:
     """
-    Record a committee asset and assign equal ownership
-    to all active members at the time of purchase.
+    Record a committee asset, create its accounting account,
+    record the purchase, and assign equal ownership to all
+    active members at the time of purchase.
     """
 
     name = name.strip()
@@ -52,6 +58,20 @@ def add_committee_asset(
             "Committee must have active members to purchase an asset."
         )
 
+    cash_account = db.scalars(
+        select(Account)
+        .where(
+            Account.account_type == AccountType.CASH,
+            Account.committee_id == committee_id,
+            Account.member_id.is_(None),
+        )
+    ).first()
+
+    if cash_account is None:
+        raise AccountingError(
+            "Committee cash account not found."
+        )
+
     asset = CommitteeAsset(
         committee_id=committee_id,
         name=name,
@@ -65,6 +85,16 @@ def add_committee_asset(
     db.add(asset)
     db.flush()
 
+    asset_account = Account(
+        name=f"Asset: {name}",
+        account_type=AccountType.ASSET,
+        committee_id=committee_id,
+        member_id=None,
+    )
+
+    db.add(asset_account)
+    db.flush()
+
     valuation = AssetValuation(
         asset_id=asset.id,
         valuation_date=purchase_date,
@@ -72,6 +102,19 @@ def add_committee_asset(
     )
 
     db.add(valuation)
+
+    create_journal_entry(
+        db,
+        description=f"Committee asset purchase: {name}",
+        entry_date=datetime.combine(
+            purchase_date,
+            datetime.min.time(),
+        ),
+        lines=[
+            (asset_account.id, purchase_price),
+            (cash_account.id, -purchase_price),
+        ],
+    )
 
     total_members = len(members)
 
