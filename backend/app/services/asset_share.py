@@ -1,7 +1,11 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import CommitteeAsset, Member
+from app.models import (
+    AssetParticipation,
+    CommitteeAsset,
+    Member,
+)
 from app.services.accounting import AccountingError
 
 
@@ -22,27 +26,10 @@ def get_committee_asset_value(
         )
     ).all()
 
-    return sum(asset.current_value for asset in assets)
-
-
-def get_active_member_count(
-    db: Session,
-    *,
-    committee_id: int,
-) -> int:
-    """
-    Return the number of currently active members.
-    """
-
-    members = db.scalars(
-        select(Member)
-        .where(
-            Member.committee_id == committee_id,
-            Member.is_active.is_(True),
-        )
-    ).all()
-
-    return len(members)
+    return sum(
+        asset.current_value
+        for asset in assets
+    )
 
 
 def get_member_asset_share(
@@ -51,9 +38,10 @@ def get_member_asset_share(
     member_id: int,
 ) -> int:
     """
-    Calculate an active member's equal share of committee assets.
+    Return the current value of a member's historical
+    ownership shares across all committee assets.
 
-    Asset ownership is divided equally among active members.
+    Ownership is determined when each asset was purchased.
     """
 
     member = db.get(Member, member_id)
@@ -63,17 +51,29 @@ def get_member_asset_share(
             f"Member not found: {member_id}"
         )
 
-    member_count = get_active_member_count(
-        db,
-        committee_id=member.committee_id,
-    )
+    participations = db.scalars(
+        select(AssetParticipation)
+        .join(
+            CommitteeAsset,
+            CommitteeAsset.id == AssetParticipation.asset_id,
+        )
+        .where(
+            AssetParticipation.member_id == member_id,
+            CommitteeAsset.is_active.is_(True),
+        )
+    ).all()
 
-    if member_count == 0:
-        return 0
+    total_share = 0
 
-    total_asset_value = get_committee_asset_value(
-        db,
-        committee_id=member.committee_id,
-    )
+    for participation in participations:
+        asset = participation.asset
 
-    return total_asset_value // member_count
+        share = (
+            asset.current_value
+            * participation.ownership_units
+            // participation.total_units
+        )
+
+        total_share += share
+
+    return total_share
