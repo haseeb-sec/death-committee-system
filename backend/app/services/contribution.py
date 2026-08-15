@@ -1,9 +1,16 @@
 from datetime import date, datetime
 
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
-from app.models import Account, AccountType, ContributionRate, Member
+from app.models import (
+    Account,
+    AccountType,
+    ContributionRate,
+    JournalEntry,
+    JournalLine,
+    Member,
+)
 from app.services.accounting import AccountingError, create_journal_entry
 
 
@@ -91,3 +98,43 @@ def record_contribution(
     )
 
     return entry
+
+
+def get_member_contributions(
+    db: Session,
+    *,
+    member_id: int,
+) -> list[JournalEntry]:
+    """
+    Return journal entries representing contributions made by a member.
+
+    Results are ordered from oldest to newest contribution.
+    """
+
+    member = db.get(Member, member_id)
+
+    if member is None:
+        raise AccountingError(
+            f"Member not found: {member_id}"
+        )
+
+    if member.account is None:
+        raise AccountingError(
+            f"Member account not found: {member_id}"
+        )
+
+    entries = db.scalars(
+        select(JournalEntry)
+        .join(JournalLine, JournalLine.journal_entry_id == JournalEntry.id)
+        .where(
+            and_(
+                JournalLine.account_id == member.account.id,
+                JournalLine.amount < 0,
+                JournalEntry.description
+                == f"Member contribution: {member.name}",
+            )
+        )
+        .order_by(JournalEntry.entry_date.asc())
+    ).unique().all()
+
+    return entries
