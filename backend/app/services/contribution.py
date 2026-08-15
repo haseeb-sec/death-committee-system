@@ -35,6 +35,11 @@ def record_contribution(
             f"Member is not active: {member_id}"
         )
 
+    if contribution_date < member.joined_on:
+        raise AccountingError(
+            "Contribution date cannot be before member joining date."
+        )
+
     rate = db.scalars(
         select(ContributionRate)
         .where(
