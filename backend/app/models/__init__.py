@@ -14,3 +14,4 @@ __all__ = [
     "JournalLine",
     "Member",
 ]
+from app.models.death_support import DeathSupport
