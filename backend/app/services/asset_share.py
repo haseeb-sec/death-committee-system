@@ -32,16 +32,16 @@ def get_committee_asset_value(
     )
 
 
-def get_member_asset_share(
+def get_member_asset_breakdown(
     db: Session,
     *,
     member_id: int,
-) -> int:
+) -> list[dict]:
     """
-    Return the current value of a member's historical
-    ownership shares across all committee assets.
+    Return the current value of every asset share
+    belonging to a member.
 
-    Ownership is determined when each asset was purchased.
+    Ownership comes from historical participation.
     """
 
     member = db.get(Member, member_id)
@@ -61,19 +61,53 @@ def get_member_asset_share(
             AssetParticipation.member_id == member_id,
             CommitteeAsset.is_active.is_(True),
         )
+        .order_by(
+            CommitteeAsset.purchase_date.asc(),
+            CommitteeAsset.id.asc(),
+        )
     ).all()
 
-    total_share = 0
+    breakdown = []
 
     for participation in participations:
         asset = participation.asset
 
-        share = (
+        share_value = (
             asset.current_value
             * participation.ownership_units
             // participation.total_units
         )
 
-        total_share += share
+        breakdown.append(
+            {
+                "asset_id": asset.id,
+                "asset_name": asset.name,
+                "current_value": asset.current_value,
+                "ownership_units": participation.ownership_units,
+                "total_units": participation.total_units,
+                "share_value": share_value,
+            }
+        )
 
-    return total_share
+    return breakdown
+
+
+def get_member_asset_share(
+    db: Session,
+    *,
+    member_id: int,
+) -> int:
+    """
+    Return the current total value of a member's
+    historical committee asset ownership.
+    """
+
+    breakdown = get_member_asset_breakdown(
+        db,
+        member_id=member_id,
+    )
+
+    return sum(
+        item["share_value"]
+        for item in breakdown
+    )
