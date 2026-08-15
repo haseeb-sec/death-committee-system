@@ -3,7 +3,12 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import AssetValuation, CommitteeAsset
+from app.models import (
+    AssetParticipation,
+    AssetValuation,
+    CommitteeAsset,
+    Member,
+)
 from app.services.accounting import AccountingError
 
 
@@ -17,9 +22,8 @@ def add_committee_asset(
     description: str | None = None,
 ) -> CommitteeAsset:
     """
-    Record a committee-owned asset.
-
-    The initial current value is equal to the purchase price.
+    Record a committee asset and assign equal ownership
+    to all active members at the time of purchase.
     """
 
     name = name.strip()
@@ -32,6 +36,20 @@ def add_committee_asset(
     if purchase_price <= 0:
         raise AccountingError(
             "Purchase price must be greater than zero."
+        )
+
+    members = db.scalars(
+        select(Member)
+        .where(
+            Member.committee_id == committee_id,
+            Member.is_active.is_(True),
+            Member.joined_on <= purchase_date,
+        )
+    ).all()
+
+    if not members:
+        raise AccountingError(
+            "Committee must have active members to purchase an asset."
         )
 
     asset = CommitteeAsset(
@@ -54,6 +72,19 @@ def add_committee_asset(
     )
 
     db.add(valuation)
+
+    total_members = len(members)
+
+    for member in members:
+        participation = AssetParticipation(
+            asset_id=asset.id,
+            member_id=member.id,
+            ownership_units=1,
+            total_units=total_members,
+        )
+
+        db.add(participation)
+
     db.flush()
 
     return asset
@@ -67,9 +98,8 @@ def update_asset_value(
     new_value: int,
 ) -> CommitteeAsset:
     """
-    Record a new current value for an asset.
-
-    Previous valuations remain preserved.
+    Record a new current value while preserving
+    previous valuation history.
     """
 
     if new_value < 0:
@@ -128,5 +158,32 @@ def get_asset_valuations(
         .order_by(
             AssetValuation.valuation_date.asc(),
             AssetValuation.id.asc(),
+        )
+    ).all()
+
+
+def get_asset_participation(
+    db: Session,
+    *,
+    asset_id: int,
+) -> list[AssetParticipation]:
+    """
+    Return all members who participated in an asset.
+    """
+
+    asset = db.get(CommitteeAsset, asset_id)
+
+    if asset is None:
+        raise AccountingError(
+            f"Asset not found: {asset_id}"
+        )
+
+    return db.scalars(
+        select(AssetParticipation)
+        .where(
+            AssetParticipation.asset_id == asset_id,
+        )
+        .order_by(
+            AssetParticipation.member_id.asc(),
         )
     ).all()
