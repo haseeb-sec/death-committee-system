@@ -84,6 +84,19 @@ def leave_member(
             f"Member is already inactive: {member_id}"
         )
 
+    from app.services.member_due import get_outstanding_dues
+
+    outstanding_dues = get_outstanding_dues(
+        db,
+        member_id=member_id,
+    )
+
+    if outstanding_dues > 0:
+        raise AccountingError(
+            f"Member has outstanding dues: "
+            f"{outstanding_dues}"
+        )
+
     if leaving_date < member.joined_on:
         raise AccountingError(
             "Leaving date cannot be before joining date."
