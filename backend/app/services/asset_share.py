@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import (
-    AssetParticipation,
+    AssetOwnership,
     CommitteeAsset,
     Member,
 )
@@ -39,9 +39,10 @@ def get_member_asset_breakdown(
 ) -> list[dict]:
     """
     Return the current value of every asset share
-    belonging to a member.
+    currently owned by a member.
 
-    Ownership comes from historical participation.
+    Current ownership comes from AssetOwnership.
+    Historical participation is preserved separately.
     """
 
     member = db.get(Member, member_id)
@@ -51,14 +52,15 @@ def get_member_asset_breakdown(
             f"Member not found: {member_id}"
         )
 
-    participations = db.scalars(
-        select(AssetParticipation)
+    ownerships = db.scalars(
+        select(AssetOwnership)
         .join(
             CommitteeAsset,
-            CommitteeAsset.id == AssetParticipation.asset_id,
+            CommitteeAsset.id == AssetOwnership.asset_id,
         )
         .where(
-            AssetParticipation.member_id == member_id,
+            AssetOwnership.member_id == member_id,
+            AssetOwnership.ownership_units > 0,
             CommitteeAsset.is_active.is_(True),
         )
         .order_by(
@@ -69,13 +71,13 @@ def get_member_asset_breakdown(
 
     breakdown = []
 
-    for participation in participations:
-        asset = participation.asset
+    for ownership in ownerships:
+        asset = ownership.asset
 
         share_value = (
             asset.current_value
-            * participation.ownership_units
-            // participation.total_units
+            * ownership.ownership_units
+            // ownership.total_units
         )
 
         breakdown.append(
@@ -83,8 +85,8 @@ def get_member_asset_breakdown(
                 "asset_id": asset.id,
                 "asset_name": asset.name,
                 "current_value": asset.current_value,
-                "ownership_units": participation.ownership_units,
-                "total_units": participation.total_units,
+                "ownership_units": ownership.ownership_units,
+                "total_units": ownership.total_units,
                 "share_value": share_value,
             }
         )
@@ -99,7 +101,7 @@ def get_member_asset_share(
 ) -> int:
     """
     Return the current total value of a member's
-    historical committee asset ownership.
+    current committee asset ownership.
     """
 
     breakdown = get_member_asset_breakdown(

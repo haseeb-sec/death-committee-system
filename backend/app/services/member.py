@@ -66,11 +66,25 @@ def leave_member(
     leaving_date: date,
 ) -> Member:
     """
-    Mark a member as having left the committee.
+    Leave a member from the committee.
 
-    The member and their account are preserved so that
-    historical transactions remain available.
+    This operation performs the complete settlement workflow:
+
+        1. Validate the member.
+        2. Validate outstanding dues.
+        3. Calculate the member's final settlement.
+        4. Create a pending settlement record.
+        5. Mark the member inactive.
+        6. Redistribute current committee-asset ownership.
+
+    Actual cash payment remains a separate operation through
+    pay_member_settlement().
     """
+
+    from app.services.asset_ownership import (
+        redistribute_member_asset_ownership,
+    )
+    from app.services.member_settlement import settle_member
 
     member = db.get(Member, member_id)
 
@@ -84,26 +98,25 @@ def leave_member(
             f"Member is already inactive: {member_id}"
         )
 
-    from app.services.member_due import get_outstanding_dues
-
-    outstanding_dues = get_outstanding_dues(
-        db,
-        member_id=member_id,
-    )
-
-    if outstanding_dues > 0:
-        raise AccountingError(
-            f"Member has outstanding dues: "
-            f"{outstanding_dues}"
-        )
-
     if leaving_date < member.joined_on:
         raise AccountingError(
             "Leaving date cannot be before joining date."
         )
 
-    member.left_on = leaving_date
-    member.is_active = False
+    # settle_member() performs the financial validation,
+    # including outstanding dues and settlement calculation.
+    settle_member(
+        db,
+        member_id=member_id,
+        settlement_date=leaving_date,
+    )
+
+    # Once settlement is created, remove the member from
+    # current committee-asset ownership.
+    redistribute_member_asset_ownership(
+        db,
+        member_id=member_id,
+    )
 
     db.flush()
 

@@ -7,7 +7,9 @@ from app.models import (
     Account,
     AccountType,
     AssetParticipation,
+    AssetOwnership,
     AssetValuation,
+    Committee,
     CommitteeAsset,
     Member,
 )
@@ -27,9 +29,22 @@ def add_committee_asset(
     description: str | None = None,
 ) -> CommitteeAsset:
     """
-    Record a committee asset, create its accounting account,
-    record the purchase, and assign equal ownership to all
-    active members at the time of purchase.
+    Record a committee asset purchase.
+
+    Business rules:
+
+    - The committee must exist and be active.
+    - The asset name cannot be empty.
+    - The purchase price must be greater than zero.
+    - The committee must have active members on the purchase date.
+    - The committee must have enough cash to purchase the asset.
+    - The purchase is recorded through double-entry accounting:
+          Asset account  +purchase_price
+          Cash account   -purchase_price
+    - Equal current ownership is assigned to all active members
+      participating at the purchase date.
+    - AssetParticipation preserves the historical participation.
+    - AssetOwnership represents the current ownership.
     """
 
     name = name.strip()
@@ -44,6 +59,18 @@ def add_committee_asset(
             "Purchase price must be greater than zero."
         )
 
+    committee = db.get(Committee, committee_id)
+
+    if committee is None:
+        raise AccountingError(
+            f"Committee not found: {committee_id}"
+        )
+
+    if not committee.is_active:
+        raise AccountingError(
+            f"Committee is not active: {committee_id}"
+        )
+
     members = db.scalars(
         select(Member)
         .where(
@@ -51,6 +78,7 @@ def add_committee_asset(
             Member.is_active.is_(True),
             Member.joined_on <= purchase_date,
         )
+        .order_by(Member.id.asc())
     ).all()
 
     if not members:
@@ -70,6 +98,18 @@ def add_committee_asset(
     if cash_account is None:
         raise AccountingError(
             "Committee cash account not found."
+        )
+
+    cash_balance = sum(
+        line.amount
+        for line in cash_account.journal_lines
+    )
+
+    if cash_balance < purchase_price:
+        raise AccountingError(
+            f"Insufficient committee cash. "
+            f"Required: {purchase_price}, "
+            f"available: {cash_balance}"
         )
 
     asset = CommitteeAsset(
@@ -128,6 +168,15 @@ def add_committee_asset(
 
         db.add(participation)
 
+        ownership = AssetOwnership(
+            asset_id=asset.id,
+            member_id=member.id,
+            ownership_units=1,
+            total_units=total_members,
+        )
+
+        db.add(ownership)
+
     db.flush()
 
     return asset
@@ -155,6 +204,11 @@ def update_asset_value(
     if asset is None:
         raise AccountingError(
             f"Asset not found: {asset_id}"
+        )
+
+    if not asset.is_active:
+        raise AccountingError(
+            f"Asset is inactive: {asset_id}"
         )
 
     if valuation_date < asset.purchase_date:
@@ -211,7 +265,10 @@ def get_asset_participation(
     asset_id: int,
 ) -> list[AssetParticipation]:
     """
-    Return all members who participated in an asset.
+    Return all members who historically participated in an asset.
+
+    Historical participation is never changed when ownership
+    later changes.
     """
 
     asset = db.get(CommitteeAsset, asset_id)
