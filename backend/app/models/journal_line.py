@@ -28,4 +28,6 @@ class JournalLine(Base):
         back_populates="lines",
     )
 
-    account: Mapped["Account"] = relationship()
+    account: Mapped["Account"] = relationship(
+        back_populates="journal_lines",
+    )

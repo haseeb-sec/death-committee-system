@@ -48,3 +48,7 @@ class Account(Base):
     member: Mapped["Member | None"] = relationship(
         back_populates="account",
     )
+
+    journal_lines: Mapped[list["JournalLine"]] = relationship(
+        back_populates="account",
+    )
