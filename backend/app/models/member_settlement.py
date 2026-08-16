@@ -54,7 +54,7 @@ class MemberSettlement(Base):
     status: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
-        default="completed",
+        default="pending",
     )
 
     member: Mapped["Member"] = relationship()

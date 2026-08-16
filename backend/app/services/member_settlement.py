@@ -1,10 +1,23 @@
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Member, MemberSettlement
-from app.services.accounting import AccountingError
+from app.models import (
+    Account,
+    AccountType,
+    DeathSupport,
+    JournalLine,
+    Member,
+    MemberSettlement,
+)
+from app.services.accounting import (
+    AccountingError,
+    create_journal_entry,
+)
+from app.services.asset_ownership import (
+    redistribute_member_asset_ownership,
+)
 from app.services.asset_share import (
     get_member_asset_breakdown,
     get_member_asset_share,
@@ -21,6 +34,17 @@ def get_member_settlement(
 ) -> dict:
     """
     Calculate the current financial settlement for a member.
+
+    Settlement consists of:
+
+        Contribution balance
+        + Asset share
+        + Member goods value
+        - Outstanding dues
+        = Final settlement amount
+
+    This function only calculates the settlement.
+    It does not change the member, ownership, or accounting records.
     """
 
     member = db.get(Member, member_id)
@@ -84,9 +108,31 @@ def settle_member(
     """
     Permanently settle a member.
 
-    A member cannot be settled while they have outstanding dues.
-    The settlement stores a snapshot of the member's financial
-    position at the time of settlement.
+    Normal voluntary exit requires an active member.
+
+    A deceased member is different:
+    record_death_support() marks the member inactive before
+    the final financial settlement is completed. Therefore an
+    inactive member is allowed to proceed only when a DeathSupport
+    record exists for that member.
+
+    Settlement performs:
+
+        1. Verify the member and settlement state.
+        2. Allow either:
+           - active voluntary exit, or
+           - inactive member with recorded death support.
+        3. Calculate and freeze the financial position.
+        4. Reject outstanding dues.
+        5. Reject a negative settlement.
+        6. Redistribute current asset ownership.
+        7. Mark the member inactive.
+        8. Preserve the settlement snapshot permanently.
+
+    Historical AssetParticipation records are never modified.
+
+    Actual cash payment is performed separately by
+    pay_member_settlement().
     """
 
     member = db.get(Member, member_id)
@@ -94,11 +140,6 @@ def settle_member(
     if member is None:
         raise AccountingError(
             f"Member not found: {member_id}"
-        )
-
-    if not member.is_active:
-        raise AccountingError(
-            f"Member is already inactive: {member_id}"
         )
 
     existing = db.scalars(
@@ -113,6 +154,20 @@ def settle_member(
             f"Member has already been settled: {member_id}"
         )
 
+    death_support = db.scalars(
+        select(DeathSupport)
+        .where(
+            DeathSupport.member_id == member_id,
+        )
+    ).first()
+
+    is_death_settlement = death_support is not None
+
+    if not member.is_active and not is_death_settlement:
+        raise AccountingError(
+            f"Member is already inactive: {member_id}"
+        )
+
     settlement = get_member_settlement(
         db,
         member_id=member_id,
@@ -124,6 +179,22 @@ def settle_member(
             f"{settlement['outstanding_dues']}"
         )
 
+    if settlement["final_amount"] < 0:
+        raise AccountingError(
+            f"Settlement amount cannot be negative: "
+            f"{settlement['final_amount']}"
+        )
+
+    # The settlement amount is calculated BEFORE ownership is
+    # redistributed. This freezes the departing member's asset
+    # value in the settlement record.
+    #
+    # Historical AssetParticipation records are never modified.
+    redistribute_member_asset_ownership(
+        db,
+        member_id=member_id,
+    )
+
     record = MemberSettlement(
         member_id=member_id,
         settlement_date=settlement_date,
@@ -133,13 +204,143 @@ def settle_member(
         gross_amount=settlement["gross_amount"],
         outstanding_dues=settlement["outstanding_dues"],
         final_amount=settlement["final_amount"],
-        status="completed",
+        status="pending",
     )
 
     db.add(record)
 
     member.is_active = False
-    member.left_on = settlement_date
+
+    if member.left_on is None:
+        member.left_on = settlement_date
+
+    db.flush()
+
+    return record
+
+
+def pay_member_settlement(
+    db: Session,
+    *,
+    settlement_id: int,
+) -> MemberSettlement:
+    """
+    Pay a pending member settlement.
+
+    Accounting entry:
+
+        Member Account   +settlement amount
+        Committee Cash   -settlement amount
+
+    This clears the member's accounting balance and reduces
+    committee cash.
+
+    The settlement status changes:
+
+        pending -> paid
+
+    A settlement can only be paid once.
+    """
+
+    record = db.get(
+        MemberSettlement,
+        settlement_id,
+    )
+
+    if record is None:
+        raise AccountingError(
+            f"Settlement not found: {settlement_id}"
+        )
+
+    if record.status != "pending":
+        raise AccountingError(
+            f"Settlement is not pending: {settlement_id}"
+        )
+
+    member = db.get(Member, record.member_id)
+
+    if member is None:
+        raise AccountingError(
+            f"Member not found: {record.member_id}"
+        )
+
+    if member.account is None:
+        raise AccountingError(
+            f"Member account not found: {member.id}"
+        )
+
+    cash_account = db.scalars(
+        select(Account)
+        .where(
+            Account.account_type == AccountType.CASH,
+            Account.committee_id == member.committee_id,
+            Account.member_id.is_(None),
+        )
+    ).first()
+
+    if cash_account is None:
+        raise AccountingError(
+            "Committee cash account not found."
+        )
+
+    amount = record.final_amount
+
+    if amount < 0:
+        raise AccountingError(
+            f"Settlement amount cannot be negative: {amount}"
+        )
+
+    if amount == 0:
+        record.status = "paid"
+
+        db.flush()
+
+        return record
+
+    # Committee cash uses normal signed accounting:
+    #
+    #   contribution -> +cash
+    #   asset purchase -> -cash
+    #   settlement payment -> -cash
+    #
+    # Therefore available cash is the direct sum of
+    # the cash account journal lines.
+    cash_balance = sum(
+        line.amount
+        for line in db.scalars(
+            select(JournalLine)
+            .where(
+                JournalLine.account_id == cash_account.id,
+            )
+        ).all()
+    )
+
+    if cash_balance < amount:
+        raise AccountingError(
+            f"Insufficient committee cash. "
+            f"Required: {amount}, available: {cash_balance}"
+        )
+
+    create_journal_entry(
+        db,
+        description=(
+            f"Member settlement payment: {member.name}"
+        ),
+        entry_date=datetime.combine(
+            record.settlement_date,
+            datetime.min.time(),
+        ),
+        reference=f"SETTLEMENT-{record.id}",
+        lines=[
+            # Remove the member's liability/balance.
+            (member.account.id, amount),
+
+            # Reduce committee cash.
+            (cash_account.id, -amount),
+        ],
+    )
+
+    record.status = "paid"
 
     db.flush()
 
