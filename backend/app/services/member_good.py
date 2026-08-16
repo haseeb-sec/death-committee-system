@@ -1,10 +1,19 @@
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Member, MemberGood, MemberGoodValuation
-from app.services.accounting import AccountingError
+from app.models import (
+    Account,
+    AccountType,
+    Member,
+    MemberGood,
+    MemberGoodValuation,
+)
+from app.services.accounting import (
+    AccountingError,
+    create_journal_entry,
+)
 
 
 def add_member_good(
@@ -17,9 +26,21 @@ def add_member_good(
     description: str | None = None,
 ) -> MemberGood:
     """
-    Record a good purchased specifically using a member's funds.
+    Record a good purchased using a member's accumulated funds.
 
-    The initial current value equals the purchase price.
+    The purchase is treated as a transfer of value from the
+    member's committee balance into a member-owned good.
+
+    Accounting:
+
+        Member Account   +purchase_price
+        Committee Cash   -purchase_price
+
+    The member's refundable cash balance therefore decreases,
+    while the good becomes part of the member's refundable value.
+
+    The good's current value is tracked separately and may change
+    through later valuations.
     """
 
     name = name.strip()
@@ -39,6 +60,49 @@ def add_member_good(
     if member is None:
         raise AccountingError(
             f"Member not found: {member_id}"
+        )
+
+    if not member.is_active:
+        raise AccountingError(
+            f"Member is not active: {member_id}"
+        )
+
+    if purchase_date < member.joined_on:
+        raise AccountingError(
+            "Purchase date cannot be before member joining date."
+        )
+
+    if member.account is None:
+        raise AccountingError(
+            f"Member account not found: {member_id}"
+        )
+
+    cash_account = db.scalars(
+        select(Account)
+        .where(
+            Account.account_type == AccountType.CASH,
+            Account.committee_id == member.committee_id,
+            Account.member_id.is_(None),
+        )
+    ).first()
+
+    if cash_account is None:
+        raise AccountingError(
+            "Committee cash account not found."
+        )
+
+    # The member must actually have enough accumulated balance
+    # to purchase the good.
+    member_balance = -sum(
+        line.amount
+        for line in member.account.journal_lines
+    )
+
+    if member_balance < purchase_price:
+        raise AccountingError(
+            f"Insufficient member balance. "
+            f"Required: {purchase_price}, "
+            f"available: {member_balance}"
         )
 
     good = MemberGood(
@@ -61,6 +125,24 @@ def add_member_good(
     )
 
     db.add(valuation)
+
+    create_journal_entry(
+        db,
+        description=f"Member good purchase: {name}",
+        entry_date=datetime.combine(
+            purchase_date,
+            datetime.min.time(),
+        ),
+        reference=f"MEMBER-GOOD-{good.id}",
+        lines=[
+            # Reduce the member's refundable cash balance.
+            (member.account.id, purchase_price),
+
+            # Committee cash is used to acquire the good.
+            (cash_account.id, -purchase_price),
+        ],
+    )
+
     db.flush()
 
     return good
@@ -76,6 +158,9 @@ def update_member_good_value(
     """
     Record a new current value while preserving
     previous valuation history.
+
+    Valuation changes do not create cash transactions because
+    the good remains a member-owned refundable asset.
     """
 
     if new_value < 0:
@@ -145,7 +230,8 @@ def get_member_goods_total(
     member_id: int,
 ) -> int:
     """
-    Return the current total value of a member's goods.
+    Return the current total refundable value of
+    all active goods belonging to a member.
     """
 
     goods = get_member_goods(

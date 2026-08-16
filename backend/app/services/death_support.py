@@ -22,7 +22,20 @@ def record_death_support(
     reference: str | None = None,
 ) -> DeathSupport:
     """
-    Record death support paid for a member.
+    Record death support for a member.
+
+    The death-support operation represents the point at which
+    the member's death is recorded.
+
+    Workflow:
+
+        Active member
+            ->
+        Death support recorded
+            ->
+        Member becomes inactive
+            ->
+        Remaining member balance can later be settled.
 
     Accounting:
 
@@ -31,6 +44,10 @@ def record_death_support(
 
     The support record preserves the business-level history.
     The journal entry preserves the financial history.
+
+    The support amount reduces the member's refundable balance.
+    It does not erase the member account or perform the final
+    settlement.
     """
 
     beneficiary_name = beneficiary_name.strip()
@@ -57,11 +74,6 @@ def record_death_support(
             f"Committee is not active: {member.committee_id}"
         )
 
-    if member.is_active:
-        raise AccountingError(
-            f"Member must be inactive before death support can be recorded: {member_id}"
-        )
-
     if member.account is None:
         raise AccountingError(
             f"Member account not found: {member_id}"
@@ -78,6 +90,11 @@ def record_death_support(
             f"Death support already recorded for member: {member_id}"
         )
 
+    if not member.is_active:
+        raise AccountingError(
+            f"Member is already inactive: {member_id}"
+        )
+
     cash_account = db.scalars(
         select(Account).where(
             Account.account_type == AccountType.CASH,
@@ -89,6 +106,17 @@ def record_death_support(
     if cash_account is None:
         raise AccountingError(
             "Committee cash account not found."
+        )
+
+    cash_balance = sum(
+        line.amount
+        for line in cash_account.journal_lines
+    )
+
+    if cash_balance < amount:
+        raise AccountingError(
+            f"Insufficient committee cash. "
+            f"Required: {amount}, available: {cash_balance}"
         )
 
     journal_entry = create_journal_entry(
@@ -115,6 +143,13 @@ def record_death_support(
     )
 
     db.add(support)
+
+    # Recording death support marks the member as deceased/inactive.
+    member.is_active = False
+
+    if member.left_on is None:
+        member.left_on = support_date
+
     db.flush()
 
     return support

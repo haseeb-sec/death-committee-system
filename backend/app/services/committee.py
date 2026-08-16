@@ -10,7 +10,13 @@ def create_committee(
     name: str,
 ) -> Committee:
     """
-    Create a committee and its cash account.
+    Create a committee and its core accounting accounts.
+
+    Every committee receives:
+        - Cash account
+        - Recovery account
+
+    Member accounts and asset accounts are created separately.
     """
 
     name = name.strip()
@@ -35,7 +41,15 @@ def create_committee(
         member_id=None,
     )
 
+    recovery_account = Account(
+        name=f"Recovery: {name}",
+        account_type=AccountType.RECOVERY,
+        committee_id=committee.id,
+        member_id=None,
+    )
+
     db.add(cash_account)
+    db.add(recovery_account)
     db.flush()
 
     return committee
