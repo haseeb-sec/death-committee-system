@@ -85,3 +85,76 @@ def create_journal_entry(
         raise
 
     return entry
+
+
+def reverse_journal_entry(
+    db: Session,
+    *,
+    journal_entry_id: int,
+    reversal_date: datetime | None = None,
+    reference: str | None = None,
+) -> JournalEntry:
+    """
+    Reverse an existing journal entry without modifying or deleting it.
+
+    Every original journal line is recreated with the opposite amount.
+
+    Example:
+
+        Original:
+            Cash    +2000
+            Member  -2000
+
+        Reversal:
+            Cash    -2000
+            Member  +2000
+
+    The original entry remains permanently in the journal history.
+    """
+
+    entry = db.get(JournalEntry, journal_entry_id)
+
+    if entry is None:
+        raise AccountingError(
+            f"Journal entry not found: {journal_entry_id}"
+        )
+
+    # A reversal itself cannot be reversed through this operation.
+    if entry.reverses_entry_id is not None:
+        raise AccountingError(
+            f"Cannot reverse a reversal entry: {journal_entry_id}"
+        )
+
+    existing_reversal = (
+        db.query(JournalEntry)
+        .filter(
+            JournalEntry.reverses_entry_id == journal_entry_id
+        )
+        .first()
+    )
+
+    if existing_reversal is not None:
+        raise AccountingError(
+            f"Journal entry is already reversed: {journal_entry_id}"
+        )
+
+    if not entry.lines:
+        raise AccountingError(
+            f"Journal entry has no journal lines: {journal_entry_id}"
+        )
+
+    reversal_lines = [
+        (line.account_id, -line.amount)
+        for line in entry.lines
+    ]
+
+    reversal = create_journal_entry(
+        db,
+        description=f"Reversal: {entry.description}",
+        entry_date=reversal_date or datetime.utcnow(),
+        reference=reference or f"REVERSAL-{entry.id}",
+        reverses_entry_id=entry.id,
+        lines=reversal_lines,
+    )
+
+    return reversal
