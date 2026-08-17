@@ -15,6 +15,7 @@ def create_committee(
     Every committee receives:
         - Cash account
         - Recovery account
+        - Settlement expense account
 
     Member accounts and asset accounts are created separately.
     """
@@ -48,8 +49,16 @@ def create_committee(
         member_id=None,
     )
 
+    settlement_expense_account = Account(
+        name=f"Settlement Expense: {name}",
+        account_type=AccountType.EXPENSE,
+        committee_id=committee.id,
+        member_id=None,
+    )
+
     db.add(cash_account)
     db.add(recovery_account)
+    db.add(settlement_expense_account)
     db.flush()
 
     return committee

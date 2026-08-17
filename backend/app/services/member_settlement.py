@@ -229,11 +229,15 @@ def pay_member_settlement(
 
     Accounting entry:
 
-        Member Account   +settlement amount
-        Committee Cash   -settlement amount
+        Member Account       +contribution balance
+        Settlement Expense   +(asset share + goods value)
+        Committee Cash       -final settlement amount
 
-    This clears the member's accounting balance and reduces
-    committee cash.
+    The member account represents only the member's refundable
+    cash contribution balance.
+
+    Asset share and member-good value are separate refundable
+    components and must not be posted into the member account.
 
     The settlement status changes:
 
@@ -283,6 +287,23 @@ def pay_member_settlement(
             "Committee cash account not found."
         )
 
+    settlement_expense_account = db.scalars(
+        select(Account)
+        .where(
+            Account.account_type == AccountType.EXPENSE,
+            Account.committee_id == member.committee_id,
+            Account.member_id.is_(None),
+            Account.name == (
+                f"Settlement Expense: {member.committee.name}"
+            ),
+        )
+    ).first()
+
+    if settlement_expense_account is None:
+        raise AccountingError(
+            "Committee settlement expense account not found."
+        )
+
     amount = record.final_amount
 
     if amount < 0:
@@ -321,6 +342,51 @@ def pay_member_settlement(
             f"Required: {amount}, available: {cash_balance}"
         )
 
+    # The settlement record is the frozen financial snapshot.
+    #
+    # The member account contains only the refundable cash
+    # contribution balance. Asset share and member-good value
+    # are paid from their own settlement component.
+    settlement_asset_and_goods = (
+        record.asset_share
+        + record.goods_value
+    )
+
+    expected_final_amount = (
+        record.contribution_balance
+        + settlement_asset_and_goods
+        - record.outstanding_dues
+    )
+
+    if expected_final_amount != record.final_amount:
+        raise AccountingError(
+            "Settlement record is internally inconsistent."
+        )
+
+    if record.outstanding_dues != 0:
+        raise AccountingError(
+            "Settlement with outstanding dues cannot be paid."
+        )
+
+    lines = []
+
+    if record.contribution_balance > 0:
+        lines.append(
+            (member.account.id, record.contribution_balance)
+        )
+
+    if settlement_asset_and_goods > 0:
+        lines.append(
+            (
+                settlement_expense_account.id,
+                settlement_asset_and_goods,
+            )
+        )
+
+    lines.append(
+        (cash_account.id, -amount)
+    )
+
     create_journal_entry(
         db,
         description=(
@@ -331,13 +397,7 @@ def pay_member_settlement(
             datetime.min.time(),
         ),
         reference=f"SETTLEMENT-{record.id}",
-        lines=[
-            # Remove the member's liability/balance.
-            (member.account.id, amount),
-
-            # Reduce committee cash.
-            (cash_account.id, -amount),
-        ],
+        lines=lines,
     )
 
     record.status = "paid"
