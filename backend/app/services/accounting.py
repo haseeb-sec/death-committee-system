@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -62,7 +62,7 @@ def create_journal_entry(
         )
 
     entry = JournalEntry(
-        entry_date=entry_date or datetime.utcnow(),
+        entry_date=entry_date or datetime.now(timezone.utc),
         description=description.strip(),
         reference=reference,
         reverses_entry_id=reverses_entry_id,
@@ -151,7 +151,7 @@ def reverse_journal_entry(
     reversal = create_journal_entry(
         db,
         description=f"Reversal: {entry.description}",
-        entry_date=reversal_date or datetime.utcnow(),
+        entry_date=reversal_date or datetime.now(timezone.utc),
         reference=reference or f"REVERSAL-{entry.id}",
         reverses_entry_id=entry.id,
         lines=reversal_lines,

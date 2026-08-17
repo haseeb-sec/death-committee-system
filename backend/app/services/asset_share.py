@@ -43,6 +43,18 @@ def get_member_asset_breakdown(
 
     Current ownership comes from AssetOwnership.
     Historical participation is preserved separately.
+
+    Share calculation is deterministic.
+
+    If an asset cannot be divided equally into whole PKR
+    amounts, the remainder is distributed one PKR at a time
+    according to member_id order.
+
+    Therefore:
+
+        sum(all member shares) == asset.current_value
+
+    No PKR is lost because of integer division.
     """
 
     member = db.get(Member, member_id)
@@ -74,19 +86,60 @@ def get_member_asset_breakdown(
     for ownership in ownerships:
         asset = ownership.asset
 
-        share_value = (
-            asset.current_value
-            * ownership.ownership_units
-            // ownership.total_units
+        all_owners = db.scalars(
+            select(AssetOwnership)
+            .where(
+                AssetOwnership.asset_id == asset.id,
+                AssetOwnership.ownership_units > 0,
+            )
+            .order_by(
+                AssetOwnership.member_id.asc(),
+            )
+        ).all()
+
+        total_units = sum(
+            owner.ownership_units
+            for owner in all_owners
         )
+
+        if total_units <= 0:
+            raise AccountingError(
+                f"Asset has invalid ownership units: {asset.id}"
+            )
+
+        member_units = ownership.ownership_units
+
+        base_share = (
+            asset.current_value
+            * member_units
+            // total_units
+        )
+
+        remainder = (
+            asset.current_value
+            % total_units
+        )
+
+        member_rank = sum(
+            owner.ownership_units
+            for owner in all_owners
+            if owner.member_id < member_id
+        )
+
+        extra = 0
+
+        if member_rank < remainder:
+            extra = 1
+
+        share_value = base_share + extra
 
         breakdown.append(
             {
                 "asset_id": asset.id,
                 "asset_name": asset.name,
                 "current_value": asset.current_value,
-                "ownership_units": ownership.ownership_units,
-                "total_units": ownership.total_units,
+                "ownership_units": member_units,
+                "total_units": total_units,
                 "share_value": share_value,
             }
         )

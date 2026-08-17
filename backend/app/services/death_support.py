@@ -153,3 +153,36 @@ def record_death_support(
     db.flush()
 
     return support
+
+
+def get_member_death_support(
+    db: Session,
+    *,
+    member_id: int,
+) -> DeathSupport:
+    """
+    Return the death-support record for a member.
+
+    Each member can have at most one death-support record.
+    """
+
+    member = db.get(Member, member_id)
+
+    if member is None:
+        raise AccountingError(
+            f"Member not found: {member_id}"
+        )
+
+    support = db.scalars(
+        select(DeathSupport)
+        .where(
+            DeathSupport.member_id == member_id,
+        )
+    ).first()
+
+    if support is None:
+        raise AccountingError(
+            f"Death support not found for member: {member_id}"
+        )
+
+    return support

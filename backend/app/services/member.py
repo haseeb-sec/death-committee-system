@@ -81,9 +81,6 @@ def leave_member(
     pay_member_settlement().
     """
 
-    from app.services.asset_ownership import (
-        redistribute_member_asset_ownership,
-    )
     from app.services.member_settlement import settle_member
 
     member = db.get(Member, member_id)
@@ -109,13 +106,6 @@ def leave_member(
         db,
         member_id=member_id,
         settlement_date=leaving_date,
-    )
-
-    # Once settlement is created, remove the member from
-    # current committee-asset ownership.
-    redistribute_member_asset_ownership(
-        db,
-        member_id=member_id,
     )
 
     db.flush()

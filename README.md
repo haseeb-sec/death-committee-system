@@ -1,50 +1,115 @@
-# Death Management Committee System
+# Death Committee System
 
-A full-stack financial management system for community-based death management committees.
+A financial management system for community-based mutual death-support committees.
 
-The system is designed to manage member contributions, individual financial ledgers, common committee assets, death-related expenses, emergency payments, arrears, and final member settlements.
+The system manages members, contributions, death-support payments, dues, member-owned goods, shared committee assets, accounting records, valuations, and final member settlements.
 
 ## Status
 
-🚧 In active development.
+Backend core: implemented and tested
+Frontend: next phase
+Deployment: planned
 
-## Project Goals
+## Features
 
-- Maintain an individual financial ledger for every member
-- Track mandatory and additional contributions
-- Manage committee-owned common goods and assets
-- Record death events and related expenses
-- Provide immediate financial support during a death while preserving the concerned member's financial responsibility
-- Handle positive and negative member balances
-- Manage member exit and final settlement
-- Maintain a complete and auditable transaction history
-- Provide separate administrative and member access
-- Build a reliable, transparent, and maintainable financial management system
+- Committee and member management
+- Contribution tracking
+- Double-entry accounting foundation
+- Death-support management
+- Member dues and payments
+- Member-owned goods and valuations
+- Shared committee assets
+- Asset ownership and valuation history
+- Member financial summaries and statements
+- Member exit and settlement
+- Settlement payment tracking
+- Financial integrity tests
+- REST API with FastAPI
+- Alembic database migrations
+
+## Financial Integrity
+
+Money is stored as integer PKR values; floating-point arithmetic is avoided.
+
+Member settlement accounts for:
+
+Contribution balance
++ Asset share
++ Goods value
+- Outstanding dues
+= Final settlement
+
+Financial operations use balanced journal entries and journal lines to maintain accounting integrity.
 
 ## Technology
 
-### Backend
 - Python
 - FastAPI
 - SQLAlchemy
-- Alembic
 - Pydantic
-- SQLite initially, with PostgreSQL compatibility planned
-
-### Frontend
+- Alembic
+- SQLite
 - React
 - TypeScript
 - Vite
 - Tailwind CSS
-
-### Development
+- pytest
 - Git
 - GitHub
-- VS Code
-- WSL2
 
-## Development Approach
+## Project Structure
 
-This project is being developed incrementally from the database and accounting logic through the API, frontend, testing, security, and deployment.
+death-committee-system/
+├── backend/
+│   ├── app/
+│   ├── alembic/
+│   └── tests/
+├── frontend/
+├── docs/
+├── .gitignore
+└── README.md
 
-The initial development target is zero cost using free and open-source tools wherever practical.
+## Running the Backend
+
+cd backend
+source .venv/bin/activate
+uvicorn app.main:app --reload
+
+API: http://127.0.0.1:8000
+Swagger: http://127.0.0.1:8000/docs
+
+## Testing
+
+cd backend
+pytest -q
+
+## Roadmap
+
+- [x] Core backend
+- [x] Accounting foundation
+- [x] Contributions
+- [x] Death support
+- [x] Dues
+- [x] Goods
+- [x] Committee assets
+- [x] Asset valuations
+- [x] Member settlement
+- [x] Settlement payments
+- [x] Financial integrity tests
+- [ ] Backend hardening
+- [ ] Authentication and authorization
+- [ ] React frontend
+- [ ] Admin dashboard
+- [ ] Financial reports
+- [ ] PostgreSQL production setup
+- [ ] Deployment
+- [ ] CI/CD
+- [ ] Security review
+
+## Portfolio
+
+This project demonstrates practical experience with backend architecture, REST API development, relational database design, financial business logic, database migrations, automated testing, and transaction integrity.
+
+## License
+
+To be determined.

@@ -7,6 +7,7 @@ from app.api.death_support import router as death_support_router
 from app.api.member_good import router as member_good_router
 from app.api.member import router as member_router
 from app.api.committee_asset import router as committee_asset_router
+from app.api.member_due import router as member_due_router
 
 
 app = FastAPI(
@@ -30,3 +31,4 @@ def root():
         "status": "running",
     }
 app.include_router(committee_asset_router)
+app.include_router(member_due_router)

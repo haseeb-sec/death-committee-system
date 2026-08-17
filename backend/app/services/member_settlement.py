@@ -9,6 +9,7 @@ from app.models import (
     DeathSupport,
     JournalLine,
     Member,
+    MemberGood,
     MemberSettlement,
 )
 from app.services.accounting import (
@@ -37,14 +38,15 @@ def get_member_settlement(
 
     Settlement consists of:
 
-        Contribution balance
-        + Asset share
-        + Member goods value
+        Contribution cash balance
+        + Current committee asset share
+        + Current member-good value
         - Outstanding dues
         = Final settlement amount
 
     This function only calculates the settlement.
-    It does not change the member, ownership, or accounting records.
+    It does not change accounting records, ownership,
+    member status, or goods.
     """
 
     member = db.get(Member, member_id)
@@ -106,28 +108,10 @@ def settle_member(
     settlement_date: date,
 ) -> MemberSettlement:
     """
-    Permanently settle a member.
+    Create and freeze a member settlement.
 
-    Normal voluntary exit requires an active member.
-
-    A deceased member is different:
-    record_death_support() marks the member inactive before
-    the final financial settlement is completed. Therefore an
-    inactive member is allowed to proceed only when a DeathSupport
-    record exists for that member.
-
-    Settlement performs:
-
-        1. Verify the member and settlement state.
-        2. Allow either:
-           - active voluntary exit, or
-           - inactive member with recorded death support.
-        3. Calculate and freeze the financial position.
-        4. Reject outstanding dues.
-        5. Reject a negative settlement.
-        6. Redistribute current asset ownership.
-        7. Mark the member inactive.
-        8. Preserve the settlement snapshot permanently.
+    The settlement snapshot is calculated before current asset
+    ownership is redistributed.
 
     Historical AssetParticipation records are never modified.
 
@@ -185,11 +169,8 @@ def settle_member(
             f"{settlement['final_amount']}"
         )
 
-    # The settlement amount is calculated BEFORE ownership is
-    # redistributed. This freezes the departing member's asset
-    # value in the settlement record.
-    #
-    # Historical AssetParticipation records are never modified.
+    # Freeze the departing member's asset share before
+    # redistributing current ownership.
     redistribute_member_asset_ownership(
         db,
         member_id=member_id,
@@ -227,21 +208,32 @@ def pay_member_settlement(
     """
     Pay a pending member settlement.
 
-    Accounting entry:
+    Accounting:
 
-        Member Account       +contribution balance
-        Settlement Expense   +(asset share + goods value)
+        Member Account       +cash contribution balance
+        Settlement Expense   +asset share + goods value
         Committee Cash       -final settlement amount
 
-    The member account represents only the member's refundable
-    cash contribution balance.
+    The member account contains only the member's remaining
+    refundable cash contribution balance.
 
-    Asset share and member-good value are separate refundable
-    components and must not be posted into the member account.
+    Committee asset shares and member-good values are separate
+    settlement components.
 
-    The settlement status changes:
+    IMPORTANT:
 
-        pending -> paid
+    The settlement amount is an entitlement, not automatically
+    available committee cash.
+
+    The committee must actually have enough cash to pay the
+    final settlement. No accounting entry may create money that
+    does not exist.
+
+    After successful payment:
+
+        - settlement becomes paid
+        - refundable member cash balance is cleared
+        - active member goods included in the settlement are closed
 
     A settlement can only be paid once.
     """
@@ -311,42 +303,11 @@ def pay_member_settlement(
             f"Settlement amount cannot be negative: {amount}"
         )
 
-    if amount == 0:
-        record.status = "paid"
-
-        db.flush()
-
-        return record
-
-    # Committee cash uses normal signed accounting:
-    #
-    #   contribution -> +cash
-    #   asset purchase -> -cash
-    #   settlement payment -> -cash
-    #
-    # Therefore available cash is the direct sum of
-    # the cash account journal lines.
-    cash_balance = sum(
-        line.amount
-        for line in db.scalars(
-            select(JournalLine)
-            .where(
-                JournalLine.account_id == cash_account.id,
-            )
-        ).all()
-    )
-
-    if cash_balance < amount:
+    if record.outstanding_dues != 0:
         raise AccountingError(
-            f"Insufficient committee cash. "
-            f"Required: {amount}, available: {cash_balance}"
+            "Settlement with outstanding dues cannot be paid."
         )
 
-    # The settlement record is the frozen financial snapshot.
-    #
-    # The member account contains only the refundable cash
-    # contribution balance. Asset share and member-good value
-    # are paid from their own settlement component.
     settlement_asset_and_goods = (
         record.asset_share
         + record.goods_value
@@ -363,16 +324,45 @@ def pay_member_settlement(
             "Settlement record is internally inconsistent."
         )
 
-    if record.outstanding_dues != 0:
+    if amount == 0:
+        record.status = "paid"
+
+        db.flush()
+
+        return record
+
+    # Committee cash is represented using signed journal lines:
+    #
+    # contribution      -> positive cash
+    # purchase          -> negative cash
+    # settlement        -> negative cash
+    #
+    # Therefore the current available cash is the sum of all
+    # journal lines belonging to the committee cash account.
+    cash_balance = sum(
+        line.amount
+        for line in db.scalars(
+            select(JournalLine)
+            .where(
+                JournalLine.account_id == cash_account.id,
+            )
+        ).all()
+    )
+
+    if cash_balance < amount:
         raise AccountingError(
-            "Settlement with outstanding dues cannot be paid."
+            f"Insufficient committee cash. "
+            f"Required: {amount}, available: {cash_balance}"
         )
 
     lines = []
 
     if record.contribution_balance > 0:
         lines.append(
-            (member.account.id, record.contribution_balance)
+            (
+                member.account.id,
+                record.contribution_balance,
+            )
         )
 
     if settlement_asset_and_goods > 0:
@@ -384,7 +374,10 @@ def pay_member_settlement(
         )
 
     lines.append(
-        (cash_account.id, -amount)
+        (
+            cash_account.id,
+            -amount,
+        )
     )
 
     create_journal_entry(
@@ -399,6 +392,23 @@ def pay_member_settlement(
         reference=f"SETTLEMENT-{record.id}",
         lines=lines,
     )
+
+    # The cash portion of the member's account is now settled.
+    #
+    # Member goods were already represented separately as
+    # refundable settlement value. Once that settlement is paid,
+    # those goods must no longer appear as active refundable
+    # goods for the member.
+    goods = db.scalars(
+        select(MemberGood)
+        .where(
+            MemberGood.member_id == member.id,
+            MemberGood.is_active.is_(True),
+        )
+    ).all()
+
+    for good in goods:
+        good.is_active = False
 
     record.status = "paid"
 

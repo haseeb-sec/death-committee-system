@@ -74,6 +74,10 @@ def add_member_due(
     return due
 
 
+# Public compatibility name used by the settlement/integrity API.
+create_member_due = add_member_due
+
+
 def pay_member_due(
     db: Session,
     *,
