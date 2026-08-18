@@ -11,12 +11,48 @@ from app.models import (
     AssetValuation,
     Committee,
     CommitteeAsset,
+    JournalLine,
     Member,
 )
 from app.services.accounting import (
     AccountingError,
     create_journal_entry,
 )
+
+
+def _get_committee_cash_account(
+    db: Session,
+    *,
+    committee_id: int,
+) -> Account:
+    cash_account = db.scalars(
+        select(Account).where(
+            Account.account_type == AccountType.CASH,
+            Account.committee_id == committee_id,
+            Account.member_id.is_(None),
+        )
+    ).first()
+
+    if cash_account is None:
+        raise AccountingError(
+            f"Committee cash account not found: {committee_id}"
+        )
+
+    return cash_account
+
+
+def _get_committee_cash_balance(
+    db: Session,
+    *,
+    cash_account_id: int,
+) -> int:
+    cash_lines = db.scalars(
+        select(JournalLine).where(
+            JournalLine.account_id == cash_account_id,
+        )
+    ).all()
+
+    return sum(line.amount for line in cash_lines)
 
 
 def add_committee_asset(
@@ -29,22 +65,22 @@ def add_committee_asset(
     description: str | None = None,
 ) -> CommitteeAsset:
     """
-    Record a committee asset purchase.
+    Record one committee asset purchase.
 
-    Business rules:
+    Locked business rules:
 
-    - The committee must exist and be active.
-    - The asset name cannot be empty.
-    - The purchase price must be greater than zero.
-    - The committee must have active members on the purchase date.
-    - The committee must have enough cash to purchase the asset.
-    - The purchase is recorded through double-entry accounting:
+    - Committee must exist and be active.
+    - Asset name cannot be empty.
+    - Purchase price must be greater than zero.
+    - Committee must have active members on the purchase date.
+    - Committee must have sufficient actual cash.
+    - Asset purchase uses double-entry accounting:
           Asset account  +purchase_price
           Cash account   -purchase_price
-    - Equal current ownership is assigned to all active members
-      participating at the purchase date.
-    - AssetParticipation preserves the historical participation.
-    - AssetOwnership represents the current ownership.
+    - Asset ownership is initially divided equally among
+      members participating on the purchase date.
+    - Historical participation is preserved.
+    - Current ownership is stored separately.
     """
 
     name = name.strip()
@@ -86,28 +122,19 @@ def add_committee_asset(
             "Committee must have active members to purchase an asset."
         )
 
-    cash_account = db.scalars(
-        select(Account)
-        .where(
-            Account.account_type == AccountType.CASH,
-            Account.committee_id == committee_id,
-            Account.member_id.is_(None),
-        )
-    ).first()
+    cash_account = _get_committee_cash_account(
+        db,
+        committee_id=committee_id,
+    )
 
-    if cash_account is None:
-        raise AccountingError(
-            "Committee cash account not found."
-        )
-
-    cash_balance = sum(
-        line.amount
-        for line in cash_account.journal_lines
+    cash_balance = _get_committee_cash_balance(
+        db,
+        cash_account_id=cash_account.id,
     )
 
     if cash_balance < purchase_price:
         raise AccountingError(
-            f"Insufficient committee cash. "
+            "Insufficient committee cash. "
             f"Required: {purchase_price}, "
             f"available: {cash_balance}"
         )
@@ -135,14 +162,6 @@ def add_committee_asset(
     db.add(asset_account)
     db.flush()
 
-    valuation = AssetValuation(
-        asset_id=asset.id,
-        valuation_date=purchase_date,
-        value=purchase_price,
-    )
-
-    db.add(valuation)
-
     create_journal_entry(
         db,
         description=f"Committee asset purchase: {name}",
@@ -156,26 +175,34 @@ def add_committee_asset(
         ],
     )
 
+    valuation = AssetValuation(
+        asset_id=asset.id,
+        valuation_date=purchase_date,
+        value=purchase_price,
+    )
+
+    db.add(valuation)
+
     total_members = len(members)
 
     for member in members:
-        participation = AssetParticipation(
-            asset_id=asset.id,
-            member_id=member.id,
-            ownership_units=1,
-            total_units=total_members,
+        db.add(
+            AssetParticipation(
+                asset_id=asset.id,
+                member_id=member.id,
+                ownership_units=1,
+                total_units=total_members,
+            )
         )
 
-        db.add(participation)
-
-        ownership = AssetOwnership(
-            asset_id=asset.id,
-            member_id=member.id,
-            ownership_units=1,
-            total_units=total_members,
+        db.add(
+            AssetOwnership(
+                asset_id=asset.id,
+                member_id=member.id,
+                ownership_units=1,
+                total_units=total_members,
+            )
         )
-
-        db.add(ownership)
 
     db.flush()
 
@@ -190,8 +217,11 @@ def update_asset_value(
     new_value: int,
 ) -> CommitteeAsset:
     """
-    Record a new current value while preserving
-    previous valuation history.
+    Record a new asset valuation.
+
+    Valuation changes the asset's current value only.
+    It does not create a cash transaction.
+    Previous valuation records remain unchanged.
     """
 
     if new_value < 0:
@@ -237,7 +267,7 @@ def get_asset_valuations(
     asset_id: int,
 ) -> list[AssetValuation]:
     """
-    Return the complete valuation history for an asset.
+    Return complete valuation history for an asset.
     """
 
     asset = db.get(CommitteeAsset, asset_id)
@@ -267,8 +297,8 @@ def get_asset_participation(
     """
     Return all members who historically participated in an asset.
 
-    Historical participation is never changed when ownership
-    later changes.
+    Historical participation is never changed when
+    current ownership changes.
     """
 
     asset = db.get(CommitteeAsset, asset_id)

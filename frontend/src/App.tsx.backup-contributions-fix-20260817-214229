@@ -1,0 +1,500 @@
+import { useState } from 'react'
+import type { FormEvent } from 'react'
+import './App.css'
+
+const API_BASE = 'http://127.0.0.1:8000'
+
+type CommitteeSummary = {
+  committee_id: number
+  committee_name: string
+  is_active: boolean
+  total_contributions: number
+  total_death_support: number
+  cash_balance: number
+}
+
+type CreatedCommittee = {
+  id?: number
+  name?: string
+  committee_name?: string
+}
+
+function formatPKR(amount: number) {
+  return `Rs. ${amount.toLocaleString('en-PK')}`
+}
+
+async function login(username: string, password: string) {
+  const body = new URLSearchParams()
+  body.set('username', username)
+  body.set('password', password)
+
+  const response = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body,
+  })
+
+  if (!response.ok) {
+    throw new Error('Invalid username or password')
+  }
+
+  return response.json()
+}
+
+async function createCommittee(
+  name: string,
+  token: string,
+): Promise<CreatedCommittee> {
+  const response = await fetch(`${API_BASE}/committees`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name }),
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(data?.detail ?? 'Unable to create committee')
+  }
+
+  return response.json()
+}
+
+async function getCommitteeSummary(
+  committeeId: number,
+  token: string,
+): Promise<CommitteeSummary> {
+  const response = await fetch(
+    `${API_BASE}/committees/${committeeId}/summary`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(data?.detail ?? 'Unable to load committee')
+  }
+
+  return response.json()
+}
+
+function App() {
+  const [token, setToken] = useState(
+    () => localStorage.getItem('death_committee_token') ?? '',
+  )
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [committeeId, setCommitteeId] = useState('1')
+  const [summary, setSummary] = useState<CommitteeSummary | null>(null)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [activePage, setActivePage] = useState('Dashboard')
+  const [committeeName, setCommitteeName] = useState('')
+  const [createdCommittee, setCreatedCommittee] =
+    useState<CreatedCommittee | null>(null)
+
+  async function handleLogin(event: FormEvent) {
+    event.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      const data = await login(username, password)
+
+      localStorage.setItem('death_committee_token', data.access_token)
+      setToken(data.access_token)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleLoadCommittee() {
+    if (!token) return
+
+    const id = Number(committeeId)
+
+    if (!Number.isInteger(id) || id <= 0) {
+      setError('Enter a valid committee ID')
+      return
+    }
+
+    setError('')
+    setLoading(true)
+
+    try {
+      const data = await getCommitteeSummary(id, token)
+      setSummary(data)
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to load committee',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleCreateCommittee(event: FormEvent) {
+    event.preventDefault()
+
+    const name = committeeName.trim()
+
+    if (!name) {
+      setError('Committee name is required')
+      return
+    }
+
+    if (!token) {
+      setError('You are not authenticated')
+      return
+    }
+
+    setError('')
+    setLoading(true)
+
+    try {
+      const data = await createCommittee(name, token)
+      setCreatedCommittee(data)
+      setCommitteeName('')
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to create committee',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem('death_committee_token')
+    setToken('')
+    setSummary(null)
+    setUsername('')
+    setPassword('')
+  }
+
+  if (!token) {
+    return (
+      <main className="login-page">
+        <section className="login-card">
+          <div className="brand-mark">DC</div>
+
+          <p className="eyebrow">MUTUAL SUPPORT MANAGEMENT</p>
+          <h1>Death Committee System</h1>
+          <p className="login-description">
+            Sign in to manage committees, members, contributions, support,
+            assets and settlements.
+          </p>
+
+          <form onSubmit={handleLogin} className="login-form">
+            <label>
+              Username
+              <input
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                autoComplete="username"
+                required
+              />
+            </label>
+
+            <label>
+              Password
+              <div className="password-field">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+                      />
+                      <circle cx="12" cy="12" r="2.8" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M3 3l18 18" />
+                      <path
+                        d="M10.6 6.2A10.5 10.5 0 0 1 12 6c6 0 9.5 6 9.5 6a18.7 18.7 0 0 1-3.1 3.9M6.2 6.8C3.8 8.4 2.5 12 2.5 12s3.5 6 9.5 6c1.4 0 2.7-.3 3.8-.8"
+                      />
+                      <path d="M9.9 9.9a2.8 2.8 0 0 0 4.2 4.2" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </label>
+
+            {error && <div className="error">{error}</div>}
+
+            <button type="submit" disabled={loading}>
+              {loading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </form>
+        </section>
+      </main>
+    )
+  }
+
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <div className="brand-mark small">DC</div>
+          <div>
+            <strong>Death Committee</strong>
+            <span>System</span>
+          </div>
+        </div>
+
+        <nav>
+          {[
+            'Dashboard',
+            'Committees',
+            'Members',
+            'Contributions',
+            'Death Support',
+            'Dues',
+            'Goods',
+            'Assets',
+            'Settlements',
+            'Users',
+          ].map((page) => (
+            <button
+              key={page}
+              className={`nav-item ${activePage === page ? 'active' : ''}`}
+              onClick={() => setActivePage(page)}
+            >
+              {page}
+            </button>
+          ))}
+        </nav>
+
+        <button className="logout-button" onClick={logout}>
+          Sign out
+        </button>
+      </aside>
+
+      <main className="main-content">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">DEATH COMMITTEE SYSTEM</p>
+            <h2>{activePage}</h2>
+          </div>
+
+          <div className="status-pill">
+            <span />
+            Authenticated
+          </div>
+        </header>
+
+        <section className="content">
+          {activePage === 'Committees' ? (
+            <section className="committee-module">
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">MANAGEMENT</p>
+                  <h1>Committees</h1>
+                  <p>
+                    Create and manage mutual support committees.
+                  </p>
+                </div>
+              </div>
+
+              {error && <div className="error page-error">{error}</div>}
+
+              <section className="information-card">
+                <div>
+                  <p className="eyebrow">NEW COMMITTEE</p>
+                  <h3>Create a committee</h3>
+                  <p className="form-help">
+                    Enter the name of the committee you want to register.
+                  </p>
+                </div>
+
+                <form
+                  className="committee-create-form"
+                  onSubmit={handleCreateCommittee}
+                >
+                  <label>
+                    Committee name
+                    <input
+                      value={committeeName}
+                      onChange={(event) =>
+                        setCommitteeName(event.target.value)
+                      }
+                      placeholder="e.g. Swabi Mutual Support Committee"
+                      required
+                    />
+                  </label>
+
+                  <button type="submit" disabled={loading}>
+                    {loading ? 'Creating...' : 'Create Committee'}
+                  </button>
+                </form>
+              </section>
+
+              {createdCommittee && (
+                <section className="committee-banner">
+                  <div>
+                    <p className="eyebrow">CREATED</p>
+                    <h3>
+                      {createdCommittee.name ??
+                        createdCommittee.committee_name ??
+                        'Committee created'}
+                    </h3>
+
+                    {createdCommittee.id && (
+                      <p className="created-id">
+                        Committee ID: {createdCommittee.id}
+                      </p>
+                    )}
+                  </div>
+
+                  <span className="active-badge">Created</span>
+                </section>
+              )}
+            </section>
+          ) : activePage !== 'Dashboard' ? (
+            <section className="module-placeholder">
+              <div className="module-placeholder-icon">DC</div>
+              <p className="eyebrow">MODULE</p>
+              <h1>{activePage}</h1>
+              <p>
+                This module is now connected to the application navigation.
+                Its backend functionality will be connected in the next stage.
+              </p>
+              <div className="module-placeholder-status">
+                <span />
+                Backend API available
+              </div>
+            </section>
+          ) : ( 
+          <>
+          <div className="page-heading">
+            <div>
+              <h1>Committee Financial Overview</h1>
+              <p>
+                Load a committee to view its current financial position.
+              </p>
+            </div>
+
+            <div className="committee-loader">
+              <label htmlFor="committee-id">Committee ID</label>
+              <div>
+                <input
+                  id="committee-id"
+                  type="number"
+                  min="1"
+                  value={committeeId}
+                  onChange={(event) => setCommitteeId(event.target.value)}
+                />
+                <button onClick={handleLoadCommittee} disabled={loading}>
+                  {loading ? 'Loading...' : 'Load'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {error && <div className="error page-error">{error}</div>}
+
+          {!summary && !error && (
+            <section className="empty-state">
+              <div className="empty-icon">₨</div>
+              <h3>No committee loaded</h3>
+              <p>
+                Enter a committee ID above and load its real financial data
+                from the backend.
+              </p>
+            </section>
+          )}
+
+          {summary && (
+            <>
+              <section className="committee-banner">
+                <div>
+                  <p className="eyebrow">COMMITTEE</p>
+                  <h3>{summary.committee_name}</h3>
+                </div>
+
+                <span
+                  className={
+                    summary.is_active
+                      ? 'active-badge'
+                      : 'inactive-badge'
+                  }
+                >
+                  {summary.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </section>
+
+              <section className="stats-grid">
+                <article className="stat-card">
+                  <span>Total Contributions</span>
+                  <strong>{formatPKR(summary.total_contributions)}</strong>
+                  <small>Member contributions recorded</small>
+                </article>
+
+                <article className="stat-card">
+                  <span>Death Support</span>
+                  <strong>{formatPKR(summary.total_death_support)}</strong>
+                  <small>Support paid by the committee</small>
+                </article>
+
+                <article className="stat-card primary">
+                  <span>Cash Balance</span>
+                  <strong>{formatPKR(summary.cash_balance)}</strong>
+                  <small>Current committee cash position</small>
+                </article>
+              </section>
+
+              <section className="information-card">
+                <div>
+                  <p className="eyebrow">FINANCIAL POSITION</p>
+                  <h3>Current committee position</h3>
+                </div>
+
+                <div className="position-row">
+                  <span>Committee</span>
+                  <strong>{summary.committee_name}</strong>
+                </div>
+
+                <div className="position-row">
+                  <span>Committee ID</span>
+                  <strong>{summary.committee_id}</strong>
+                </div>
+
+                <div className="position-row">
+                  <span>Cash balance</span>
+                  <strong>{formatPKR(summary.cash_balance)}</strong>
+                </div>
+              </section>
+            </>
+          )}
+          </>
+          )}
+        </section>
+      </main>
+    </div>
+  )
+}
+
+export default App

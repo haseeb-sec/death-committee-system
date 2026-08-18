@@ -1,10 +1,16 @@
-from datetime import date
-
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
+from app.api.permissions import require_admin, require_authenticated
+from app.schemas.member import (
+    MemberCreate,
+    MemberFinancialSummaryResponse,
+    MemberLeave,
+    MemberResponse,
+    MemberStatementResponse,
+)
+from app.api.permissions import require_admin, require_authenticated
 from app.services.accounting import AccountingError
 from app.services.member import add_member, leave_member
 from app.services.member_financial import (
@@ -13,6 +19,7 @@ from app.services.member_financial import (
 from app.services.member_statement import (
     get_member_statement,
 )
+from app.services.audit import record_audit
 
 
 router = APIRouter(
@@ -21,20 +28,11 @@ router = APIRouter(
 )
 
 
-class MemberCreate(BaseModel):
-    committee_id: int
-    name: str
-    joined_on: date
-
-
-class MemberLeave(BaseModel):
-    leaving_date: date
-
-
-@router.post("")
+@router.post("", response_model=MemberResponse)
 def create_member_api(
     data: MemberCreate,
     db: Session = Depends(get_db),
+    current_user = Depends(require_admin),
 ):
     try:
         member = add_member(
@@ -42,6 +40,15 @@ def create_member_api(
             committee_id=data.committee_id,
             name=data.name,
             joined_on=data.joined_on,
+        )
+
+        record_audit(
+            db,
+            user_id=current_user.id,
+            action="create",
+            entity_type="member",
+            entity_id=member.id,
+            description=f"Created member '{member.name}' in committee {member.committee_id}",
         )
 
         db.commit()
@@ -63,17 +70,30 @@ def create_member_api(
         ) from exc
 
 
-@router.post("/{member_id}/leave")
+@router.post(
+    "/{member_id}/leave",
+    response_model=MemberResponse,
+)
 def leave_member_api(
     member_id: int,
     data: MemberLeave,
     db: Session = Depends(get_db),
+    current_user = Depends(require_admin),
 ):
     try:
         member = leave_member(
             db,
             member_id=member_id,
             leaving_date=data.leaving_date,
+        )
+
+        record_audit(
+            db,
+            user_id=current_user.id,
+            action="leave",
+            entity_type="member",
+            entity_id=member.id,
+            description=f"Member '{member.name}' left committee {member.committee_id}",
         )
 
         db.commit()
@@ -96,10 +116,14 @@ def leave_member_api(
         ) from exc
 
 
-@router.get("/{member_id}/financial-summary")
+@router.get(
+    "/{member_id}/financial-summary",
+    response_model=MemberFinancialSummaryResponse,
+)
 def member_financial_summary(
     member_id: int,
     db: Session = Depends(get_db),
+    current_user = Depends(require_authenticated),
 ):
     try:
         return get_member_financial_summary(
@@ -113,10 +137,14 @@ def member_financial_summary(
         ) from exc
 
 
-@router.get("/{member_id}/statement")
+@router.get(
+    "/{member_id}/statement",
+    response_model=list[MemberStatementResponse],
+)
 def member_statement(
     member_id: int,
     db: Session = Depends(get_db),
+    current_user = Depends(require_authenticated),
 ):
     try:
         return get_member_statement(

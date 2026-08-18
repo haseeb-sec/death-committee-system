@@ -23,6 +23,8 @@ from app.models import (
     MemberGoodValuation,
     MemberSettlement,
 )
+from app.services.committee import create_committee
+from app.services.member import add_member
 
 
 @pytest.fixture
@@ -49,3 +51,29 @@ def db():
         session.close()
         Base.metadata.drop_all(engine)
         engine.dispose()
+
+
+@pytest.fixture
+def committee(db):
+    committee = create_committee(
+        db,
+        name="Test Committee",
+    )
+
+    db.commit()
+
+    return committee
+
+
+@pytest.fixture
+def member(db, committee):
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Test Member",
+        joined_on=date(2026, 1, 1),
+    )
+
+    db.flush()
+
+    return member

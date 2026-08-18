@@ -1,10 +1,15 @@
-from datetime import date
-
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.schemas.member_due import (
+    MemberDueCreate,
+    MemberDuePayment,
+    MemberDueResponse,
+    MemberOutstandingDuesResponse,
+)
+
 from app.api.dependencies import get_db
+from app.api.permissions import require_admin, require_authenticated
 from app.services.accounting import AccountingError
 from app.services.member_due import (
     add_member_due,
@@ -12,6 +17,7 @@ from app.services.member_due import (
     get_outstanding_dues,
     pay_member_due,
 )
+from app.services.audit import record_audit
 
 
 router = APIRouter(
@@ -20,22 +26,15 @@ router = APIRouter(
 )
 
 
-class MemberDueCreate(BaseModel):
-    amount: int = Field(gt=0)
-    due_date: date
-    description: str
-    reference: str | None = None
-
-
-class MemberDuePayment(BaseModel):
-    amount: int = Field(gt=0)
-
-
-@router.post("/{member_id}/dues")
+@router.post(
+    "/{member_id}/dues",
+    response_model=MemberDueResponse,
+)
 def create_member_due(
     member_id: int,
     data: MemberDueCreate,
     db: Session = Depends(get_db),
+    current_user = Depends(require_admin),
 ):
     try:
         due = add_member_due(
@@ -45,6 +44,18 @@ def create_member_due(
             due_date=data.due_date,
             description=data.description,
             reference=data.reference,
+        )
+
+        record_audit(
+            db,
+            user_id=current_user.id,
+            action="create",
+            entity_type="member_due",
+            entity_id=due.id,
+            description=(
+                f"Created due of {due.amount} for member {member_id}: "
+                f"{due.description}"
+            ),
         )
 
         db.commit()
@@ -72,10 +83,14 @@ def create_member_due(
         ) from exc
 
 
-@router.get("/{member_id}/dues")
+@router.get(
+    "/{member_id}/dues",
+    response_model=list[MemberDueResponse],
+)
 def list_member_dues(
     member_id: int,
     db: Session = Depends(get_db),
+    current_user = Depends(require_authenticated),
 ):
     try:
         dues = get_member_dues(
@@ -107,10 +122,14 @@ def list_member_dues(
         ) from exc
 
 
-@router.get("/{member_id}/dues/outstanding")
+@router.get(
+    "/{member_id}/dues/outstanding",
+    response_model=MemberOutstandingDuesResponse,
+)
 def member_outstanding_dues(
     member_id: int,
     db: Session = Depends(get_db),
+    current_user = Depends(require_authenticated),
 ):
     try:
         outstanding = get_outstanding_dues(
@@ -130,11 +149,15 @@ def member_outstanding_dues(
         ) from exc
 
 
-@router.post("/dues/{due_id}/pay")
+@router.post(
+    "/dues/{due_id}/pay",
+    response_model=MemberDueResponse,
+)
 def pay_member_due_api(
     due_id: int,
     data: MemberDuePayment,
     db: Session = Depends(get_db),
+    current_user = Depends(require_admin),
 ):
     try:
         due = pay_member_due(

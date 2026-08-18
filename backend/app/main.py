@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.committee import router as committee_router
 from app.api.contribution import router as contribution_router
@@ -8,11 +9,24 @@ from app.api.member_good import router as member_good_router
 from app.api.member import router as member_router
 from app.api.committee_asset import router as committee_asset_router
 from app.api.member_due import router as member_due_router
+from app.api.auth import router as auth_router
+from app.api.users import router as users_router
 
 
 app = FastAPI(
     title="Death Management Committee System",
     version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -32,3 +46,5 @@ def root():
     }
 app.include_router(committee_asset_router)
 app.include_router(member_due_router)
+app.include_router(auth_router)
+app.include_router(users_router)

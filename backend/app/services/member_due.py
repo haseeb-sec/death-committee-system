@@ -23,6 +23,7 @@ def add_member_due(
     due_date: date,
     description: str,
     reference: str | None = None,
+    due_type: str = "ordinary",
 ) -> MemberDue:
     """
     Record an amount owed by a member.
@@ -46,6 +47,13 @@ def add_member_due(
             "Due description cannot be empty."
         )
 
+    allowed_due_types = {"ordinary", "qarz_e_hasana"}
+
+    if due_type not in allowed_due_types:
+        raise AccountingError(
+            f"Invalid due type: {due_type}"
+        )
+
     member = db.get(Member, member_id)
 
     if member is None:
@@ -65,6 +73,7 @@ def add_member_due(
         paid_amount=0,
         due_date=due_date,
         description=description,
+        due_type=due_type,
         reference=reference,
     )
 
@@ -164,6 +173,16 @@ def pay_member_due(
             "Committee recovery account not found."
         )
 
+    if due.due_type == "qarz_e_hasana":
+        payment_account = member.account
+
+        if payment_account is None:
+            raise AccountingError(
+                f"Member account not found: {member.id}"
+            )
+    else:
+        payment_account = recovery_account
+
     create_journal_entry(
         db,
         description=(
@@ -179,7 +198,7 @@ def pay_member_due(
         ),
         lines=[
             (cash_account.id, amount),
-            (recovery_account.id, -amount),
+            (payment_account.id, -amount),
         ],
     )
 

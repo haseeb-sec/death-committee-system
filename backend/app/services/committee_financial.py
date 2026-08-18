@@ -11,9 +11,15 @@ def get_committee_financial_position(
     committee_id: int,
 ) -> dict:
     """
-    Return the financial position of a committee.
+    Return the committee's actual financial cash position.
 
-    Customer-facing values are returned as positive amounts.
+    The cash balance is calculated directly from the committee
+    cash account's journal lines.
+
+    A negative value is intentionally preserved because it
+    represents an accounting inconsistency or an overdrawn
+    committee cash position. The reporting layer must never
+    hide or silently correct ledger data.
     """
 
     committee = db.get(Committee, committee_id)
@@ -42,7 +48,10 @@ def get_committee_financial_position(
         )
     ).all()
 
-    cash_balance = sum(line.amount for line in cash_lines)
+    cash_balance = sum(
+        line.amount
+        for line in cash_lines
+    )
 
     return {
         "committee_id": committee.id,

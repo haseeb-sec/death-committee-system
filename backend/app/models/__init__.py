@@ -31,4 +31,9 @@ __all__ = [
     "MemberGoodValuation",
     "MemberSettlement",
     "AssetOwnership",
-]
+    "User",
+    "UserRole",
+    "AuditLog",
+    ]
+from .user import User, UserRole
+from .audit_log import AuditLog

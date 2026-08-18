@@ -27,9 +27,26 @@ class DeathSupport(Base):
         nullable=False,
     )
 
+    # Total actual death-related expense.
     amount: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
+    )
+
+    # Portion of the death expense covered from the
+    # member's own accumulated committee balance.
+    member_funded_amount: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+
+    # Portion actually advanced by the committee as
+    # Qarz-e-Hasana (قرضِ حسنہ).
+    qarz_e_hasana_amount: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
     )
 
     support_date: Mapped[date] = mapped_column(

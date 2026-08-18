@@ -11,29 +11,20 @@ def redistribute_member_asset_ownership(
     member_id: int,
 ) -> None:
     """
-    Remove a departing member from current asset ownership
-    and redistribute that member's ownership equally among
-    the remaining active members of the committee.
+    Remove a departing member from current asset ownership.
+
+    Normal case:
+        The departing member's ownership is redistributed equally
+        among the remaining active owners.
+
+    Sole-owner case:
+        If the departing member is the only active owner of an asset,
+        their ownership is removed. The asset remains active committee
+        property but becomes temporarily unallocated.
 
     Historical AssetParticipation records are never modified.
 
     Current ownership is represented by AssetOwnership.
-
-    Example:
-
-        Before:
-            Member A = 1/3
-            Member B = 1/3
-            Member C = 1/3
-
-        Member C leaves.
-
-        After:
-            Member A = 1/2
-            Member B = 1/2
-            Member C = 0
-
-    The departing member's historical participation remains intact.
     """
 
     member = db.get(Member, member_id)
@@ -71,21 +62,24 @@ def redistribute_member_asset_ownership(
             )
         ).all()
 
+        # Remove the departing member from current ownership.
+        ownership.ownership_units = 0
+
         if not other_owners:
-            raise AccountingError(
-                "Cannot redistribute asset ownership: "
-                f"member {member_id} is the only active owner "
-                f"of asset {ownership.asset_id}."
-            )
+            # The departing member was the only current owner.
+            #
+            # Do not give the asset to a later-joining member.
+            # The asset remains committee property but currently
+            # has no active owner.
+            ownership.total_units = 0
+            continue
 
         new_total_units = len(other_owners)
 
-        # Remove the departing member's current ownership.
-        ownership.ownership_units = 0
         ownership.total_units = new_total_units
 
-        # Redistribute the asset equally among the
-        # remaining active owners.
+        # Redistribute the departing member's ownership equally
+        # among the remaining active owners.
         for other in other_owners:
             other.ownership_units = 1
             other.total_units = new_total_units

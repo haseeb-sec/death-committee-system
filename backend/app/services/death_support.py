@@ -7,7 +7,9 @@ from app.models import (
     Account,
     AccountType,
     DeathSupport,
+    JournalLine,
     Member,
+    MemberDue,
 )
 from app.services.accounting import AccountingError, create_journal_entry
 
@@ -110,7 +112,11 @@ def record_death_support(
 
     cash_balance = sum(
         line.amount
-        for line in cash_account.journal_lines
+        for line in db.scalars(
+            select(JournalLine).where(
+                JournalLine.account_id == cash_account.id,
+            )
+        ).all()
     )
 
     if cash_balance < amount:
@@ -118,6 +124,18 @@ def record_death_support(
             f"Insufficient committee cash. "
             f"Required: {amount}, available: {cash_balance}"
         )
+
+    member_balance = -sum(
+        line.amount
+        for line in member.account.journal_lines
+    )
+
+    member_funded_amount = max(
+        min(member_balance, amount),
+        0,
+    )
+
+    qarz_e_hasana_amount = amount - member_funded_amount
 
     journal_entry = create_journal_entry(
         db,
@@ -138,11 +156,30 @@ def record_death_support(
         member_id=member.id,
         beneficiary_name=beneficiary_name,
         amount=amount,
+        member_funded_amount=member_funded_amount,
+        qarz_e_hasana_amount=qarz_e_hasana_amount,
         support_date=support_date,
         reference=reference,
     )
 
     db.add(support)
+
+    if qarz_e_hasana_amount > 0:
+        db.add(
+            MemberDue(
+                committee_id=member.committee_id,
+                member_id=member.id,
+                amount=qarz_e_hasana_amount,
+                paid_amount=0,
+                due_date=support_date,
+                description=(
+                    "Qarz-e-Hasana death support "
+                    f"for {member.name}"
+                ),
+                due_type="qarz_e_hasana",
+                reference=reference,
+            )
+        )
 
     # Recording death support marks the member as deceased/inactive.
     member.is_active = False

@@ -42,6 +42,12 @@ class MemberDue(Base):
         nullable=False,
     )
 
+    due_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="ordinary",
+    )
+
     reference: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,

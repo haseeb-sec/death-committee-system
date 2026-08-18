@@ -40,3 +40,6 @@ htmlcov/
 # Build / temporary files
 *.tmp
 *.temp
+
+# Local database backups
+*.db.*

@@ -10,6 +10,7 @@ from app.models import (
     JournalEntry,
     JournalLine,
     Member,
+    MemberDue,
     MemberSettlement,
 )
 from app.services.accounting import create_journal_entry
@@ -174,6 +175,139 @@ def test_death_support_settlement_financial_integrity(db):
         assert total == 0, (
             f"Journal entry {entry.id} is unbalanced: {total}"
         )
+
+
+
+
+def test_death_support_creates_qarz_e_hasana_when_cost_exceeds_member_balance(db):
+    committee = create_committee(
+        db,
+        name="Qarz Death Committee",
+    )
+    db.flush()
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Qarz Member",
+        joined_on=date(2026, 8, 18),
+    )
+    db.flush()
+
+    rate = ContributionRate(
+        committee_id=committee.id,
+        amount=50000,
+        effective_from=date(2026, 8, 18),
+    )
+    db.add(rate)
+    db.flush()
+
+    record_contribution(
+        db,
+        member_id=member.id,
+        contribution_date=date(2026, 8, 18),
+        reference="QARZ-CONTRIBUTION",
+    )
+    db.flush()
+
+    cash_account = db.scalars(
+        select(Account).where(
+            Account.committee_id == committee.id,
+            Account.account_type == AccountType.CASH,
+            Account.member_id.is_(None),
+        )
+    ).one()
+
+    assert get_member_balance(db, member_id=member.id) == 50000
+    assert sum(line.amount for line in cash_account.journal_lines) == 50000
+
+    other_member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Other Member",
+        joined_on=date(2026, 8, 18),
+    )
+    db.flush()
+
+    record_contribution(
+        db,
+        member_id=other_member.id,
+        contribution_date=date(2026, 8, 18),
+        reference="OTHER-CONTRIBUTION",
+    )
+    db.flush()
+
+    assert get_member_balance(db, member_id=member.id) == 50000
+    assert get_member_balance(db, member_id=other_member.id) == 50000
+    assert sum(line.amount for line in db.scalars(select(JournalLine).where(JournalLine.account_id == cash_account.id)).all()) == 100000
+
+    record_death_support(
+        db,
+        member_id=member.id,
+        beneficiary_name="Qarz Beneficiary",
+        amount=80000,
+        support_date=date(2026, 8, 18),
+        reference="QARZ-DEATH",
+    )
+    db.flush()
+
+    db.refresh(member)
+
+    support = db.scalars(
+        select(DeathSupport).where(
+            DeathSupport.member_id == member.id,
+        )
+    ).one()
+
+    due = db.scalars(
+        select(MemberDue).where(
+            MemberDue.member_id == member.id,
+            MemberDue.due_type == "qarz_e_hasana",
+        )
+    ).one()
+
+    assert support.amount == 80000
+    assert support.member_funded_amount == 50000
+    assert support.qarz_e_hasana_amount == 30000
+
+    assert due.amount == 30000
+    assert due.paid_amount == 0
+
+    assert get_member_balance(db, member_id=member.id) == -30000
+
+    assert sum(line.amount for line in db.scalars(select(JournalLine).where(JournalLine.account_id == cash_account.id)).all()) == 20000
+
+    assert all(
+        line.amount == 0
+        for line in []
+    )
+
+    from app.services.member_due import pay_member_due
+
+    pay_member_due(
+        db,
+        due_id=due.id,
+        amount=30000,
+    )
+    db.flush()
+
+    db.refresh(due)
+
+    assert due.paid_amount == 30000
+    assert get_member_balance(db, member_id=member.id) == 0
+
+    assert sum(line.amount for line in db.scalars(select(JournalLine).where(JournalLine.account_id == cash_account.id)).all()) == 50000
+
+    entries = db.scalars(
+        select(JournalEntry)
+        .order_by(JournalEntry.id.asc())
+    ).all()
+
+    for entry in entries:
+        assert sum(
+            line.amount
+            for line in entry.lines
+        ) == 0
 
 
 def test_asset_exit_settlement_preserves_historical_participation(db):
@@ -564,3 +698,189 @@ def test_combined_settlement_components_reconcile(db):
         assert total == 0, (
             f"Journal entry {entry.id} is unbalanced: {total}"
         )
+
+def test_asset_share_remainder_is_distributed_without_loss(db):
+    from app.models import AssetOwnership
+    from app.services.asset_share import get_member_asset_breakdown
+    from app.services.committee_asset import add_committee_asset
+
+    committee = create_committee(
+        db,
+        name="Asset Remainder Integrity Committee",
+    )
+    db.flush()
+
+    rate = ContributionRate(
+        committee_id=committee.id,
+        amount=10000,
+        effective_from=date(2026, 8, 17),
+    )
+    db.add(rate)
+    db.flush()
+
+    members = []
+
+    for name in (
+        "Remainder Member A",
+        "Remainder Member B",
+        "Remainder Member C",
+    ):
+        member = add_member(
+            db,
+            committee_id=committee.id,
+            name=name,
+            joined_on=date(2026, 8, 17),
+        )
+        db.flush()
+
+        record_contribution(
+            db,
+            member_id=member.id,
+            contribution_date=date(2026, 8, 17),
+            reference=f"REMAINDER-{name[-1]}",
+        )
+        db.flush()
+
+        members.append(member)
+
+    asset = add_committee_asset(
+        db,
+        committee_id=committee.id,
+        name="Remainder Test Asset",
+        purchase_date=date(2026, 8, 17),
+        purchase_price=3000,
+    )
+    db.flush()
+
+    # Make the asset value impossible to divide evenly by 3.
+    asset.current_value = 10000
+    db.flush()
+
+    ownerships = db.scalars(
+        select(AssetOwnership)
+        .where(
+            AssetOwnership.asset_id == asset.id,
+            AssetOwnership.ownership_units > 0,
+        )
+        .order_by(AssetOwnership.member_id.asc())
+    ).all()
+
+    assert len(ownerships) == 3
+    assert all(o.ownership_units == 1 for o in ownerships)
+
+    shares = []
+
+    for member in members:
+        breakdown = get_member_asset_breakdown(
+            db,
+            member_id=member.id,
+        )
+
+        assert len(breakdown) == 1
+        assert breakdown[0]["asset_id"] == asset.id
+
+        shares.append(breakdown[0]["share_value"])
+
+    # Deterministic remainder distribution:
+    # 10,000 / 3 = 3,333 remainder 1.
+    assert shares == [3334, 3333, 3333]
+
+    # Most important invariant: no PKR is lost.
+    assert sum(shares) == asset.current_value
+
+def test_sole_owner_asset_becomes_unallocated_after_exit(db):
+    from app.models import AssetOwnership, CommitteeAsset
+    from app.services.committee_asset import add_committee_asset
+    from app.services.member_settlement import settle_member
+
+    committee = create_committee(
+        db,
+        name="Sole Owner Asset Integrity Committee",
+    )
+    db.flush()
+
+    rate = ContributionRate(
+        committee_id=committee.id,
+        amount=10000,
+        effective_from=date(2026, 8, 17),
+    )
+    db.add(rate)
+    db.flush()
+
+    departing = add_member(
+        db,
+        committee_id=committee.id,
+        name="Sole Asset Owner",
+        joined_on=date(2026, 8, 17),
+    )
+    db.flush()
+
+    later_member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Later Member",
+        joined_on=date(2026, 8, 18),
+    )
+    db.flush()
+
+    record_contribution(
+        db,
+        member_id=departing.id,
+        contribution_date=date(2026, 8, 17),
+        reference="SOLE-OWNER",
+    )
+    db.flush()
+
+    asset = add_committee_asset(
+        db,
+        committee_id=committee.id,
+        name="Sole Owner Asset",
+        purchase_date=date(2026, 8, 17),
+        purchase_price=5000,
+    )
+    db.flush()
+
+    ownership_before = db.scalars(
+        select(AssetOwnership).where(
+            AssetOwnership.asset_id == asset.id,
+        )
+    ).all()
+
+    assert len(ownership_before) == 1
+    assert ownership_before[0].member_id == departing.id
+    assert ownership_before[0].ownership_units == 1
+    assert ownership_before[0].total_units == 1
+
+    settlement = settle_member(
+        db,
+        member_id=departing.id,
+        settlement_date=date(2026, 8, 17),
+    )
+    db.flush()
+
+    assert settlement.asset_share == 5000
+
+    departing_ownership = db.scalars(
+        select(AssetOwnership).where(
+            AssetOwnership.asset_id == asset.id,
+            AssetOwnership.member_id == departing.id,
+        )
+    ).one()
+
+    assert departing_ownership.ownership_units == 0
+    assert departing_ownership.total_units == 0
+
+    # A later-joining member must not inherit historical ownership.
+    later_ownership = db.scalars(
+        select(AssetOwnership).where(
+            AssetOwnership.asset_id == asset.id,
+            AssetOwnership.member_id == later_member.id,
+        )
+    ).first()
+
+    assert later_ownership is None
+
+    asset = db.get(CommitteeAsset, asset.id)
+
+    assert asset.is_active is True
+    assert asset.current_value == 5000
