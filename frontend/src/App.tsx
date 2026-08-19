@@ -530,6 +530,93 @@ async function getCommitteeSummary(
   return response.json()
 }
 
+async function createMemberDue(
+  memberId: number,
+  amount: number,
+  dueDate: string,
+  description: string,
+  reference: string,
+  token: string,
+): Promise<Record<string, any>> {
+  const response = await fetch(`${API_BASE}/members/${memberId}/dues`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      amount,
+      due_date: dueDate,
+      description,
+      reference: reference.trim() || null,
+    }),
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(data?.detail ?? 'Unable to create member due')
+  }
+
+  return response.json()
+}
+
+async function getMemberDues(
+  memberId: number,
+  token: string,
+): Promise<Array<Record<string, any>>> {
+  const response = await fetch(`${API_BASE}/members/${memberId}/dues`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(data?.detail ?? 'Unable to load member dues')
+  }
+
+  return response.json()
+}
+
+async function getOutstandingDues(
+  memberId: number,
+  token: string,
+): Promise<Record<string, any>> {
+  const response = await fetch(
+    `${API_BASE}/members/${memberId}/dues/outstanding`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  )
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(data?.detail ?? 'Unable to load outstanding dues')
+  }
+
+  return response.json()
+}
+
+async function payMemberDue(
+  dueId: number,
+  amount: number,
+  token: string,
+): Promise<Record<string, any>> {
+  const response = await fetch(`${API_BASE}/members/dues/${dueId}/pay`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ amount }),
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(data?.detail ?? 'Unable to pay member due')
+  }
+
+  return response.json()
+}
+
 function App() {
   const [token, setToken] = useState(
     () => localStorage.getItem('death_committee_token') ?? '',
@@ -593,7 +680,20 @@ function App() {
   const [goodNewValue, setGoodNewValue] = useState('')
   const [updatedMemberGoodValue, setUpdatedMemberGoodValue] =
     useState<Record<string, any> | null>(null)
-    useState<CreatedCommittee | null>(null)
+
+    const [dueMemberId, setDueMemberId] = useState('' )
+    const [dueAmount, setDueAmount] = useState('' )
+    const [dueDate, setDueDate] = useState(new Date().toISOString().slice(0, 10))
+    const [dueDescription, setDueDescription] = useState('' )
+    const [dueReference, setDueReference] = useState('' )
+    const [createdMemberDue, setCreatedMemberDue] = useState<Record<string, any> | null>(null)
+    const [duesListMemberId, setDuesListMemberId] = useState('' )
+    const [memberDues, setMemberDues] = useState<Array<Record<string, any>>>([])
+    const [outstandingDuesMemberId, setOutstandingDuesMemberId] = useState('' )
+    const [memberOutstandingDues, setMemberOutstandingDues] = useState<Record<string, any> | null>(null)
+    const [duePaymentId, setDuePaymentId] = useState('' )
+    const [duePaymentAmount, setDuePaymentAmount] = useState('' )
+    const [paidMemberDue, setPaidMemberDue] = useState<Record<string, any> | null>(null)
 
   const [rateCommitteeId, setRateCommitteeId] = useState('9')
   const [contributionAmount, setContributionAmount] = useState('')
@@ -1016,6 +1116,153 @@ function App() {
     }
   }
 
+  async function handleCreateMemberDue(event: FormEvent) {
+    event.preventDefault()
+
+    if (!token) {
+      setError('You are not authenticated')
+      return
+    }
+
+    const memberId = Number(dueMemberId)
+    const amount = Number(dueAmount)
+
+    if (!Number.isInteger(memberId) || memberId <= 0) {
+      setError('Enter a valid member ID')
+      return
+    }
+
+    if (!Number.isInteger(amount) || amount <= 0) {
+      setError('Due amount must be a positive whole number')
+      return
+    }
+
+    if (!dueDate) {
+      setError('Due date is required')
+      return
+    }
+
+    setError('')
+    setLoading(true)
+
+    try {
+      const data = await createMemberDue(
+        memberId,
+        amount,
+        dueDate,
+        dueDescription.trim(),
+        dueReference.trim(),
+        token,
+      )
+
+      setCreatedMemberDue(data)
+      setDueAmount('')
+      setDueDescription('')
+      setDueReference('')
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to create member due',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleLoadMemberDues() {
+    if (!token) {
+      setError('You are not authenticated')
+      return
+    }
+
+    const memberId = Number(duesListMemberId)
+
+    if (!Number.isInteger(memberId) || memberId <= 0) {
+      setError('Enter a valid member ID')
+      return
+    }
+
+    setError('')
+    setLoading(true)
+
+    try {
+      const data = await getMemberDues(memberId, token)
+      setMemberDues(data)
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to load member dues',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleLoadOutstandingDues() {
+    if (!token) {
+      setError('You are not authenticated')
+      return
+    }
+
+    const memberId = Number(outstandingDuesMemberId)
+
+    if (!Number.isInteger(memberId) || memberId <= 0) {
+      setError('Enter a valid member ID')
+      return
+    }
+
+    setError('')
+    setLoading(true)
+
+    try {
+      const data = await getOutstandingDues(memberId, token)
+      setMemberOutstandingDues(data)
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to load outstanding dues',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handlePayMemberDue(event: FormEvent) {
+    event.preventDefault()
+
+    if (!token) {
+      setError('You are not authenticated')
+      return
+    }
+
+    const dueId = Number(duePaymentId)
+    const amount = Number(duePaymentAmount)
+
+    if (!Number.isInteger(dueId) || dueId <= 0) {
+      setError('Enter a valid due ID')
+      return
+    }
+
+    if (!Number.isInteger(amount) || amount <= 0) {
+      setError('Payment amount must be a positive whole number')
+      return
+    }
+
+    setError('')
+    setLoading(true)
+
+    try {
+      const data = await payMemberDue(dueId, amount, token)
+      setPaidMemberDue(data)
+      setDuePaymentAmount('')
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to pay member due',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleCreateCommittee(event: FormEvent) {
     event.preventDefault()
 
@@ -1233,70 +1480,132 @@ function App() {
   if (!token) {
     return (
       <main className="login-page">
-        <section className="login-card">
-          <div className="brand-mark">DC</div>
+        <section className="login-layout">
+          <div className="login-intro">
+            <div className="login-intro-glow" />
 
-          <p className="eyebrow">MUTUAL SUPPORT MANAGEMENT</p>
-          <h1>Death Committee System</h1>
-          <p className="login-description">
-            Sign in to manage committees, members, contributions, support,
-            assets and settlements.
-          </p>
+            <div className="login-brand">
+              <div className="brand-mark">DC</div>
+              <span>Death Committee System</span>
+            </div>
 
-          <form onSubmit={handleLogin} className="login-form">
-            <label>
-              Username
-              <input
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                autoComplete="username"
-                required
-              />
-            </label>
+            <div className="login-intro-content">
+              <p className="eyebrow">MUTUAL SUPPORT MANAGEMENT</p>
 
-            <label>
-              Password
-              <div className="password-field">
+              <h1>Manage your committee with clarity.</h1>
+
+              <p className="login-intro-description">
+                Keep members, contributions, support, dues, assets, and
+                settlements organized in one place.
+              </p>
+
+              <div className="login-benefits">
+                <div className="login-benefit">
+                  <span className="login-benefit-icon">01</span>
+                  <div>
+                    <strong>Member records</strong>
+                    <p>Keep member balances and activity organized.</p>
+                  </div>
+                </div>
+
+                <div className="login-benefit">
+                  <span className="login-benefit-icon">02</span>
+                  <div>
+                    <strong>Financial tracking</strong>
+                    <p>Record contributions, support, dues, and assets.</p>
+                  </div>
+                </div>
+
+                <div className="login-benefit">
+                  <span className="login-benefit-icon">03</span>
+                  <div>
+                    <strong>Clear settlements</strong>
+                    <p>Review each member's financial position clearly.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="login-intro-footer">
+              <span className="login-footer-dot" />
+              <span>Simple records. Clear financial oversight.</span>
+            </div>
+          </div>
+
+          <div className="login-panel">
+            <div className="login-panel-header">
+              <span className="login-panel-label">ADMINISTRATOR</span>
+              <h2>Sign in</h2>
+              <p>
+                Access your committee records and financial information.
+              </p>
+            </div>
+            <form onSubmit={handleLogin} className="login-form">
+              <label>
+                <span>Username</span>
                 <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  autoComplete="current-password"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  autoComplete="username"
+                  placeholder="Enter your username"
                   required
                 />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword((value) => !value)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  title={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? (
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path
-                        d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
-                      />
-                      <circle cx="12" cy="12" r="2.8" />
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M3 3l18 18" />
-                      <path
-                        d="M10.6 6.2A10.5 10.5 0 0 1 12 6c6 0 9.5 6 9.5 6a18.7 18.7 0 0 1-3.1 3.9M6.2 6.8C3.8 8.4 2.5 12 2.5 12s3.5 6 9.5 6c1.4 0 2.7-.3 3.8-.8"
-                      />
-                      <path d="M9.9 9.9a2.8 2.8 0 0 0 4.2 4.2" />
-                    </svg>
-                  )}
-                </button>
+              </label>
+
+              <label>
+                <span>Password</span>
+                <div className="password-field">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="current-password"
+                    placeholder="Enter your password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword((value) => !value)}
+                    aria-label={
+                      showPassword ? 'Hide password' : 'Show password'
+                    }
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+                        />
+                        <circle cx="12" cy="12" r="2.8" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3 3l18 18" />
+                        <path
+                          d="M10.6 6.2A10.5 10.5 0 0 1 12 6c6 0 9.5 6 9.5 6a18.7 18.7 0 0 1-3.1 3.9M6.2 6.8C3.8 8.4 2.5 12 2.5 12s3.5 6 9.5 6c1.4 0 2.7-.3 3.8-.8"
+                        />
+                        <path d="M9.9 9.9a2.8 2.8 0 0 0 4.2 4.2" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </label>
+
+              {error && <div className="error">{error}</div>}
+
+              <button type="submit" disabled={loading}>
+                {loading ? 'Signing in...' : 'Sign in'}
+              </button>
+            </form>
+
+            <div className="login-security-note">
+              <span className="security-icon">✓</span>
+              <div>
+                <strong>Secure administrator access</strong>
+                <p>Your committee records are available after sign in.</p>
               </div>
-            </label>
-
-            {error && <div className="error">{error}</div>}
-
-            <button type="submit" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </form>
+            </div>
+          </div>
         </section>
       </main>
     )
@@ -2660,6 +2969,320 @@ function App() {
                     </p>
                   </div>
 
+                  <span className="active-badge">Updated</span>
+                </section>
+              )}
+
+            </section>
+          ) : activePage === 'Dues' ? (
+            <section className="module-content">
+
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">MEMBER DUES</p>
+                  <h1>Member Dues</h1>
+                  <p>
+                    Record member obligations, monitor outstanding balances,
+                    and apply payments against individual dues.
+                  </p>
+                </div>
+              </div>
+
+              <section className="information-card">
+                <div>
+                  <p className="eyebrow">NEW DUE</p>
+                  <h3>Create member due</h3>
+                  <p className="form-help">
+                    Record an amount owed by a member with its due date and supporting details.
+                  </p>
+                </div>
+
+                <form
+                  className="committee-create-form"
+                  onSubmit={handleCreateMemberDue}
+                >
+                  <div className="rate-form-grid">
+                    <label>
+                      Member ID
+                      <input
+                        type="number"
+                        min="1"
+                        value={dueMemberId}
+                        onChange={(event) => setDueMemberId(event.target.value)}
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      Amount
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={dueAmount}
+                        onChange={(event) => setDueAmount(event.target.value)}
+                        placeholder="e.g. 5000"
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      Due date
+                      <input
+                        type="date"
+                        value={dueDate}
+                        onChange={(event) => setDueDate(event.target.value)}
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      Reference
+                      <input
+                        type="text"
+                        value={dueReference}
+                        onChange={(event) => setDueReference(event.target.value)}
+                        placeholder="Optional reference"
+                      />
+                    </label>
+                  </div>
+
+                  <label>
+                    Description
+                    <textarea
+                      value={dueDescription}
+                      onChange={(event) => setDueDescription(event.target.value)}
+                      placeholder="Reason or description for this due"
+                      rows={3}
+                      required
+                    />
+                  </label>
+
+                  <button type="submit" disabled={loading}>
+                    {loading ? 'Recording...' : 'Record Due'}
+                  </button>
+                </form>
+              </section>
+
+              {createdMemberDue && (
+                <section className="committee-banner">
+                  <div>
+                    <p className="eyebrow">DUE RECORDED</p>
+                    <h3>Member due recorded</h3>
+                    <p className="created-id">
+                      Due ID: {createdMemberDue.id}
+                      {' · '}
+                      Member ID: {createdMemberDue.member_id ?? dueMemberId}
+                    </p>
+                    <p className="created-id">
+                      Amount:{' '}
+                      {formatPKR(
+                        createdMemberDue.amount ?? Number(dueAmount),
+                      )}
+                      {' · '}
+                      Outstanding:{' '}
+                      {formatPKR(
+                        createdMemberDue.outstanding_amount ??
+                          createdMemberDue.amount ??
+                          Number(dueAmount),
+                      )}
+                    </p>
+                  </div>
+                  <span className="active-badge">Recorded</span>
+                </section>
+              )}
+
+              <section className="information-card">
+                <div>
+                  <p className="eyebrow">DUE HISTORY</p>
+                  <h3>View member dues</h3>
+                  <p className="form-help">
+                    Load all recorded dues for a member.
+                  </p>
+                </div>
+
+                <form
+                  className="committee-create-form"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    void handleLoadMemberDues()
+                  }}
+                >
+                  <label>
+                    Member ID
+                    <input
+                      type="number"
+                      min="1"
+                      value={duesListMemberId}
+                      onChange={(event) =>
+                        setDuesListMemberId(event.target.value)
+                      }
+                      required
+                    />
+                  </label>
+
+                  <button type="submit" disabled={loading}>
+                    {loading ? 'Loading...' : 'Load Dues'}
+                  </button>
+                </form>
+              </section>
+
+              {memberDues.length > 0 && (
+                <section className="information-card">
+                  <p className="eyebrow">RECORDED DUES</p>
+                  <h3>Member due history</h3>
+
+                  {memberDues.map((due) => (
+                    <div className="position-row" key={due.id}>
+                      <div>
+                        <strong>{due.description || 'Member due'}</strong>
+                        <small>
+                          Due ID: {due.id}
+                          {' · '}
+                          Due date: {due.due_date}
+                          {due.reference
+                            ? ` · Reference: ${due.reference}`
+                            : ''}
+                        </small>
+                      </div>
+
+                      <div>
+                        <strong>
+                          {formatPKR(due.outstanding_amount ?? 0)}
+                        </strong>
+                        <small>
+                          Outstanding
+                          {' · '}
+                          Paid: {formatPKR(due.paid_amount ?? 0)}
+                          {' · '}
+                          Total: {formatPKR(due.amount ?? 0)}
+                        </small>
+                      </div>
+                    </div>
+                  ))}
+                </section>
+              )}
+
+              <section className="information-card">
+                <div>
+                  <p className="eyebrow">OUTSTANDING BALANCE</p>
+                  <h3>View outstanding dues</h3>
+                  <p className="form-help">
+                    Check the total amount currently outstanding for a member.
+                  </p>
+                </div>
+
+                <form
+                  className="committee-create-form"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    void handleLoadOutstandingDues()
+                  }}
+                >
+                  <label>
+                    Member ID
+                    <input
+                      type="number"
+                      min="1"
+                      value={outstandingDuesMemberId}
+                      onChange={(event) =>
+                        setOutstandingDuesMemberId(event.target.value)
+                      }
+                      required
+                    />
+                  </label>
+
+                  <button type="submit" disabled={loading}>
+                    {loading ? 'Loading...' : 'Check Outstanding'}
+                  </button>
+                </form>
+              </section>
+
+              {memberOutstandingDues && (
+                <section className="committee-banner">
+                  <div>
+                    <p className="eyebrow">OUTSTANDING DUES</p>
+                    <h3>
+                      {formatPKR(
+                        memberOutstandingDues.outstanding_dues ?? 0,
+                      )}
+                    </h3>
+                    <p className="created-id">
+                      Member ID:{' '}
+                      {memberOutstandingDues.member_id ??
+                        outstandingDuesMemberId}
+                    </p>
+                  </div>
+                  <span className="active-badge">Current</span>
+                </section>
+              )}
+
+              <section className="information-card">
+                <div>
+                  <p className="eyebrow">PAYMENT</p>
+                  <h3>Pay member due</h3>
+                  <p className="form-help">
+                    Apply a full or partial payment to a specific due.
+                  </p>
+                </div>
+
+                <form
+                  className="committee-create-form"
+                  onSubmit={handlePayMemberDue}
+                >
+                  <div className="rate-form-grid">
+                    <label>
+                      Due ID
+                      <input
+                        type="number"
+                        min="1"
+                        value={duePaymentId}
+                        onChange={(event) =>
+                          setDuePaymentId(event.target.value)
+                        }
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      Payment amount
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={duePaymentAmount}
+                        onChange={(event) =>
+                          setDuePaymentAmount(event.target.value)
+                        }
+                        placeholder="e.g. 2500"
+                        required
+                      />
+                    </label>
+                  </div>
+
+                  <button type="submit" disabled={loading}>
+                    {loading ? 'Processing...' : 'Record Payment'}
+                  </button>
+                </form>
+              </section>
+
+              {paidMemberDue && (
+                <section className="committee-banner">
+                  <div>
+                    <p className="eyebrow">PAYMENT RECORDED</p>
+                    <h3>Due payment recorded</h3>
+                    <p className="created-id">
+                      Due ID: {paidMemberDue.id ?? duePaymentId}
+                      {' · '}
+                      Member ID: {paidMemberDue.member_id ?? '—'}
+                    </p>
+                    <p className="created-id">
+                      Paid: {formatPKR(paidMemberDue.paid_amount ?? 0)}
+                      {' · '}
+                      Remaining:{' '}
+                      {formatPKR(paidMemberDue.outstanding_amount ?? 0)}
+                    </p>
+                  </div>
                   <span className="active-badge">Updated</span>
                 </section>
               )}
