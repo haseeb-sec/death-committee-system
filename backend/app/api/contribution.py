@@ -15,6 +15,7 @@ from app.models import ContributionRate
 from app.services.accounting import AccountingError
 from app.services.contribution import record_contribution
 from app.services.audit import record_audit
+from app.services.access_control import require_committee_access, require_member_access
 
 
 router = APIRouter(
@@ -33,6 +34,12 @@ def create_contribution_rate(
     current_user = Depends(require_admin),
 ):
     try:
+        require_committee_access(
+            db,
+            user=current_user,
+            committee_id=committee_id,
+        )
+
         rate = ContributionRate(
             committee_id=committee_id,
             amount=data.amount,
@@ -82,6 +89,18 @@ def create_contribution(
     db: Session = Depends(get_db),
     current_user = Depends(require_admin),
 ):
+    try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+    except AccountingError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     try:
         entry = record_contribution(
             db,

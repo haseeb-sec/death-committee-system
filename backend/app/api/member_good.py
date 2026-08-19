@@ -20,6 +20,10 @@ from app.services.member_good import (
     update_member_good_value,
 )
 from app.services.audit import record_audit
+from app.services.access_control import (
+    require_member_access,
+    require_member_good_access,
+)
 
 
 router = APIRouter(
@@ -39,6 +43,12 @@ def create_member_good(
     current_user = Depends(require_admin),
 ):
     try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+
         good = add_member_good(
             db,
             member_id=member_id,
@@ -104,6 +114,12 @@ def list_member_goods(
     current_user = Depends(require_authenticated),
 ):
     try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+
         goods = get_member_goods(
             db,
             member_id=member_id,
@@ -140,6 +156,12 @@ def member_goods_total(
     current_user = Depends(require_authenticated),
 ):
     try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+
         total = get_member_goods_total(
             db,
             member_id=member_id,
@@ -168,6 +190,23 @@ def good_valuations(
     current_user = Depends(require_authenticated),
 ):
     try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+
+        good_access = require_member_good_access(
+            db,
+            user=current_user,
+            good_id=good_id,
+        )
+
+        if good_access.member_id != member_id:
+            raise AccountingError(
+                f"Member good not found: {good_id}"
+            )
+
         goods = get_member_goods(
             db,
             member_id=member_id,
@@ -216,6 +255,18 @@ def update_good_value(
     current_user = Depends(require_admin),
 ):
     try:
+        try:
+            require_member_good_access(
+                db,
+                user=current_user,
+                good_id=good_id,
+            )
+        except AccountingError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
+
         good = update_member_good_value(
             db,
             good_id=good_id,

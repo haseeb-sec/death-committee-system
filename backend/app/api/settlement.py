@@ -5,21 +5,67 @@ from app.api.dependencies import get_db
 from app.api.permissions import require_admin
 from app.schemas.settlement import (
     SettlementCreate,
+    SettlementPreviewResponse,
     SettlementResponse,
 )
-from app.api.permissions import require_admin
 from app.services.accounting import AccountingError
 from app.services.member_settlement import (
+    get_member_settlement,
     pay_member_settlement,
     settle_member,
 )
 from app.services.audit import record_audit
+from app.services.access_control import require_member_access
+from app.models import MemberSettlement
 
 
 router = APIRouter(
     prefix="/members",
     tags=["Settlements"],
 )
+
+
+@router.get(
+    "/{member_id}/settlement",
+    response_model=SettlementPreviewResponse,
+)
+def preview_member_settlement(
+    member_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin),
+):
+    try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+    except AccountingError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    try:
+        settlement = get_member_settlement(
+            db,
+            member_id=member_id,
+        )
+
+        return {
+            "member_id": settlement["member_id"],
+            "contribution_balance": settlement["contribution_balance"],
+            "asset_share": settlement["asset_share"],
+            "goods_value": settlement["goods_value"],
+            "outstanding_dues": settlement["outstanding_dues"],
+            "gross_amount": settlement["gross_amount"],
+            "final_amount": settlement["final_amount"],
+        }
+    except AccountingError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
 
 
 @router.post(
@@ -32,6 +78,18 @@ def create_member_settlement(
     db: Session = Depends(get_db),
     current_user = Depends(require_admin),
 ):
+    try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+    except AccountingError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     try:
         settlement = settle_member(
             db,
@@ -85,6 +143,24 @@ def pay_member_settlement_api(
     current_user = Depends(require_admin),
 ):
     try:
+        settlement = db.get(MemberSettlement, settlement_id)
+        if settlement is None:
+            raise AccountingError(
+                f"Settlement not found: {settlement_id}"
+            )
+
+        try:
+            require_member_access(
+                db,
+                user=current_user,
+                member_id=settlement.member_id,
+            )
+        except AccountingError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
+
         settlement = pay_member_settlement(
             db,
             settlement_id=settlement_id,

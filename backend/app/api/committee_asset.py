@@ -19,6 +19,7 @@ from app.services.committee_asset import (
     update_asset_value,
 )
 from app.services.audit import record_audit
+from app.services.access_control import require_asset_access, require_committee_access
 
 
 router = APIRouter(
@@ -37,6 +38,18 @@ def create_committee_asset(
     db: Session = Depends(get_db),
     current_user = Depends(require_admin),
 ):
+    try:
+        require_committee_access(
+            db,
+            user=current_user,
+            committee_id=committee_id,
+        )
+    except AccountingError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     try:
         asset = add_committee_asset(
             db,
@@ -103,6 +116,18 @@ def update_committee_asset_value(
     current_user = Depends(require_admin),
 ):
     try:
+        require_asset_access(
+            db,
+            user=current_user,
+            asset_id=asset_id,
+        )
+    except AccountingError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    try:
         asset = update_asset_value(
             db,
             asset_id=asset_id,
@@ -153,6 +178,12 @@ def committee_asset_valuations(
     current_user = Depends(require_authenticated),
 ):
     try:
+        require_asset_access(
+            db,
+            user=current_user,
+            asset_id=asset_id,
+        )
+
         valuations = get_asset_valuations(
             db,
             asset_id=asset_id,
@@ -185,6 +216,12 @@ def committee_asset_participation(
     current_user = Depends(require_authenticated),
 ):
     try:
+        require_asset_access(
+            db,
+            user=current_user,
+            asset_id=asset_id,
+        )
+
         participation = get_asset_participation(
             db,
             asset_id=asset_id,

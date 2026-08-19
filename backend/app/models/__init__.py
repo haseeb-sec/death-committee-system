@@ -34,6 +34,9 @@ __all__ = [
     "User",
     "UserRole",
     "AuditLog",
+    "UserCommitteeAccess",
     ]
 from .user import User, UserRole
 from .audit_log import AuditLog
+
+from .user_committee_access import UserCommitteeAccess

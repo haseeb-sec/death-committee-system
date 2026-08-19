@@ -80,8 +80,8 @@ def test_death_support_settlement_financial_integrity(db):
     )
     db.flush()
 
-    assert member.is_active is False
-    assert member.left_on == date(2026, 8, 17)
+    assert member.is_active is True
+    assert member.left_on is None
 
     assert get_member_balance(
         db,

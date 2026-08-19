@@ -20,6 +20,7 @@ from app.services.member_statement import (
     get_member_statement,
 )
 from app.services.audit import record_audit
+from app.services.access_control import require_committee_access, require_member_access
 
 
 router = APIRouter(
@@ -35,6 +36,12 @@ def create_member_api(
     current_user = Depends(require_admin),
 ):
     try:
+        require_committee_access(
+            db,
+            user=current_user,
+            committee_id=data.committee_id,
+        )
+
         member = add_member(
             db,
             committee_id=data.committee_id,
@@ -81,6 +88,12 @@ def leave_member_api(
     current_user = Depends(require_admin),
 ):
     try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+
         member = leave_member(
             db,
             member_id=member_id,
@@ -126,6 +139,12 @@ def member_financial_summary(
     current_user = Depends(require_authenticated),
 ):
     try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+
         return get_member_financial_summary(
             db,
             member_id=member_id,
@@ -147,6 +166,12 @@ def member_statement(
     current_user = Depends(require_authenticated),
 ):
     try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+
         return get_member_statement(
             db,
             member_id=member_id,

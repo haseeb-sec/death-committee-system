@@ -15,6 +15,7 @@ from app.services.death_support import (
     record_death_support,
 )
 from app.services.audit import record_audit
+from app.services.access_control import require_member_access
 
 
 router = APIRouter(
@@ -47,6 +48,18 @@ def create_death_support(
     db: Session = Depends(get_db),
     current_user = Depends(require_admin),
 ):
+    try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+    except AccountingError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     try:
         support = record_death_support(
             db,
@@ -92,6 +105,12 @@ def get_death_support(
     current_user = Depends(require_authenticated),
 ):
     try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+
         support = get_member_death_support(
             db,
             member_id=member_id,
@@ -116,6 +135,12 @@ def get_death_support_status(
     current_user = Depends(require_authenticated),
 ):
     try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+
         support = get_member_death_support(
             db,
             member_id=member_id,

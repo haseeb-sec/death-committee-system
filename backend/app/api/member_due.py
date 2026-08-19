@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.models import MemberDue
 from app.schemas.member_due import (
     MemberDueCreate,
     MemberDuePayment,
@@ -18,6 +19,7 @@ from app.services.member_due import (
     pay_member_due,
 )
 from app.services.audit import record_audit
+from app.services.access_control import require_member_access
 
 
 router = APIRouter(
@@ -37,6 +39,12 @@ def create_member_due(
     current_user = Depends(require_admin),
 ):
     try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+
         due = add_member_due(
             db,
             member_id=member_id,
@@ -93,6 +101,12 @@ def list_member_dues(
     current_user = Depends(require_authenticated),
 ):
     try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+
         dues = get_member_dues(
             db,
             member_id=member_id,
@@ -132,6 +146,12 @@ def member_outstanding_dues(
     current_user = Depends(require_authenticated),
 ):
     try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+
         outstanding = get_outstanding_dues(
             db,
             member_id=member_id,
@@ -160,6 +180,25 @@ def pay_member_due_api(
     current_user = Depends(require_admin),
 ):
     try:
+        due = db.get(MemberDue, due_id)
+        if due is None:
+            raise AccountingError(
+                f"Member due not found: {due_id}"
+            )
+
+        try:
+            require_member_access(
+                db,
+                user=current_user,
+                member_id=due.member_id,
+            )
+        except AccountingError as exc:
+            db.rollback()
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
+
         due = pay_member_due(
             db,
             due_id=due_id,

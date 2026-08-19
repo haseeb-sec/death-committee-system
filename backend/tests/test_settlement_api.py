@@ -5,7 +5,15 @@ from fastapi.testclient import TestClient
 from app.api.dependencies import get_db
 from app.api.auth import get_current_user
 from app.main import app
-from app.models import Account, AccountType, Committee, ContributionRate, User
+from app.models import (
+    Account,
+    AccountType,
+    Committee,
+    ContributionRate,
+    User,
+    UserCommitteeAccess,
+    UserRole,
+)
 
 
 def test_create_settlement_api(db):
@@ -73,19 +81,32 @@ def test_create_settlement_api(db):
 
     db.commit()
 
+    test_user = User(
+        username="test_admin",
+        password_hash="unused",
+        role=UserRole.ADMIN.value,
+        is_active=True,
+    )
+    db.add(test_user)
+    db.flush()
+
+    db.add(
+        UserCommitteeAccess(
+            user_id=test_user.id,
+            committee_id=committee.id,
+            granted_by_user_id=test_user.id,
+            is_active=True,
+        )
+    )
+    db.commit()
+
     def override_get_db():
         yield db
 
     app.dependency_overrides[get_db] = override_get_db
 
     def override_get_current_user():
-        return User(
-            id=1,
-            username="test_admin",
-            password_hash="unused",
-            role="admin",
-            is_active=True,
-        )
+        return test_user
 
     app.dependency_overrides[get_current_user] = override_get_current_user
 
@@ -191,19 +212,32 @@ def test_pay_settlement_api(db):
 
     db.commit()
 
+    test_user = User(
+        username="test_admin",
+        password_hash="unused",
+        role=UserRole.ADMIN.value,
+        is_active=True,
+    )
+    db.add(test_user)
+    db.flush()
+
+    db.add(
+        UserCommitteeAccess(
+            user_id=test_user.id,
+            committee_id=committee.id,
+            granted_by_user_id=test_user.id,
+            is_active=True,
+        )
+    )
+    db.commit()
+
     def override_get_db():
         yield db
 
     app.dependency_overrides[get_db] = override_get_db
 
     def override_get_current_user():
-        return User(
-            id=1,
-            username="test_admin",
-            password_hash="unused",
-            role="admin",
-            is_active=True,
-        )
+        return test_user
 
     app.dependency_overrides[get_current_user] = override_get_current_user
 

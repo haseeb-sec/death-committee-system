@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from app.api.auth import get_current_user
 from app.api.dependencies import get_db
 from app.main import app
-from app.models import ContributionRate, User
+from app.models import ContributionRate, User, UserCommitteeAccess
 from app.services.committee import create_committee
 from app.services.contribution import record_contribution
 from app.services.member import add_member
@@ -52,19 +52,33 @@ def test_committee_asset_api_lifecycle(db):
 
     db.commit()
 
+    test_user = User(
+        id=1,
+        username="test_admin",
+        password_hash="unused",
+        role="admin",
+        is_active=True,
+    )
+    db.add(test_user)
+    db.flush()
+
+    db.add(
+        UserCommitteeAccess(
+            user_id=test_user.id,
+            committee_id=committee.id,
+            granted_by_user_id=test_user.id,
+            is_active=True,
+        )
+    )
+    db.commit()
+
     def override_get_db():
         yield db
 
     app.dependency_overrides[get_db] = override_get_db
 
     def override_get_current_user():
-        return User(
-            id=1,
-            username="test_admin",
-            password_hash="unused",
-            role="admin",
-            is_active=True,
-        )
+        return test_user
 
     app.dependency_overrides[get_current_user] = override_get_current_user
 

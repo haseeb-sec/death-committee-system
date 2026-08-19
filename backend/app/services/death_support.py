@@ -181,12 +181,6 @@ def record_death_support(
             )
         )
 
-    # Recording death support marks the member as deceased/inactive.
-    member.is_active = False
-
-    if member.left_on is None:
-        member.left_on = support_date
-
     db.flush()
 
     return support
