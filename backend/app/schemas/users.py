@@ -14,3 +14,14 @@ class UserResponse(BaseModel):
     username: str
     role: str
     is_active: bool
+
+
+class CommitteeAccessCreate(BaseModel):
+    user_id: int
+
+
+class CommitteeAccessResponse(BaseModel):
+    id: int
+    user_id: int
+    committee_id: int
+    is_active: bool

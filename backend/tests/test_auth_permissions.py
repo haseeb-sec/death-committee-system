@@ -1385,3 +1385,313 @@ def test_user_cannot_pay_settlement_from_another_committee(db):
 
     finally:
         app.dependency_overrides.clear()
+
+
+def test_super_admin_can_grant_committee_access(db):
+    super_admin = make_user(
+        db,
+        "grant_super_admin",
+        "super-password",
+        UserRole.SUPER_ADMIN.value,
+    )
+    target_user = make_user(
+        db,
+        "grant_target",
+        "target-password",
+        UserRole.VIEWER.value,
+    )
+
+    committee = Committee(
+        name="Grant Access Committee",
+        is_active=True,
+    )
+    db.add(committee)
+    db.commit()
+    db.refresh(committee)
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        response = login(
+            client,
+            "grant_super_admin",
+            "super-password",
+        )
+
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+
+        response = client.post(
+            f"/users/{target_user.id}/committees/{committee.id}/access",
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
+            json={
+                "user_id": target_user.id,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["user_id"] == target_user.id
+        assert data["committee_id"] == committee.id
+        assert data["is_active"] is True
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_admin_cannot_grant_committee_access(db):
+    admin = make_user(
+        db,
+        "grant_admin",
+        "admin-password",
+        UserRole.ADMIN.value,
+    )
+    target_user = make_user(
+        db,
+        "grant_admin_target",
+        "target-password",
+        UserRole.VIEWER.value,
+    )
+
+    committee = Committee(
+        name="Admin Grant Committee",
+        is_active=True,
+    )
+    db.add(committee)
+    db.commit()
+    db.refresh(committee)
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        response = login(
+            client,
+            "grant_admin",
+            "admin-password",
+        )
+
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+
+        response = client.post(
+            f"/users/{target_user.id}/committees/{committee.id}/access",
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
+            json={
+                "user_id": target_user.id,
+            },
+        )
+
+        assert response.status_code == 403
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_super_admin_can_read_committee_access(db):
+    super_admin = make_user(
+        db,
+        "read_access_super_admin",
+        "super-password",
+        UserRole.SUPER_ADMIN.value,
+    )
+    target_user = make_user(
+        db,
+        "read_access_target",
+        "target-password",
+        UserRole.VIEWER.value,
+    )
+
+    committee = Committee(
+        name="Read Access Committee",
+        is_active=True,
+    )
+    db.add(committee)
+    db.commit()
+    db.refresh(committee)
+
+    from app.models import UserCommitteeAccess
+
+    access = UserCommitteeAccess(
+        user_id=target_user.id,
+        committee_id=committee.id,
+        granted_by_user_id=super_admin.id,
+        is_active=True,
+    )
+    db.add(access)
+    db.commit()
+    db.refresh(access)
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        response = login(
+            client,
+            "read_access_super_admin",
+            "super-password",
+        )
+
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+
+        response = client.get(
+            f"/users/{target_user.id}/committees/{committee.id}/access",
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["id"] == access.id
+        assert data["user_id"] == target_user.id
+        assert data["committee_id"] == committee.id
+        assert data["is_active"] is True
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_super_admin_can_deactivate_committee_access(db):
+    super_admin = make_user(
+        db,
+        "deactivate_super_admin",
+        "super-password",
+        UserRole.SUPER_ADMIN.value,
+    )
+    target_user = make_user(
+        db,
+        "deactivate_target",
+        "target-password",
+        UserRole.VIEWER.value,
+    )
+
+    committee = Committee(
+        name="Deactivate Access Committee",
+        is_active=True,
+    )
+    db.add(committee)
+    db.commit()
+    db.refresh(committee)
+
+    from app.models import UserCommitteeAccess
+
+    access = UserCommitteeAccess(
+        user_id=target_user.id,
+        committee_id=committee.id,
+        granted_by_user_id=super_admin.id,
+        is_active=True,
+    )
+    db.add(access)
+    db.commit()
+    db.refresh(access)
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        response = login(
+            client,
+            "deactivate_super_admin",
+            "super-password",
+        )
+
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+
+        response = client.patch(
+            f"/users/{target_user.id}/committees/{committee.id}/access/deactivate",
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["id"] == access.id
+        assert data["user_id"] == target_user.id
+        assert data["committee_id"] == committee.id
+        assert data["is_active"] is False
+
+        db.refresh(access)
+        assert access.is_active is False
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_admin_cannot_deactivate_committee_access(db):
+    admin = make_user(
+        db,
+        "deactivate_admin",
+        "admin-password",
+        UserRole.ADMIN.value,
+    )
+    target_user = make_user(
+        db,
+        "deactivate_admin_target",
+        "target-password",
+        UserRole.VIEWER.value,
+    )
+
+    committee = Committee(
+        name="Admin Deactivate Committee",
+        is_active=True,
+    )
+    db.add(committee)
+    db.commit()
+    db.refresh(committee)
+
+    from app.models import UserCommitteeAccess
+
+    access = UserCommitteeAccess(
+        user_id=target_user.id,
+        committee_id=committee.id,
+        granted_by_user_id=admin.id,
+        is_active=True,
+    )
+    db.add(access)
+    db.commit()
+    db.refresh(access)
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        response = login(
+            client,
+            "deactivate_admin",
+            "admin-password",
+        )
+
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+
+        response = client.patch(
+            f"/users/{target_user.id}/committees/{committee.id}/access/deactivate",
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
+        )
+
+        assert response.status_code == 403
+
+        db.refresh(access)
+        assert access.is_active is True
+
+    finally:
+        app.dependency_overrides.clear()

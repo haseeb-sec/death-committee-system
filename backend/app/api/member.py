@@ -12,7 +12,7 @@ from app.schemas.member import (
 )
 from app.api.permissions import require_admin, require_authenticated
 from app.services.accounting import AccountingError
-from app.services.member import add_member, leave_member
+from app.services.member import add_member, leave_member, list_members
 from app.services.member_financial import (
     get_member_financial_summary,
 )
@@ -75,6 +75,24 @@ def create_member_api(
             status_code=400,
             detail=str(exc),
         ) from exc
+
+
+@router.get("", response_model=list[MemberResponse])
+def list_members_api(
+    committee_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_authenticated),
+):
+    require_committee_access(
+        db,
+        user=current_user,
+        committee_id=committee_id,
+    )
+
+    return list_members(
+        db,
+        committee_id=committee_id,
+    )
 
 
 @router.post(

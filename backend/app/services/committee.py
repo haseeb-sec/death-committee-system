@@ -1,6 +1,12 @@
 from sqlalchemy.orm import Session
 
-from app.models import Account, AccountType, Committee
+from app.models import (
+    Account,
+    AccountType,
+    Committee,
+    UserCommitteeAccess,
+    UserRole,
+)
 from app.services.accounting import AccountingError
 
 
@@ -62,6 +68,41 @@ def create_committee(
     db.flush()
 
     return committee
+
+
+def list_committees(
+    db: Session,
+    *,
+    user,
+) -> list[Committee]:
+    """
+    Return active committees accessible to the authenticated user.
+
+    Super administrators can access every active committee.
+    Other users can access only committees explicitly granted
+    through UserCommitteeAccess.
+    """
+
+    query = (
+        db.query(Committee)
+        .filter(Committee.is_active.is_(True))
+        .order_by(Committee.id)
+    )
+
+    if user.role == UserRole.SUPER_ADMIN.value:
+        return query.all()
+
+    return (
+        query.join(
+            UserCommitteeAccess,
+            UserCommitteeAccess.committee_id == Committee.id,
+        )
+        .filter(
+            UserCommitteeAccess.user_id == user.id,
+            UserCommitteeAccess.is_active.is_(True),
+        )
+        .all()
+    )
 
 
 def close_committee(

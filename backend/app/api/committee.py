@@ -13,7 +13,11 @@ from app.schemas.committee import (
 from app.api.dependencies import get_db
 from app.api.permissions import require_admin, require_authenticated
 from app.services.accounting import AccountingError
-from app.services.committee import create_committee, close_committee
+from app.services.committee import (
+    create_committee,
+    close_committee,
+    list_committees,
+)
 from app.services.committee_financial import (
     get_committee_financial_position,
 )
@@ -85,6 +89,20 @@ def create_committee_api(
             status_code=400,
             detail=str(exc),
         ) from exc
+
+
+@router.get(
+    "",
+    response_model=list[CommitteeResponse],
+)
+def list_committees_api(
+    db: Session = Depends(get_db),
+    current_user = Depends(require_authenticated),
+):
+    return list_committees(
+        db,
+        user=current_user,
+    )
 
 
 @router.post(

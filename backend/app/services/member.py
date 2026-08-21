@@ -59,6 +59,21 @@ def add_member(
     return member
 
 
+def list_members(
+    db: Session,
+    *,
+    committee_id: int,
+) -> list[Member]:
+    """Return all members belonging to a committee."""
+
+    return (
+        db.query(Member)
+        .filter(Member.committee_id == committee_id)
+        .order_by(Member.id)
+        .all()
+    )
+
+
 def leave_member(
     db: Session,
     *,

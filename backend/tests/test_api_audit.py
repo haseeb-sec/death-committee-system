@@ -147,3 +147,115 @@ def test_admin_can_close_committee_and_audit_it(db):
 
     finally:
         app.dependency_overrides.clear()
+
+def test_admin_can_create_death_support_and_receive_full_response(db):
+    from datetime import date
+
+    from app.api.dependencies import get_db
+    from app.models import Committee, ContributionRate, UserRole
+    from app.services.committee import create_committee
+    from app.services.contribution import record_contribution
+    from app.services.member import add_member
+
+    admin = User(
+        username="death_support_api_admin",
+        password_hash=hash_password("death-support-api-password"),
+        role=UserRole.ADMIN.value,
+        is_active=True,
+    )
+
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+
+    committee = create_committee(
+        db,
+        name="Death Support API Committee",
+    )
+    db.flush()
+
+    from app.models import UserCommitteeAccess
+
+    db.add(
+        UserCommitteeAccess(
+            user_id=admin.id,
+            committee_id=committee.id,
+            granted_by_user_id=admin.id,
+            is_active=True,
+        )
+    )
+    db.flush()
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Death Support API Member",
+        joined_on=date(2026, 8, 17),
+    )
+    db.flush()
+
+    rate = ContributionRate(
+        committee_id=committee.id,
+        amount=70000,
+        effective_from=date(2026, 8, 17),
+    )
+    db.add(rate)
+    db.flush()
+
+    record_contribution(
+        db,
+        member_id=member.id,
+        contribution_date=date(2026, 8, 17),
+        reference="API-DEATH-SUPPORT-CONTRIBUTION",
+    )
+    db.commit()
+
+    def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    try:
+        client = TestClient(app)
+
+        login_response = client.post(
+            "/auth/login",
+            data={
+                "username": "death_support_api_admin",
+                "password": "death-support-api-password",
+            },
+        )
+
+        assert login_response.status_code == 200
+
+        token = login_response.json()["access_token"]
+
+        response = client.post(
+            f"/members/{member.id}/death-support",
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
+            json={
+                "beneficiary_name": "API Test Beneficiary",
+                "amount": 20000,
+                "support_date": "2026-08-17",
+                "reference": "API-DEATH-SUPPORT",
+            },
+        )
+
+        assert response.status_code == 200
+
+        data = response.json()
+
+        assert data["id"] > 0
+        assert data["committee_id"] == committee.id
+        assert data["member_id"] == member.id
+        assert data["beneficiary_name"] == "API Test Beneficiary"
+        assert data["amount"] == 20000
+        assert data["member_funded_amount"] == 20000
+        assert data["qarz_e_hasana_amount"] == 0
+        assert data["support_date"] == "2026-08-17"
+        assert data["reference"] == "API-DEATH-SUPPORT"
+
+    finally:
+        app.dependency_overrides.clear()

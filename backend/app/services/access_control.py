@@ -161,3 +161,45 @@ def require_asset_participation_access(
     )
 
     return participation
+
+
+def grant_committee_access(
+    db: Session,
+    *,
+    user: User,
+    committee_id: int,
+    granted_by_user: User,
+) -> UserCommitteeAccess:
+    require_committee_access(
+        db,
+        user=granted_by_user,
+        committee_id=committee_id,
+    )
+
+    target_user = db.get(User, user.id)
+    if target_user is None or not target_user.is_active:
+        raise AccountingError(f"User not found or inactive: {user.id}")
+
+    access = (
+        db.query(UserCommitteeAccess)
+        .filter(
+            UserCommitteeAccess.user_id == user.id,
+            UserCommitteeAccess.committee_id == committee_id,
+        )
+        .first()
+    )
+
+    if access is None:
+        access = UserCommitteeAccess(
+            user_id=user.id,
+            committee_id=committee_id,
+            granted_by_user_id=granted_by_user.id,
+            is_active=True,
+        )
+        db.add(access)
+    else:
+        access.is_active = True
+        access.granted_by_user_id = granted_by_user.id
+
+    db.flush()
+    return access
