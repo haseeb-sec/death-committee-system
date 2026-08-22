@@ -13,7 +13,7 @@ from app.services.contribution import (
     get_member_contributions,
 )
 from app.services.member_balance import get_member_balance
-from app.services.member_due import get_outstanding_dues
+from app.services.member_due import get_member_due_breakdown
 from app.services.member_good import get_member_goods_total
 
 
@@ -72,10 +72,12 @@ def get_member_financial_summary(
         member_id=member_id,
     )
 
-    outstanding_dues = get_outstanding_dues(
+    due_breakdown = get_member_due_breakdown(
         db,
         member_id=member_id,
     )
+
+    outstanding_dues = due_breakdown["outstanding_dues"]
 
     death_support = db.scalars(
         select(DeathSupport)
@@ -119,6 +121,8 @@ def get_member_financial_summary(
         "asset_share": asset_share,
         "goods_value": goods_value,
 
+        "ordinary_dues": due_breakdown["ordinary_dues"],
+        "qarz_e_hasana_dues": due_breakdown["qarz_e_hasana_dues"],
         "outstanding_dues": outstanding_dues,
 
         "current_gross_value": current_gross_value,

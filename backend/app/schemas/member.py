@@ -63,6 +63,8 @@ class MemberFinancialSummaryResponse(BaseModel):
     asset_share: int
     goods_value: int
 
+    ordinary_dues: int
+    qarz_e_hasana_dues: int
     outstanding_dues: int
 
     current_gross_value: int

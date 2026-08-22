@@ -259,3 +259,108 @@ def test_admin_can_create_death_support_and_receive_full_response(db):
 
     finally:
         app.dependency_overrides.clear()
+
+def test_member_financial_summary_returns_due_breakdown(db):
+    from datetime import date
+
+    from app.api.dependencies import get_db
+    from app.models import Committee, ContributionRate, MemberDue, UserCommitteeAccess
+    from app.services.committee import create_committee
+    from app.services.member import add_member
+
+    admin = User(
+        username="financial_summary_api_admin",
+        password_hash=hash_password("financial-summary-api-password"),
+        role=UserRole.ADMIN.value,
+        is_active=True,
+    )
+
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+
+    committee = create_committee(
+        db,
+        name="Financial Summary API Committee",
+    )
+    db.flush()
+
+    db.add(
+        UserCommitteeAccess(
+            user_id=admin.id,
+            committee_id=committee.id,
+            granted_by_user_id=admin.id,
+            is_active=True,
+        )
+    )
+    db.flush()
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Financial Summary API Member",
+        joined_on=date(2026, 8, 17),
+    )
+    db.flush()
+
+    db.add_all(
+        [
+            MemberDue(
+                committee_id=committee.id,
+                member_id=member.id,
+                amount=5000,
+                paid_amount=1000,
+                due_date=date(2026, 8, 20),
+                description="Ordinary due",
+                due_type="ordinary",
+            ),
+            MemberDue(
+                committee_id=committee.id,
+                member_id=member.id,
+                amount=12000,
+                paid_amount=2000,
+                due_date=date(2026, 8, 21),
+                description="Qarz-e-Hasana",
+                due_type="qarz_e_hasana",
+            ),
+        ]
+    )
+    db.commit()
+
+    def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    try:
+        client = TestClient(app)
+
+        login_response = client.post(
+            "/auth/login",
+            data={
+                "username": "financial_summary_api_admin",
+                "password": "financial-summary-api-password",
+            },
+        )
+
+        assert login_response.status_code == 200
+
+        token = login_response.json()["access_token"]
+
+        response = client.get(
+            f"/members/{member.id}/financial-summary",
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
+        )
+
+        assert response.status_code == 200
+
+        data = response.json()
+
+        assert data["ordinary_dues"] == 4000
+        assert data["qarz_e_hasana_dues"] == 10000
+        assert data["outstanding_dues"] == 14000
+
+    finally:
+        app.dependency_overrides.clear()

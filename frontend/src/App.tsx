@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 
-const API_BASE = 'http://127.0.0.1:8000'
+const API_BASE = import.meta.env.VITE_API_BASE ?? `http://${window.location.hostname}:8000`
 
 type CommitteeSummary = {
   committee_id: number
@@ -113,6 +113,8 @@ type MemberFinancialSummary = {
   contribution_balance: number
   asset_share: number
   goods_value: number
+  ordinary_dues: number
+  qarz_e_hasana_dues: number
   outstanding_dues: number
   current_gross_value: number
   current_final_value: number
@@ -3018,7 +3020,25 @@ async function handleCreateCommittee(event: FormEvent) {
                     </div>
 
                     <div className="position-row">
-                      <span>Outstanding dues</span>
+                      <span>Ordinary dues</span>
+                      <strong>
+                        {formatPKR(
+                          memberFinancialSummary.ordinary_dues,
+                        )}
+                      </strong>
+                    </div>
+
+                    <div className="position-row">
+                      <span>Qarz-e-Hasana</span>
+                      <strong>
+                        {formatPKR(
+                          memberFinancialSummary.qarz_e_hasana_dues,
+                        )}
+                      </strong>
+                    </div>
+
+                    <div className="position-row">
+                      <span>Total outstanding dues</span>
                       <strong>
                         {formatPKR(
                           memberFinancialSummary.outstanding_dues,

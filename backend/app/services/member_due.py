@@ -264,3 +264,31 @@ def get_outstanding_dues(
         due.amount - due.paid_amount
         for due in dues
     )
+
+def get_member_due_breakdown(
+    db: Session,
+    *,
+    member_id: int,
+) -> dict[str, int]:
+    dues = get_member_dues(
+        db,
+        member_id=member_id,
+    )
+
+    ordinary_dues = sum(
+        due.amount - due.paid_amount
+        for due in dues
+        if due.due_type == "ordinary"
+    )
+
+    qarz_e_hasana_dues = sum(
+        due.amount - due.paid_amount
+        for due in dues
+        if due.due_type == "qarz_e_hasana"
+    )
+
+    return {
+        "ordinary_dues": ordinary_dues,
+        "qarz_e_hasana_dues": qarz_e_hasana_dues,
+        "outstanding_dues": ordinary_dues + qarz_e_hasana_dues,
+    }
