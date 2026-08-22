@@ -2746,9 +2746,11 @@ async function handleCreateCommittee(event: FormEvent) {
           <div className="login-panel">
             <div className="login-panel-header">
               <span className="login-panel-label">ADMINISTRATOR</span>
-              <h2>Sign in</h2>
+              <h2>{recoveryMode ? 'Reset your password' : 'Sign in'}</h2>
               <p>
-                Access your committee records and financial information.
+                {recoveryMode
+                  ? 'Ask a Super Admin to issue a recovery token, then use it below to create a new password.'
+                  : 'Access your committee records and financial information.'}
               </p>
             </div>
             {recoveryMode ? (
