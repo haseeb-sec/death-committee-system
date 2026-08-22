@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    secret_key: str = "development-secret-key-change-before-production-12345"
+    secret_key: str
     access_token_expire_minutes: int = 60
 
     model_config = SettingsConfigDict(

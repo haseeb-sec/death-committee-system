@@ -1,16 +1,59 @@
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime, timedelta, timezone
+import time
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from app.schemas.users import UserCreate, UserResponse, CommitteeAccessCreate, CommitteeAccessResponse
+from app.schemas.users import (
+    UserCreate,
+    UserResponse,
+    CommitteeAccessCreate,
+    CommitteeAccessResponse,
+    PasswordChange,
+    PasswordReset,
+)
 
 from app.api.auth import get_db
 from app.api.permissions import require_super_admin
 from app.models import User, UserCommitteeAccess
-from app.services.auth import hash_password
+from app.services.auth import (
+    create_password_reset_token,
+    hash_password,
+    hash_password_reset_token,
+    verify_password,
+)
 from app.services.audit import record_audit
 from app.services.access_control import grant_committee_access
 
 router = APIRouter(prefix="/users", tags=["Users"])
+
+# Lightweight abuse protection for the public password-reset endpoint.
+# This intentionally lives in memory so it does not add database/accounting state.
+password_reset_attempts: dict[str, list[float]] = {}
+PASSWORD_RESET_RATE_WINDOW = 60.0
+PASSWORD_RESET_RATE_LIMIT = 5
+
+
+def check_password_reset_rate_limit(client_key: str) -> None:
+    now = time.monotonic()
+    attempts = password_reset_attempts.get(client_key, [])
+
+    attempts = [
+        timestamp
+        for timestamp in attempts
+        if now - timestamp < PASSWORD_RESET_RATE_WINDOW
+    ]
+
+    if len(attempts) >= PASSWORD_RESET_RATE_LIMIT:
+        password_reset_attempts[client_key] = attempts
+        raise HTTPException(
+            status_code=429,
+            detail="Too many password reset attempts. Please try again later.",
+        )
+
+    attempts.append(now)
+    password_reset_attempts[client_key] = attempts
+
 
 @router.post("", response_model=UserResponse)
 def create_user(
@@ -48,6 +91,136 @@ def create_user(
         "username": user.username,
         "role": user.role,
         "is_active": user.is_active,
+    }
+
+
+@router.post("/me/password")
+def change_my_password(
+    data: PasswordChange,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+):
+    if not verify_password(data.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=400,
+            detail="Current password is incorrect",
+        )
+
+    if data.current_password == data.new_password:
+        raise HTTPException(
+            status_code=400,
+            detail="New password must be different from current password",
+        )
+
+    current_user.password_hash = hash_password(data.new_password)
+
+    record_audit(
+        db,
+        user_id=current_user.id,
+        action="change_password",
+        entity_type="user",
+        entity_id=current_user.id,
+        description=f"User '{current_user.username}' changed their password",
+    )
+
+    db.commit()
+
+    return {"message": "Password changed successfully"}
+
+
+@router.post("/password-reset")
+def reset_password(
+    data: PasswordReset,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    client_host = request.client.host if request.client else "unknown"
+    check_password_reset_rate_limit(client_host)
+
+    token_hash = hash_password_reset_token(data.token)
+
+    user = (
+        db.query(User)
+        .filter(User.password_reset_token_hash == token_hash)
+        .first()
+    )
+
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired password reset token",
+        )
+
+    expires_at = user.password_reset_expires_at
+
+    if (
+        expires_at is None
+        or expires_at.replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc)
+    ):
+        user.password_reset_token_hash = None
+        user.password_reset_expires_at = None
+        db.commit()
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired password reset token",
+        )
+
+    user.password_hash = hash_password(data.new_password)
+    user.password_reset_token_hash = None
+    user.password_reset_expires_at = None
+
+    record_audit(
+        db,
+        user_id=user.id,
+        action="reset_password",
+        entity_type="user",
+        entity_id=user.id,
+        description=f"Password reset completed for user '{user.username}'",
+    )
+
+    db.commit()
+
+    return {"message": "Password reset successfully"}
+
+
+@router.post("/{user_id}/password-reset")
+def issue_password_reset(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+):
+    user = db.get(User, user_id)
+
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found or inactive",
+        )
+
+    token = create_password_reset_token()
+
+    user.password_reset_token_hash = hash_password_reset_token(token)
+    user.password_reset_expires_at = (
+        datetime.now(timezone.utc) + timedelta(minutes=15)
+    )
+
+    record_audit(
+        db,
+        user_id=current_user.id,
+        action="issue_password_reset",
+        entity_type="user",
+        entity_id=user.id,
+        description=(
+            f"Password recovery token issued for user '{user.username}'"
+        ),
+    )
+
+    db.commit()
+
+    return {
+        "message": "Password recovery token issued",
+        "token": token,
+        "expires_in_minutes": 15,
     }
 
 

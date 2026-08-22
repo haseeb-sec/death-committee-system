@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
@@ -15,6 +15,8 @@ class UserCommitteeAccess(Base):
             "committee_id",
             name="uq_user_committee_access",
         ),
+        Index("ix_user_committee_access_user_id", "user_id"),
+        Index("ix_user_committee_access_committee_id", "committee_id"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

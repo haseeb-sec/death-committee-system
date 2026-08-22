@@ -171,6 +171,51 @@ async function login(username: string, password: string) {
   return response.json()
 }
 
+async function resetPassword(token: string, newPassword: string) {
+  const response = await fetch(`${API_BASE}/users/password-reset`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      token,
+      new_password: newPassword,
+    }),
+  })
+
+  const data = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(data?.detail ?? 'Unable to reset password')
+  }
+
+  return data
+}
+
+
+async function issuePasswordReset(
+  token: string,
+  userId: number,
+) {
+  const response = await fetch(
+    `${API_BASE}/users/${userId}/password-reset`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  )
+
+  const data = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(data?.detail ?? 'Unable to issue recovery token')
+  }
+
+  return data
+}
+
 
 async function getCommittees(token: string): Promise<CreatedCommittee[]> {
   const response = await fetch(`${API_BASE}/committees`, {
@@ -754,6 +799,32 @@ async function payMemberDue(
   return response.json()
 }
 
+async function changeMyPassword(
+  currentPassword: string,
+  newPassword: string,
+  token: string,
+): Promise<Record<string, any>> {
+  const response = await fetch(`${API_BASE}/users/me/password`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(data?.detail ?? 'Unable to change password')
+  }
+
+  return response.json()
+}
+
+
 async function getUsers(token: string): Promise<Array<Record<string, any>>> {
   const response = await fetch(`${API_BASE}/users`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -962,6 +1033,17 @@ function App() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [issuedResetToken, setIssuedResetToken] = useState('')
+  const [issuedResetExpiry, setIssuedResetExpiry] = useState<number | null>(null)
+  const [recoveryMode, setRecoveryMode] = useState(false)
+  const [recoveryToken, setRecoveryToken] = useState('')
+  const [recoveryNewPassword, setRecoveryNewPassword] = useState('')
+  const [recoveryConfirmPassword, setRecoveryConfirmPassword] = useState('')
+  const [recoveryMessage, setRecoveryMessage] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [passwordChangeMessage, setPasswordChangeMessage] = useState('')
   const [committeeId, setCommitteeId] = useState('')
   const [summary, setSummary] = useState<CommitteeSummary | null>(null)
   const [committees, setCommittees] = useState<CreatedCommittee[]>([])
@@ -1321,6 +1403,129 @@ function App() {
     }
   }, [committeeId, token])
 
+
+  async function handleIssuePasswordReset(userId: number) {
+    setError('')
+    setIssuedResetToken('')
+    setIssuedResetExpiry(null)
+
+    if (!token) {
+      setError('You are not authenticated')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const data = await issuePasswordReset(token, userId)
+
+      setIssuedResetToken(data.token ?? '')
+      setIssuedResetExpiry(data.expires_in_minutes ?? null)
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to issue recovery token',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleChangePassword(event: FormEvent) {
+    event.preventDefault()
+    setError('')
+    setPasswordChangeMessage('')
+
+    if (!token) {
+      setError('You are not authenticated')
+      return
+    }
+
+    if (!currentPassword) {
+      setError('Current password is required')
+      return
+    }
+
+    if (!newPassword) {
+      setError('New password is required')
+      return
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setError('New passwords do not match')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const data = await changeMyPassword(
+        currentPassword,
+        newPassword,
+        token,
+      )
+
+      setPasswordChangeMessage(
+        data.message ?? 'Password changed successfully',
+      )
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmNewPassword('')
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to change password',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+
+  async function handlePasswordRecovery(event: FormEvent) {
+    event.preventDefault()
+    setError('')
+    setRecoveryMessage('')
+
+    if (!recoveryToken.trim()) {
+      setError('Recovery token is required')
+      return
+    }
+
+    if (!recoveryNewPassword) {
+      setError('New password is required')
+      return
+    }
+
+    if (recoveryNewPassword !== recoveryConfirmPassword) {
+      setError('New passwords do not match')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const data = await resetPassword(
+        recoveryToken.trim(),
+        recoveryNewPassword,
+      )
+
+      setRecoveryMessage(
+        data.message ?? 'Password reset successfully',
+      )
+      setRecoveryToken('')
+      setRecoveryNewPassword('')
+      setRecoveryConfirmPassword('')
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to reset password',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault()
@@ -2546,64 +2751,148 @@ async function handleCreateCommittee(event: FormEvent) {
                 Access your committee records and financial information.
               </p>
             </div>
-            <form onSubmit={handleLogin} className="login-form">
-              <label>
-                <span>Username</span>
-                <input
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  autoComplete="username"
-                  placeholder="Enter your username"
-                  required
-                />
-              </label>
-
-              <label>
-                <span>Password</span>
-                <div className="password-field">
+            {recoveryMode ? (
+              <form
+                onSubmit={handlePasswordRecovery}
+                className="login-form"
+              >
+                <label>
+                  <span>Recovery token</span>
                   <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    autoComplete="current-password"
-                    placeholder="Enter your password"
+                    value={recoveryToken}
+                    onChange={(event) =>
+                      setRecoveryToken(event.target.value)
+                    }
+                    autoComplete="off"
+                    placeholder="Enter your recovery token"
                     required
                   />
-                  <button
-                    type="button"
-                    className="password-toggle"
-                    onClick={() => setShowPassword((value) => !value)}
-                    aria-label={
-                      showPassword ? 'Hide password' : 'Show password'
+                </label>
+
+                <label>
+                  <span>New password</span>
+                  <input
+                    type="password"
+                    value={recoveryNewPassword}
+                    onChange={(event) =>
+                      setRecoveryNewPassword(event.target.value)
                     }
-                    title={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? (
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                          d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
-                        />
-                        <circle cx="12" cy="12" r="2.8" />
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M3 3l18 18" />
-                        <path
-                          d="M10.6 6.2A10.5 10.5 0 0 1 12 6c6 0 9.5 6 9.5 6a18.7 18.7 0 0 1-3.1 3.9M6.2 6.8C3.8 8.4 2.5 12 2.5 12s3.5 6 9.5 6c1.4 0 2.7-.3 3.8-.8"
-                        />
-                        <path d="M9.9 9.9a2.8 2.8 0 0 0 4.2 4.2" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </label>
+                    autoComplete="new-password"
+                    placeholder="Enter your new password"
+                    required
+                  />
+                </label>
 
-              {error && <div className="error">{error}</div>}
+                <label>
+                  <span>Confirm new password</span>
+                  <input
+                    type="password"
+                    value={recoveryConfirmPassword}
+                    onChange={(event) =>
+                      setRecoveryConfirmPassword(event.target.value)
+                    }
+                    autoComplete="new-password"
+                    placeholder="Confirm your new password"
+                    required
+                  />
+                </label>
 
-              <button type="submit" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign in'}
-              </button>
-            </form>
+                {error && <div className="error">{error}</div>}
+
+                {recoveryMessage && (
+                  <div className="success">
+                    {recoveryMessage}
+                  </div>
+                )}
+
+                <button type="submit" disabled={loading}>
+                  {loading ? 'Resetting...' : 'Reset Password'}
+                </button>
+
+                <button
+                  type="button"
+                  className="forgot-password-button"
+                  onClick={() => {
+                    setRecoveryMode(false)
+                    setError('')
+                    setRecoveryMessage('')
+                  }}
+                >
+                  Back to sign in
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleLogin} className="login-form">
+                <label>
+                  <span>Username</span>
+                  <input
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    autoComplete="username"
+                    placeholder="Enter your username"
+                    required
+                  />
+                </label>
+
+                <label>
+                  <span>Password</span>
+                  <div className="password-field">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      autoComplete="current-password"
+                      placeholder="Enter your password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() => setShowPassword((value) => !value)}
+                      aria-label={
+                        showPassword ? 'Hide password' : 'Show password'
+                      }
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path
+                            d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+                          />
+                          <circle cx="12" cy="12" r="2.8" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M3 3l18 18" />
+                          <path
+                            d="M10.6 6.2A10.5 10.5 0 0 1 12 6c6 0 9.5 6 9.5 6a18.7 18.7 0 0 1-3.1 3.9M6.2 6.8C3.8 8.4 2.5 12 2.5 12s3.5 6 9.5 6c1.4 0 2.7-.3 3.8-.8"
+                          />
+                          <path d="M9.9 9.9a2.8 2.8 0 0 0 4.2 4.2" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </label>
+
+                {error && <div className="error">{error}</div>}
+
+                <button type="submit" disabled={loading}>
+                  {loading ? 'Signing in...' : 'Sign in'}
+                </button>
+
+                <button
+                  type="button"
+                  className="forgot-password-button"
+                  onClick={() => {
+                    setRecoveryMode(true)
+                    setError('')
+                    setRecoveryMessage('')
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </form>
+            )}
 
             <div className="login-security-note">
               <span className="security-icon">✓</span>
@@ -3657,6 +3946,75 @@ async function handleCreateCommittee(event: FormEvent) {
 
                 {error && <div className="error page-error">{error}</div>}
 
+                {passwordChangeMessage && (
+                  <div className="success page-error">
+                    {passwordChangeMessage}
+                  </div>
+                )}
+
+                <section className="information-card">
+                  <div>
+                    <p className="eyebrow">ACCOUNT SECURITY</p>
+                    <h3>Change your password</h3>
+                    <p className="form-help">
+                      Update the password for the currently signed-in Super Administrator account.
+                    </p>
+                  </div>
+
+                  <form
+                    className="committee-create-form"
+                    onSubmit={handleChangePassword}
+                  >
+                    <div className="rate-form-grid">
+                      <label>
+                        Current password
+                        <input
+                          type="password"
+                          value={currentPassword}
+                          onChange={(event) =>
+                            setCurrentPassword(event.target.value)
+                          }
+                          autoComplete="current-password"
+                          placeholder="Enter current password"
+                          required
+                        />
+                      </label>
+
+                      <label>
+                        New password
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(event) =>
+                            setNewPassword(event.target.value)
+                          }
+                          autoComplete="new-password"
+                          placeholder="Enter new password"
+                          required
+                        />
+                      </label>
+
+                      <label>
+                        Confirm new password
+                        <input
+                          type="password"
+                          value={confirmNewPassword}
+                          onChange={(event) =>
+                            setConfirmNewPassword(event.target.value)
+                          }
+                          autoComplete="new-password"
+                          placeholder="Confirm new password"
+                          required
+                        />
+                      </label>
+                    </div>
+
+                    <button type="submit" disabled={loading}>
+                      {loading ? 'Changing...' : 'Change Password'}
+                    </button>
+                  </form>
+                </section>
+
                 <section className="information-card">
                   <div>
                     <p className="eyebrow">NEW USER</p>
@@ -3716,6 +4074,33 @@ async function handleCreateCommittee(event: FormEvent) {
                   </form>
                 </section>
 
+                {issuedResetToken && (
+                  <section className="committee-banner">
+                    <div>
+                      <p className="eyebrow">PASSWORD RECOVERY</p>
+                      <h3>Recovery token issued</h3>
+                      <p className="created-id">
+                        Give this token to the user so they can set a new
+                        password. It expires in{' '}
+                        {issuedResetExpiry ?? 15} minutes.
+                      </p>
+                      <div className="recovery-token-display">
+                        <code>{issuedResetToken}</code>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="management-action management-action-secondary"
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(issuedResetToken)
+                      }}
+                    >
+                      Copy Token
+                    </button>
+                  </section>
+                )}
+
                 {createdUser && (
                   <section className="committee-banner">
                     <div>
@@ -3773,16 +4158,29 @@ async function handleCreateCommittee(event: FormEvent) {
                             </span>
 
                             {user.is_active !== false && (
-                              <button
-                                type="button"
-                                className="management-action management-action-danger"
-                                disabled={usersLoading}
-                                onClick={() =>
-                                  void handleDeactivateUser(Number(user.id))
-                                }
-                              >
-                                Deactivate
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  className="management-action management-action-secondary"
+                                  disabled={loading}
+                                  onClick={() =>
+                                    void handleIssuePasswordReset(Number(user.id))
+                                  }
+                                >
+                                  Issue Recovery Token
+                                </button>
+
+                                <button
+                                  type="button"
+                                  className="management-action management-action-danger"
+                                  disabled={usersLoading}
+                                  onClick={() =>
+                                    void handleDeactivateUser(Number(user.id))
+                                  }
+                                >
+                                  Deactivate
+                                </button>
+                              </>
                             )}
 
                             <div className="committee-access-actions">

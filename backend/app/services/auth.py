@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+import hashlib
+import secrets
 
 import jwt
 from pwdlib import PasswordHash
@@ -37,3 +39,10 @@ def create_access_token(user_id: int, role: str) -> str:
 
 def decode_access_token(token: str) -> dict:
     return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+def create_password_reset_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def hash_password_reset_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
