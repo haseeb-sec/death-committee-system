@@ -1054,13 +1054,16 @@ function App() {
   const [usersLoading, setUsersLoading] = useState(false)
   const [userUsername, setUserUsername] = useState('')
   const [userPassword, setUserPassword] = useState('')
-  const [userRole, setUserRole] = useState('viewer')
+  const [userRole, setUserRole] = useState('')
+  const [userCreateRole, setUserCreateRole] = useState('viewer')
   const [createdUser, setCreatedUser] =
     useState<Record<string, any> | null>(null)
   const [selectedAccessUserId, setSelectedAccessUserId] = useState<number | null>(null)
   const [committeeAccessLoading, setCommitteeAccessLoading] = useState(false)
   const [committeeAccessStatus, setCommitteeAccessStatus] =
     useState<Record<string, any>>({})
+
+  const canWrite = userRole === 'admin' || userRole === 'super_admin'
 
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -1405,6 +1408,11 @@ function App() {
 
 
   async function handleIssuePasswordReset(userId: number) {
+    if (!canWrite) {
+      setError('You do not have permission to perform this action')
+      return
+    }
+
     setError('')
     setIssuedResetToken('')
     setIssuedResetExpiry(null)
@@ -1434,6 +1442,12 @@ function App() {
 
   async function handleChangePassword(event: FormEvent) {
     event.preventDefault()
+
+    if (!canWrite) {
+      setError('You do not have permission to perform this action')
+      return
+    }
+
     setError('')
     setPasswordChangeMessage('')
 
@@ -1574,6 +1588,11 @@ function App() {
   async function handleCreateCommitteeAsset(event: FormEvent) {
     event.preventDefault()
 
+    if (!canWrite) {
+      setError('You do not have permission to perform write actions')
+      return
+    }
+
     if (!token) {
       setError('You are not authenticated')
       return
@@ -1632,6 +1651,11 @@ function App() {
 
   async function handleUpdateCommitteeAssetValue(event: FormEvent) {
     event.preventDefault()
+
+    if (!canWrite) {
+      setError('You do not have permission to perform write actions')
+      return
+    }
 
     if (!token) {
       setError('You are not authenticated')
@@ -1747,6 +1771,11 @@ function App() {
 
   async function handleCreateMemberGood(event: FormEvent) {
     event.preventDefault()
+
+    if (!canWrite) {
+      setError('You do not have permission to perform write actions')
+      return
+    }
 
     if (!token) {
       setError('You are not authenticated')
@@ -1867,6 +1896,11 @@ function App() {
   async function handleUpdateMemberGoodValue(event: FormEvent) {
     event.preventDefault()
 
+    if (!canWrite) {
+      setError('You do not have permission to perform write actions')
+      return
+    }
+
     if (!token) {
       setError('You are not authenticated')
       return
@@ -1918,6 +1952,11 @@ function App() {
 
   async function handleCreateMemberDue(event: FormEvent) {
     event.preventDefault()
+
+    if (!canWrite) {
+      setError('You do not have permission to modify committee records')
+      return
+    }
 
     if (!token) {
       setError('You are not authenticated')
@@ -2029,6 +2068,11 @@ function App() {
   async function handlePayMemberDue(event: FormEvent) {
     event.preventDefault()
 
+    if (!canWrite) {
+      setError('You do not have permission to modify committee records')
+      return
+    }
+
     if (!token) {
       setError('You are not authenticated')
       return
@@ -2100,6 +2144,11 @@ function App() {
   async function handleCreateMemberSettlement(event: FormEvent) {
     event.preventDefault()
 
+    if (!canWrite) {
+      setError('You do not have permission to perform write actions')
+      return
+    }
+
     if (!token) {
       setError('You are not authenticated')
       return
@@ -2142,6 +2191,10 @@ function App() {
   }
 
   async function handlePayMemberSettlement() {
+    if (!canWrite) {
+      setError('You do not have permission to perform write actions')
+      return
+    }
     if (!token) {
       setError('You are not authenticated')
       return
@@ -2207,6 +2260,10 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   async function handleCreateContributionRate(event: FormEvent) {
+    if (!canWrite) {
+      setError('You do not have permission to modify committee records')
+      return
+    }
     event.preventDefault()
 
     if (!token) {
@@ -2257,6 +2314,10 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   async function handleCreateContribution(event: FormEvent) {
+    if (!canWrite) {
+      setError('You do not have permission to modify committee records')
+      return
+    }
     event.preventDefault()
 
     if (!token) {
@@ -2334,6 +2395,10 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   async function handleCreateDeathSupport(event: FormEvent) {
+    if (!canWrite) {
+      setError('You do not have permission to modify committee records')
+      return
+    }
     event.preventDefault()
 
     if (!token) {
@@ -2539,6 +2604,11 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   async function handleGrantCommitteeAccess(userId: number) {
+    if (!canWrite) {
+      setError('You do not have permission to perform this action')
+      return
+    }
+
     if (!token) {
       setError('You are not authenticated')
       return
@@ -2574,6 +2644,11 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   async function handleDeactivateCommitteeAccess(userId: number) {
+    if (!canWrite) {
+      setError('You do not have permission to perform this action')
+      return
+    }
+
     if (!token) {
       setError('You are not authenticated')
       return
@@ -2611,6 +2686,11 @@ async function handleCreateCommittee(event: FormEvent) {
   async function handleCreateUser(event: FormEvent) {
     event.preventDefault()
 
+    if (!canWrite) {
+      setError('You do not have permission to perform this action')
+      return
+    }
+
     if (!token) {
       setError('You are not authenticated')
       return
@@ -2629,7 +2709,7 @@ async function handleCreateCommittee(event: FormEvent) {
       return
     }
 
-    if (!['super_admin', 'admin', 'viewer'].includes(userRole)) {
+    if (!['super_admin', 'admin', 'viewer'].includes(userCreateRole)) {
       setError('Select a valid user role')
       return
     }
@@ -2641,7 +2721,7 @@ async function handleCreateCommittee(event: FormEvent) {
       const data = await createUser(
         usernameValue,
         passwordValue,
-        userRole,
+        userCreateRole,
         token,
       )
 
@@ -2659,6 +2739,11 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   async function handleDeactivateUser(userId: number) {
+    if (!canWrite) {
+      setError('You do not have permission to perform this action')
+      return
+    }
+
     if (!token) {
       setError('You are not authenticated')
       return
@@ -2988,10 +3073,11 @@ async function handleCreateCommittee(event: FormEvent) {
 
               {error && <div className="error page-error">{error}</div>}
 
-              <section className="information-card">
-                <div>
-                  <p className="eyebrow">NEW COMMITTEE</p>
-                  <h3>Create a committee</h3>
+              {canWrite && (
+                <section className="information-card">
+                  <div>
+                    <p className="eyebrow">NEW COMMITTEE</p>
+                    <h3>Create a committee</h3>
                   <p className="form-help">
                     Enter the name of the committee you want to register.
                   </p>
@@ -3017,7 +3103,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     {loading ? 'Creating...' : 'Create Committee'}
                   </button>
                 </form>
-              </section>
+                </section>
+              )}
 
               {createdCommittee && (
                 <section className="committee-banner">
@@ -3054,10 +3141,11 @@ async function handleCreateCommittee(event: FormEvent) {
 
               {error && <div className="error page-error">{error}</div>}
 
-              <section className="information-card">
-                <div>
-                  <p className="eyebrow">NEW MEMBER</p>
-                  <h3>Create member</h3>
+              {canWrite && (
+                <section className="information-card">
+                  <div>
+                    <p className="eyebrow">NEW MEMBER</p>
+                    <h3>Create member</h3>
                   <p className="form-help">
                     Enter the committee, member name, and joining date.
                   </p>
@@ -3118,7 +3206,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     {loading ? 'Creating...' : 'Create Member'}
                   </button>
                 </form>
-              </section>
+                </section>
+              )}
 
               {createdMember && (
                 <section className="committee-banner">
@@ -3505,10 +3594,11 @@ async function handleCreateCommittee(event: FormEvent) {
 
               {error && <div className="error page-error">{error}</div>}
 
-              <section className="information-card">
-                <div>
-                  <p className="eyebrow">RECORD CONTRIBUTION</p>
-                  <h3>Record member contribution</h3>
+              {canWrite && (
+                <section className="information-card">
+                  <div>
+                    <p className="eyebrow">RECORD CONTRIBUTION</p>
+                    <h3>Record member contribution</h3>
                   <p className="form-help">
                     The applicable contribution rate is selected automatically
                     from the contribution date.
@@ -3577,7 +3667,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     {loading ? 'Recording...' : 'Record Contribution'}
                   </button>
                 </form>
-              </section>
+                </section>
+              )}
 
               {createdContribution && (
                 <section className="committee-banner">
@@ -3609,10 +3700,11 @@ async function handleCreateCommittee(event: FormEvent) {
                 </section>
               )}
 
-              <section className="information-card contribution-rate-card">
-                <div>
-                  <p className="eyebrow">NEW RATE</p>
-                  <h3>Create contribution rate</h3>
+              {canWrite && (
+                <section className="information-card contribution-rate-card">
+                  <div>
+                    <p className="eyebrow">NEW RATE</p>
+                    <h3>Create contribution rate</h3>
                   <p className="form-help">
                     Set the contribution amount and the date from which
                     this rate becomes effective.
@@ -3658,7 +3750,8 @@ async function handleCreateCommittee(event: FormEvent) {
                       : 'Create Contribution Rate'}
                   </button>
                 </form>
-              </section>
+                </section>
+              )}
 
               {createdContributionRate && (
                 <section className="committee-banner contribution-rate-result">
@@ -3708,10 +3801,11 @@ async function handleCreateCommittee(event: FormEvent) {
 
               {error && <div className="error page-error">{error}</div>}
 
-              <section className="information-card death-support-record-card">
-                <div>
-                  <p className="eyebrow">RECORD SUPPORT</p>
-                  <h3>Record death support</h3>
+              {canWrite && (
+                <section className="information-card death-support-record-card">
+                  <div>
+                    <p className="eyebrow">RECORD SUPPORT</p>
+                    <h3>Record death support</h3>
                   <p className="form-help">
                     Select the affected member, enter the beneficiary and
                     support amount, and record the payment date.
@@ -3796,7 +3890,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     {loading ? 'Recording...' : 'Record Death Support'}
                   </button>
                 </form>
-              </section>
+                </section>
+              )}
 
               {createdDeathSupport && (
                 <section className="committee-banner contribution-rate-result">
@@ -3965,7 +4060,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                   <form
                     className="committee-create-form"
-                    onSubmit={handleChangePassword}
+                    onSubmit={canWrite ? handleChangePassword : (event) => event.preventDefault()}
                   >
                     <div className="rate-form-grid">
                       <label>
@@ -4028,7 +4123,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                   <form
                     className="committee-create-form"
-                    onSubmit={handleCreateUser}
+                    onSubmit={canWrite ? handleCreateUser : (event) => event.preventDefault()}
                   >
                     <div className="rate-form-grid">
                       <label>
@@ -4060,8 +4155,8 @@ async function handleCreateCommittee(event: FormEvent) {
                       <label>
                         Role
                         <select
-                          value={userRole}
-                          onChange={(event) => setUserRole(event.target.value)}
+                          value={userCreateRole}
+                          onChange={(event) => setUserCreateRole(event.target.value)}
                         >
                           <option value="viewer">Viewer</option>
                           <option value="admin">Admin</option>
@@ -4168,9 +4263,9 @@ async function handleCreateCommittee(event: FormEvent) {
                                   type="button"
                                   className="management-action management-action-secondary"
                                   disabled={loading}
-                                  onClick={() =>
+                                  onClick={canWrite ? () =>
                                     void handleIssuePasswordReset(Number(user.id))
-                                  }
+                                  : undefined}
                                 >
                                   Issue Recovery Token
                                 </button>
@@ -4179,9 +4274,9 @@ async function handleCreateCommittee(event: FormEvent) {
                                   type="button"
                                   className="management-action management-action-danger"
                                   disabled={usersLoading}
-                                  onClick={() =>
+                                  onClick={canWrite ? () =>
                                     void handleDeactivateUser(Number(user.id))
-                                  }
+                                  : undefined}
                                 >
                                   Deactivate
                                 </button>
@@ -4226,11 +4321,11 @@ async function handleCreateCommittee(event: FormEvent) {
                                   committeeAccessLoading ||
                                   user.is_active === false
                                 }
-                                onClick={() =>
+                                onClick={canWrite ? () =>
                                   void handleGrantCommitteeAccess(
                                     Number(user.id),
                                   )
-                                }
+                                : undefined}
                               >
                                 Grant Access
                               </button>
@@ -4241,11 +4336,11 @@ async function handleCreateCommittee(event: FormEvent) {
                                     type="button"
                                     className="management-action management-action-danger"
                                     disabled={committeeAccessLoading}
-                                    onClick={() =>
+                                    onClick={canWrite ? () =>
                                       void handleDeactivateCommitteeAccess(
                                         Number(user.id),
                                       )
-                                    }
+                                    : undefined}
                                   >
                                     Revoke Access
                                   </button>
@@ -4280,6 +4375,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
               {error && <div className="error page-error">{error}</div>}
 
+              {canWrite && (
               <section className="information-card asset-create-card">
                 <div>
                   <p className="eyebrow">NEW ASSET</p>
@@ -4350,7 +4446,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     {loading ? 'Creating...' : 'Create Asset'}
                   </button>
                 </form>
-              </section>
+              </section>              )}
+
 
               {createdCommitteeAsset && (
                 <section className="committee-banner">
@@ -4385,6 +4482,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 </section>
               )}
 
+              {canWrite && (
               <section className="information-card asset-valuation-card">
                 <div>
                   <p className="eyebrow">CURRENT VALUE</p>
@@ -4444,7 +4542,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     {loading ? 'Updating...' : 'Update Value'}
                   </button>
                 </form>
-              </section>
+              </section>              )}
+
 
               {updatedCommitteeAssetValue && (
                 <section className="committee-banner">
@@ -4617,6 +4716,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 </div>
               </div>
 
+              {canWrite && (
               <section className="information-card goods-create-card">
                 <div>
                   <p className="eyebrow">NEW GOOD</p>
@@ -4700,7 +4800,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     {loading ? 'Recording...' : 'Record Good'}
                   </button>
                 </form>
-              </section>
+              </section>              )}
+
 
               {createdMemberGood && (
                 <section className="committee-banner">
@@ -4852,6 +4953,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 </section>
               )}
 
+              {canWrite && (
               <section className="information-card goods-valuation-card">
                 <div>
                   <p className="eyebrow">CURRENT VALUE</p>
@@ -4910,7 +5012,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     {loading ? 'Updating...' : 'Update Good Value'}
                   </button>
                 </form>
-              </section>
+              </section>              )}
+
 
               {updatedMemberGoodValue && (
                 <section className="committee-banner">
@@ -4958,10 +5061,11 @@ async function handleCreateCommittee(event: FormEvent) {
                 </div>
               </div>
 
-              <section className="information-card dues-create-card">
-                <div>
-                  <p className="eyebrow">NEW DUE</p>
-                  <h3>Create member due</h3>
+              {canWrite && (
+                <section className="information-card dues-create-card">
+                  <div>
+                    <p className="eyebrow">NEW DUE</p>
+                    <h3>Create member due</h3>
                   <p className="form-help">
                     Record an amount owed by a member with its due date and supporting details.
                   </p>
@@ -5043,7 +5147,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     {loading ? 'Recording...' : 'Record Due'}
                   </button>
                 </form>
-              </section>
+                </section>
+              )}
 
               {createdMemberDue && (
                 <section className="committee-banner">
@@ -5231,7 +5336,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                 <form
                   className="committee-create-form"
-                  onSubmit={handlePayMemberDue}
+                  onSubmit={canWrite ? handlePayMemberDue : (event) => event.preventDefault()}
                 >
                   <div className="rate-form-grid">
                     <label>
@@ -5263,9 +5368,11 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
                   </div>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? 'Processing...' : 'Record Payment'}
-                  </button>
+                  {canWrite && (
+                    <button type="submit" disabled={loading}>
+                      {loading ? 'Processing...' : 'Record Payment'}
+                    </button>
+                  )}
                 </form>
               </section>
 
@@ -5452,16 +5559,18 @@ async function handleCreateCommittee(event: FormEvent) {
                     </p>
                   </div>
 
-                  <form
-                    className="committee-create-form"
-                    onSubmit={handleCreateMemberSettlement}
-                  >
-                    <button type="submit" disabled={loading}>
-                      {loading
-                        ? 'Creating...'
-                        : 'Create Settlement'}
-                    </button>
-                  </form>
+                  {canWrite && (
+                    <form
+                      className="committee-create-form"
+                      onSubmit={handleCreateMemberSettlement}
+                    >
+                      <button type="submit" disabled={loading}>
+                        {loading
+                          ? 'Creating...'
+                          : 'Create Settlement'}
+                      </button>
+                    </form>
+                  )}
                 </section>
               )}
 
@@ -5502,13 +5611,15 @@ async function handleCreateCommittee(event: FormEvent) {
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      disabled={loading}
-                      onClick={() => void handlePayMemberSettlement()}
-                    >
-                      {loading ? 'Processing...' : 'Pay Settlement'}
-                    </button>
+                    {canWrite && (
+                      <button
+                        type="button"
+                        disabled={loading}
+                        onClick={() => void handlePayMemberSettlement()}
+                      >
+                        {loading ? 'Processing...' : 'Pay Settlement'}
+                      </button>
+                    )}
                   </section>
                 )}
 
