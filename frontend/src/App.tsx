@@ -1329,6 +1329,7 @@ function App() {
 
     try {
       const data = await login(username, password)
+      setUserRole(data.role ?? '')
 
       localStorage.setItem('death_committee_token', data.access_token)
       setToken(data.access_token)
@@ -2475,6 +2476,7 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   function logout() {
+    setUserRole('')
     localStorage.removeItem('death_committee_token')
     setToken('')
     setSummary(null)
@@ -2638,12 +2640,15 @@ async function handleCreateCommittee(event: FormEvent) {
             'Goods',
             'Assets',
             'Settlements',
-            'Users',
+            ...(userRole === 'super_admin' ? ['Users'] : []),
           ].map((page) => (
             <button
               key={page}
               className={`nav-item ${activePage === page ? 'active' : ''}`}
-              onClick={() => setActivePage(page)}
+              onClick={() => {
+                if (page === 'Users' && userRole !== 'super_admin') return
+                setActivePage(page)
+              }}
             >
               {page}
             </button>
@@ -2664,12 +2669,21 @@ async function handleCreateCommittee(event: FormEvent) {
 
           <div className="status-pill">
             <span />
-            Authenticated
+            {userRole || 'Authenticated'}
           </div>
         </header>
 
         <section className="content">
-          {activePage === 'Committees' ? (
+          {activePage === 'Users' && userRole !== 'super_admin' ? (
+            <section className="module-placeholder">
+              <div className="module-placeholder-icon">DC</div>
+              <p className="eyebrow">ACCESS</p>
+              <h1>Access restricted</h1>
+              <p>
+                User management is available only to Super Administrators.
+              </p>
+            </section>
+          ) : activePage === 'Committees' ? (
             <section className="committee-module">
               <div className="page-heading">
                 <div>
