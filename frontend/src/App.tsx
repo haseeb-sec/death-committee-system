@@ -4126,7 +4126,10 @@ async function handleCreateCommittee(event: FormEvent) {
                     <h3>Application users</h3>
                     <p className="form-help">
                       Review current accounts and deactivate access when
-                      required.
+                      required. To help a user recover their password, click
+                      <strong> Issue Recovery Token</strong> beside their
+                      account, then securely provide the displayed token to
+                      them. The token expires after 15 minutes.
                     </p>
                   </div>
 
