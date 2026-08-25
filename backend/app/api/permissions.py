@@ -14,7 +14,7 @@ def require_admin(
     current_user: User = Depends(get_current_user),
 ) -> User:
     if current_user.role not in (
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
         UserRole.SUPER_ADMIN.value,
     ):
         raise HTTPException(

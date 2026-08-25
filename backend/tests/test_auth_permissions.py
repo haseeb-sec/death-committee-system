@@ -72,7 +72,7 @@ def test_viewer_can_read_authenticated_endpoint(db):
         db,
         "viewer_read",
         "viewer-password",
-        UserRole.VIEWER.value,
+        UserRole.MEMBER.value,
     )
 
     committee = Committee(
@@ -115,7 +115,7 @@ def test_viewer_cannot_create_committee(db):
         db,
         "viewer_write",
         "viewer-password",
-        UserRole.VIEWER.value,
+        UserRole.MEMBER.value,
     )
 
     app.dependency_overrides[get_db] = override_db(db)
@@ -146,12 +146,12 @@ def test_viewer_cannot_create_committee(db):
         app.dependency_overrides.clear()
 
 
-def test_admin_can_create_committee(db):
+def test_admin_cannot_create_committee(db):
     make_user(
         db,
         "admin_write",
         "admin-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     app.dependency_overrides[get_db] = override_db(db)
@@ -177,7 +177,7 @@ def test_admin_can_create_committee(db):
             },
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 403
     finally:
         app.dependency_overrides.clear()
 
@@ -187,7 +187,7 @@ def test_admin_cannot_manage_users(db):
         db,
         "admin_users",
         "admin-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     app.dependency_overrides[get_db] = override_db(db)
@@ -253,7 +253,7 @@ def test_invalid_password_rejected(db):
         db,
         "bad_password",
         "correct-password",
-        UserRole.VIEWER.value,
+        UserRole.MEMBER.value,
     )
 
     app.dependency_overrides[get_db] = override_db(db)
@@ -277,7 +277,7 @@ def test_inactive_user_cannot_login(db):
         db,
         "inactive_user",
         "inactive-password",
-        UserRole.VIEWER.value,
+        UserRole.MEMBER.value,
         is_active=False,
     )
 
@@ -320,7 +320,7 @@ def test_deactivated_user_cannot_use_existing_token(db):
         db,
         "deactivated_token",
         "token-password",
-        UserRole.VIEWER.value,
+        UserRole.MEMBER.value,
     )
 
     token = create_access_token(
@@ -353,14 +353,14 @@ def test_user_cannot_access_another_users_committee(db):
         db,
         "committee_owner",
         "owner-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     other_user = make_user(
         db,
         "committee_other",
         "other-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     committee_a = Committee(
@@ -438,14 +438,14 @@ def test_user_cannot_access_member_from_another_committee(db):
         db,
         "member_owner",
         "owner-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     other_user = make_user(
         db,
         "member_other",
         "other-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     committee_a = Committee(
@@ -520,14 +520,14 @@ def test_user_cannot_access_committee_asset_from_another_committee(db):
         db,
         "asset_owner",
         "owner-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     other_user = make_user(
         db,
         "asset_other",
         "other-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     committee_a = create_committee(
@@ -625,14 +625,14 @@ def test_user_cannot_read_or_update_committee_asset_from_another_committee(db):
         db,
         "asset_read_owner",
         "owner-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     other_user = make_user(
         db,
         "asset_read_other",
         "other-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     committee_a = create_committee(
@@ -751,14 +751,14 @@ def test_user_cannot_access_member_good_from_another_committee(db):
         db,
         "good_owner",
         "owner-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     other_user = make_user(
         db,
         "good_other",
         "other-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     committee_a = create_committee(
@@ -882,14 +882,14 @@ def test_user_cannot_create_contribution_for_member_from_another_committee(db):
         db,
         "contribution_owner",
         "owner-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     other_user = make_user(
         db,
         "contribution_other",
         "other-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     committee_a = create_committee(
@@ -974,14 +974,14 @@ def test_user_cannot_create_death_support_for_member_from_another_committee(db):
         db,
         "death_support_owner",
         "owner-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     other_user = make_user(
         db,
         "death_support_other",
         "other-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     committee_a = create_committee(
@@ -1081,14 +1081,14 @@ def test_user_cannot_pay_due_for_member_from_another_committee(db):
         db,
         "due_owner",
         "owner-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     other_user = make_user(
         db,
         "due_other",
         "other-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     committee_a = create_committee(
@@ -1180,14 +1180,14 @@ def test_user_cannot_create_settlement_for_member_from_another_committee(db):
         db,
         "settlement_owner",
         "owner-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     other_user = make_user(
         db,
         "settlement_other",
         "other-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     committee_a = create_committee(
@@ -1282,14 +1282,14 @@ def test_user_cannot_pay_settlement_from_another_committee(db):
         db,
         "settlement_pay_owner",
         "owner-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     other_user = make_user(
         db,
         "settlement_pay_other",
         "other-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
 
     committee_a = create_committee(
@@ -1398,7 +1398,7 @@ def test_super_admin_can_grant_committee_access(db):
         db,
         "grant_target",
         "target-password",
-        UserRole.VIEWER.value,
+        UserRole.MEMBER.value,
     )
 
     committee = Committee(
@@ -1449,13 +1449,13 @@ def test_admin_cannot_grant_committee_access(db):
         db,
         "grant_admin",
         "admin-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
     target_user = make_user(
         db,
         "grant_admin_target",
         "target-password",
-        UserRole.VIEWER.value,
+        UserRole.MEMBER.value,
     )
 
     committee = Committee(
@@ -1507,7 +1507,7 @@ def test_super_admin_can_read_committee_access(db):
         db,
         "read_access_target",
         "target-password",
-        UserRole.VIEWER.value,
+        UserRole.MEMBER.value,
     )
 
     committee = Committee(
@@ -1574,7 +1574,7 @@ def test_super_admin_can_deactivate_committee_access(db):
         db,
         "deactivate_target",
         "target-password",
-        UserRole.VIEWER.value,
+        UserRole.MEMBER.value,
     )
 
     committee = Committee(
@@ -1638,13 +1638,13 @@ def test_admin_cannot_deactivate_committee_access(db):
         db,
         "deactivate_admin",
         "admin-password",
-        UserRole.ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
     )
     target_user = make_user(
         db,
         "deactivate_admin_target",
         "target-password",
-        UserRole.VIEWER.value,
+        UserRole.MEMBER.value,
     )
 
     committee = Committee(

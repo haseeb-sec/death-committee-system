@@ -1,3 +1,5 @@
+from app.models import UserCommitteeAccess
+from app.services.committee import create_committee
 from fastapi.testclient import TestClient
 
 from app.api.auth import get_db
@@ -6,11 +8,11 @@ from app.models import AuditLog, User, UserRole
 from app.services.auth import hash_password
 
 
-def test_authenticated_committee_creation_creates_audit_log(db):
+def test_super_admin_committee_creation_creates_audit_log(db):
     admin = User(
         username="audit_admin",
         password_hash=hash_password("audit-password"),
-        role=UserRole.ADMIN.value,
+        role=UserRole.SUPER_ADMIN.value,
         is_active=True,
     )
 
@@ -74,7 +76,7 @@ def test_admin_can_close_committee_and_audit_it(db):
     admin = User(
         username="close_admin",
         password_hash=hash_password("close-password"),
-        role=UserRole.ADMIN.value,
+        role=UserRole.COMMITTEE_ADMIN.value,
         is_active=True,
     )
 
@@ -102,19 +104,30 @@ def test_admin_can_close_committee_and_audit_it(db):
 
         token = login_response.json()["access_token"]
 
-        create_response = client.post(
-            "/committees",
-            headers={
-                "Authorization": f"Bearer {token}",
-            },
-            json={
-                "name": "Committee To Close",
-            },
+        super_admin = User(
+            username="close_super_admin",
+            password_hash=hash_password("close-super-password"),
+            role=UserRole.SUPER_ADMIN.value,
+            is_active=True,
         )
+        db.add(super_admin)
+        db.commit()
+        db.refresh(super_admin)
 
-        assert create_response.status_code == 200
+        committee = create_committee(db, name="Committee To Close")
+        db.commit()
+        db.refresh(committee)
+        committee_id = committee.id
 
-        committee_id = create_response.json()["id"]
+        access = UserCommitteeAccess(
+            user_id=admin.id,
+            committee_id=committee_id,
+            granted_by_user_id=super_admin.id,
+            is_active=True,
+            is_admin=True,
+        )
+        db.add(access)
+        db.commit()
 
         close_response = client.post(
             f"/committees/{committee_id}/close",
@@ -153,14 +166,13 @@ def test_admin_can_create_death_support_and_receive_full_response(db):
 
     from app.api.dependencies import get_db
     from app.models import Committee, ContributionRate, UserRole
-    from app.services.committee import create_committee
     from app.services.contribution import record_contribution
     from app.services.member import add_member
 
     admin = User(
         username="death_support_api_admin",
         password_hash=hash_password("death-support-api-password"),
-        role=UserRole.ADMIN.value,
+        role=UserRole.COMMITTEE_ADMIN.value,
         is_active=True,
     )
 
@@ -174,7 +186,6 @@ def test_admin_can_create_death_support_and_receive_full_response(db):
     )
     db.flush()
 
-    from app.models import UserCommitteeAccess
 
     db.add(
         UserCommitteeAccess(
@@ -265,13 +276,12 @@ def test_member_financial_summary_returns_due_breakdown(db):
 
     from app.api.dependencies import get_db
     from app.models import Committee, ContributionRate, MemberDue, UserCommitteeAccess
-    from app.services.committee import create_committee
     from app.services.member import add_member
 
     admin = User(
         username="financial_summary_api_admin",
         password_hash=hash_password("financial-summary-api-password"),
-        role=UserRole.ADMIN.value,
+        role=UserRole.COMMITTEE_ADMIN.value,
         is_active=True,
     )
 

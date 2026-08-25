@@ -14,7 +14,7 @@ from app.schemas.users import (
 )
 
 from app.api.auth import get_db
-from app.api.permissions import require_super_admin
+from app.api.permissions import require_super_admin, require_authenticated
 from app.models import User, UserCommitteeAccess
 from app.services.auth import (
     create_password_reset_token,
@@ -61,6 +61,9 @@ def create_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_super_admin),
 ):
+    if data.role.value == UserRole.SUPER_ADMIN.value and current_user.role != UserRole.SUPER_ADMIN.value:
+        raise HTTPException(status_code=403, detail="Super Admin access required")
+
     if db.query(User).filter(User.username == data.username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
 
@@ -395,6 +398,32 @@ def grant_user_committee_access(
     except Exception:
         db.rollback()
         raise
+
+
+@router.get("/me/committees/access")
+def get_my_committee_access(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_authenticated),
+):
+    accesses = (
+        db.query(UserCommitteeAccess)
+        .filter(
+            UserCommitteeAccess.user_id == current_user.id,
+            UserCommitteeAccess.is_active.is_(True),
+        )
+        .all()
+    )
+
+    return [
+        {
+            "id": access.id,
+            "user_id": access.user_id,
+            "committee_id": access.committee_id,
+            "is_active": access.is_active,
+            "is_admin": access.is_admin,
+        }
+        for access in accesses
+    ]
 
 
 @router.get(

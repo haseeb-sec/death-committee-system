@@ -72,6 +72,64 @@ def require_committee_access(
     return committee
 
 
+def require_committee_admin_access(
+    db: Session,
+    *,
+    user: User,
+    committee_id: int,
+) -> Committee:
+    """
+    Require active access to a committee with management privileges.
+
+    SUPER_ADMIN has full system access.
+    COMMITTEE_ADMIN can manage only explicitly assigned committees.
+    MEMBER can never perform committee-management actions.
+    """
+    committee = require_committee_access(
+        db,
+        user=user,
+        committee_id=committee_id,
+    )
+
+    if user.role == UserRole.SUPER_ADMIN.value:
+        return committee
+
+    # Committee administration is determined by the user's system role
+    # plus active access to this specific committee.
+    #
+    # SUPER_ADMIN:
+    #   Global administrative authority.
+    #
+    # COMMITTEE_ADMIN:
+    #   Administrative authority only for committees explicitly assigned
+    #   through UserCommitteeAccess.
+    #
+    # MEMBER:
+    #   Never receives committee-management authority.
+    if user.role != UserRole.COMMITTEE_ADMIN.value:
+        raise AccountingError(
+            f"Administrative access denied to committee: {committee_id}"
+        )
+
+    committee_admin = (
+        db.query(UserCommitteeAccess.id)
+        .filter(
+            UserCommitteeAccess.user_id == user.id,
+            UserCommitteeAccess.committee_id == committee_id,
+            UserCommitteeAccess.is_active.is_(True),
+            UserCommitteeAccess.is_admin.is_(True),
+        )
+        .first()
+    )
+
+    if committee_admin is None:
+        raise AccountingError(
+            f"Administrative access denied to committee: {committee_id}"
+        )
+
+    return committee
+
+
 def require_member_access(
     db: Session,
     *,
@@ -91,8 +149,15 @@ def require_member_access(
         committee_id=member.committee_id,
     )
 
-    return member
+    if user.role not in (
+        UserRole.COMMITTEE_ADMIN.value,
+        UserRole.SUPER_ADMIN.value,
+    ) and member.user_id != user.id:
+        raise AccountingError(
+            "Access denied to member record."
+        )
 
+    return member
 
 def require_member_good_access(
     db: Session,
@@ -169,12 +234,22 @@ def grant_committee_access(
     user: User,
     committee_id: int,
     granted_by_user: User,
+    is_admin: bool = False,
 ) -> UserCommitteeAccess:
-    require_committee_access(
-        db,
-        user=granted_by_user,
-        committee_id=committee_id,
-    )
+    # Super Admin can assign any active committee. Committee administrators
+    # may only grant ordinary committee membership inside committees they control.
+    if granted_by_user.role != UserRole.SUPER_ADMIN.value:
+        require_committee_access(
+            db,
+            user=granted_by_user,
+            committee_id=committee_id,
+        )
+
+    committee = db.get(Committee, committee_id)
+    if committee is None or not committee.is_active:
+        raise AccountingError(
+            f"Committee not found: {committee_id}"
+        )
 
     target_user = db.get(User, user.id)
     if target_user is None or not target_user.is_active:
@@ -195,11 +270,13 @@ def grant_committee_access(
             committee_id=committee_id,
             granted_by_user_id=granted_by_user.id,
             is_active=True,
+            is_admin=is_admin,
         )
         db.add(access)
     else:
         access.is_active = True
         access.granted_by_user_id = granted_by_user.id
+        access.is_admin = is_admin
 
     db.flush()
     return access

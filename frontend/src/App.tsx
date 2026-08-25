@@ -102,6 +102,12 @@ type MemberStatementRow = {
   amount: number
 }
 
+type AuthenticatedUser = {
+  username: string
+  systemRole: string
+  token: string
+}
+
 type MemberFinancialSummary = {
   member_id: number
   member_name: string
@@ -825,6 +831,24 @@ async function changeMyPassword(
 }
 
 
+async function getMyCommitteeAccess(
+  token: string,
+): Promise<Array<Record<string, any>>> {
+  const response = await fetch(`${API_BASE}/users/me/committees/access`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(
+      data?.detail ?? 'Unable to load committee permissions',
+    )
+  }
+
+  return response.json()
+}
+
+
 async function getUsers(token: string): Promise<Array<Record<string, any>>> {
   const response = await fetch(`${API_BASE}/users`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -1027,9 +1051,22 @@ async function payMemberSettlement(
 }
 
 function App() {
-  const [token, setToken] = useState(
-    () => localStorage.getItem('death_committee_token') ?? '',
-  )
+  const [authenticatedUser, setAuthenticatedUser] =
+    useState<AuthenticatedUser | null>(() => {
+      const storedToken = localStorage.getItem('death_committee_token')
+
+      if (!storedToken) return null
+
+      return {
+        username: '',
+        systemRole: '',
+        token: storedToken,
+      }
+    })
+
+  const token = authenticatedUser?.token ?? ''
+  const userRole = authenticatedUser?.systemRole ?? ''
+
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -1054,16 +1091,30 @@ function App() {
   const [usersLoading, setUsersLoading] = useState(false)
   const [userUsername, setUserUsername] = useState('')
   const [userPassword, setUserPassword] = useState('')
-  const [userRole, setUserRole] = useState('')
-  const [userCreateRole, setUserCreateRole] = useState('viewer')
+  const [userCreateRole, setUserCreateRole] = useState('member')
   const [createdUser, setCreatedUser] =
     useState<Record<string, any> | null>(null)
   const [selectedAccessUserId, setSelectedAccessUserId] = useState<number | null>(null)
   const [committeeAccessLoading, setCommitteeAccessLoading] = useState(false)
+  const [assignmentUserId, setAssignmentUserId] = useState('')
+  const [assignmentCommitteeId, setAssignmentCommitteeId] = useState('')
   const [committeeAccessStatus, setCommitteeAccessStatus] =
     useState<Record<string, any>>({})
 
-  const canWrite = userRole === 'admin' || userRole === 'super_admin'
+  const [myCommitteeAccess, setMyCommitteeAccess] =
+    useState<Array<Record<string, any>>>([])
+
+  const selectedCommitteeAccess = myCommitteeAccess.find(
+    (access) =>
+      Number(access.committee_id) === Number(committeeId) &&
+      access.is_active === true,
+  )
+
+  const isSuperAdmin = userRole === 'super_admin'
+  const isSelectedCommitteeAdmin =
+    isSuperAdmin || selectedCommitteeAccess?.is_admin === true
+
+  const canWrite = isSelectedCommitteeAdmin
 
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -1230,7 +1281,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [token, activePage])
 
   useEffect(() => {
     if (!token || !committeeId) {
@@ -1548,10 +1599,14 @@ function App() {
 
     try {
       const data = await login(username, password)
-      setUserRole(data.role ?? '')
 
       localStorage.setItem('death_committee_token', data.access_token)
-      setToken(data.access_token)
+
+      setAuthenticatedUser({
+        username,
+        systemRole: data.role ?? '',
+        token: data.access_token,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -2546,6 +2601,36 @@ async function handleCreateCommittee(event: FormEvent) {
     }
   }
 
+  async function handleLoadMyCommitteeAccess() {
+    if (!token) {
+      setMyCommitteeAccess([])
+      return
+    }
+
+    try {
+      const data = await getMyCommitteeAccess(token)
+      setMyCommitteeAccess(data)
+    } catch (err) {
+      setMyCommitteeAccess([])
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to load committee permissions',
+      )
+    }
+  }
+
+
+  useEffect(() => {
+    if (!token) {
+      setMyCommitteeAccess([])
+      return
+    }
+
+    void handleLoadMyCommitteeAccess()
+  }, [token])
+
+
   async function handleLoadUsers() {
     if (!token) {
       setError('You are not authenticated')
@@ -2564,6 +2649,60 @@ async function handleCreateCommittee(event: FormEvent) {
       )
     } finally {
       setUsersLoading(false)
+    }
+  }
+
+  async function handleAssignUserToCommittee(event: FormEvent) {
+    event.preventDefault()
+
+    if (userRole !== 'super_admin') {
+      setError('Only Super Administrators can assign users to committees')
+      return
+    }
+
+    const userId = Number(assignmentUserId)
+    const selectedCommitteeId = Number(assignmentCommitteeId)
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      setError('Select a user to assign')
+      return
+    }
+
+    if (!Number.isInteger(selectedCommitteeId) || selectedCommitteeId <= 0) {
+      setError('Select a committee to assign')
+      return
+    }
+
+    setError('')
+    setLoading(true)
+
+    try {
+      await grantUserCommitteeAccess(
+        userId,
+        selectedCommitteeId,
+        token,
+      )
+
+      setAssignmentUserId('')
+      setAssignmentCommitteeId('')
+
+      // Refresh the visible access state for the newly assigned committee.
+      setCommitteeAccessStatus((current) => ({
+        ...current,
+        [userId]: {
+          ...(current[userId] ?? {}),
+          is_active: true,
+          is_admin: false,
+        },
+      }))
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to assign user to committee',
+      )
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -2604,8 +2743,8 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   async function handleGrantCommitteeAccess(userId: number) {
-    if (!canWrite) {
-      setError('You do not have permission to perform this action')
+    if (userRole !== 'super_admin') {
+      setError('Only Super Administrators can manage committee access')
       return
     }
 
@@ -2644,8 +2783,8 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   async function handleDeactivateCommitteeAccess(userId: number) {
-    if (!canWrite) {
-      setError('You do not have permission to perform this action')
+    if (userRole !== 'super_admin') {
+      setError('Only Super Administrators can manage committee access')
       return
     }
 
@@ -2709,7 +2848,7 @@ async function handleCreateCommittee(event: FormEvent) {
       return
     }
 
-    if (!['super_admin', 'admin', 'viewer'].includes(userCreateRole)) {
+    if (!['super_admin', 'committee_admin', 'member'].includes(userCreateRole)) {
       setError('Select a valid user role')
       return
     }
@@ -2766,9 +2905,8 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   function logout() {
-    setUserRole('')
     localStorage.removeItem('death_committee_token')
-    setToken('')
+    setAuthenticatedUser(null)
     setSummary(null)
     setUsername('')
     setPassword('')
@@ -3006,18 +3144,40 @@ async function handleCreateCommittee(event: FormEvent) {
         </div>
 
         <nav>
-          {[
-            'Dashboard',
-            'Committees',
-            'Members',
-            'Contributions',
-            'Death Support',
-            'Dues',
-            'Goods',
-            'Assets',
-            'Settlements',
-            ...(userRole === 'super_admin' ? ['Users'] : []),
-          ].map((page) => (
+          {(isSuperAdmin
+              ? [
+                  'Dashboard',
+                  'Committees',
+                  'Users',
+                  'Members',
+                  'Contributions',
+                  'Death Support',
+                  'Dues',
+                  'Goods',
+                  'Assets',
+                  'Settlements',
+                ]
+              : isSelectedCommitteeAdmin
+                ? [
+                    'Dashboard',
+                    'Members',
+                    'Contributions',
+                    'Death Support',
+                    'Dues',
+                    'Goods',
+                    'Assets',
+                    'Settlements',
+                  ]
+                : [
+                    'Dashboard',
+                    'My Contributions',
+                    'My Death Support',
+                    'My Dues',
+                    'My Goods',
+                    'My Financial Position',
+                    'My Settlement',
+                  ]
+            ).map((page) => (
             <button
               key={page}
               className={`nav-item ${activePage === page ? 'active' : ''}`}
@@ -4158,8 +4318,8 @@ async function handleCreateCommittee(event: FormEvent) {
                           value={userCreateRole}
                           onChange={(event) => setUserCreateRole(event.target.value)}
                         >
-                          <option value="viewer">Viewer</option>
-                          <option value="admin">Admin</option>
+                          <option value="member">Member</option>
+                          <option value="committee_admin">Committee Admin</option>
                           <option value="super_admin">Super Admin</option>
                         </select>
                       </label>
@@ -4217,8 +4377,85 @@ async function handleCreateCommittee(event: FormEvent) {
 
                 <section className="information-card">
                   <div>
+                    <p className="eyebrow">COMMITTEE ASSIGNMENT</p>
+                    <h3>Assign user to committee</h3>
+                    <p className="form-help">
+                      Super Administrators assign application users to active
+                      committees here. This assignment is independent of the
+                      currently selected workspace.
+                    </p>
+                  </div>
+
+                  <form
+                    className="committee-create-form"
+                    onSubmit={handleAssignUserToCommittee}
+                  >
+                    <div className="rate-form-grid">
+                      <label>
+                        User
+                        <select
+                          value={assignmentUserId}
+                          onChange={(event) =>
+                            setAssignmentUserId(event.target.value)
+                          }
+                          required
+                        >
+                          <option value="">Select a user</option>
+                          {users
+                            .filter(
+                              (user) =>
+                                Number(user.id) !==
+                                Number(authenticatedUser?.username === user.username ? user.id : -1),
+                            )
+                            .map((user) => (
+                              <option key={user.id} value={user.id}>
+                                {user.username} · {user.role}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+
+                      <label>
+                        Committee
+                        <select
+                          value={assignmentCommitteeId}
+                          onChange={(event) =>
+                            setAssignmentCommitteeId(event.target.value)
+                          }
+                          required
+                        >
+                          <option value="">Select a committee</option>
+                          {committees.map((committee) => (
+                            <option key={committee.id} value={committee.id}>
+                              {committee.name ??
+                                committee.committee_name ??
+                                `Committee #${committee.id}`}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={
+                        loading ||
+                        !assignmentUserId ||
+                        !assignmentCommitteeId
+                      }
+                    >
+                      {loading ? 'Assigning...' : 'Assign to Committee'}
+                    </button>
+                  </form>
+                </section>
+
+                <section className="information-card">
+                  <div>
                     <p className="eyebrow">USER ACCOUNTS</p>
                     <h3>Application users</h3>
+                    <p className="form-help">
+                      Committee access below is managed for the currently selected committee: <strong>{committees.find((committee) => Number(committee.id) === Number(committeeId))?.name ?? 'No committee selected'}</strong>.
+                    </p>
                     <p className="form-help">
                       Review current accounts and deactivate access when
                       required. To help a user recover their password, click
@@ -5681,21 +5918,22 @@ async function handleCreateCommittee(event: FormEvent) {
               </h1>
               <p>
                 {summary
-                  ? 'Here is the current financial position of your committee.'
-                  : 'Select a committee to view its current financial position.'}
+                  ? 'All committee-specific data and actions below are scoped to the selected committee.'
+                  : 'Select a committee to enter its isolated workspace.'}
               </p>
             </div>
 
             <div className="committee-loader">
-              <label htmlFor="committee-id">Committee</label>
+              <label htmlFor="committee-id">Active committee</label>
               <div>
                 <select
                   id="committee-id"
                   value={committeeId}
                   onChange={(event) => {
-                    setCommitteeId(event.target.value)
-                    setSummary(null)
+                    const nextCommitteeId = event.target.value
                     setError('')
+                    setSummary(null)
+                    setCommitteeId(nextCommitteeId)
                   }}
                   disabled={loading || committees.length === 0}
                 >
@@ -5725,10 +5963,11 @@ async function handleCreateCommittee(event: FormEvent) {
           {!summary && !error && (
             <section className="empty-state">
               <div className="empty-icon">₨</div>
-              <h3>No committee loaded</h3>
+              <h3>No committee workspace loaded</h3>
               <p>
-                Enter a committee ID above and load its real financial data
-                from the backend.
+                Select an accessible committee above. The selected committee
+                becomes the active context for all members, finances, assets,
+                goods, dues, death support, and settlements.
               </p>
             </section>
           )}

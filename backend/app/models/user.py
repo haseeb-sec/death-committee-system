@@ -2,15 +2,15 @@ from datetime import datetime, timezone
 from enum import Enum
 
 from sqlalchemy import Boolean, DateTime, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 
 
 class UserRole(str, Enum):
     SUPER_ADMIN = "super_admin"
-    ADMIN = "admin"
-    VIEWER = "viewer"
+    COMMITTEE_ADMIN = "committee_admin"
+    MEMBER = "member"
 
 
 class User(Base):
@@ -22,7 +22,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
-        default=UserRole.VIEWER.value,
+        default=UserRole.MEMBER.value,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -38,6 +38,11 @@ class User(Base):
         String(255),
         nullable=True,
     )
+    member: Mapped["Member | None"] = relationship(
+        back_populates="user",
+        uselist=False,
+    )
+
     password_reset_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,

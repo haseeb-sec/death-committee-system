@@ -10,8 +10,8 @@ from app.schemas.member import (
     MemberResponse,
     MemberStatementResponse,
 )
-from app.api.permissions import require_admin, require_authenticated
 from app.services.accounting import AccountingError
+from app.models import Member, User, UserRole
 from app.services.member import add_member, leave_member, list_members
 from app.services.member_financial import (
     get_member_financial_summary,
@@ -20,7 +20,12 @@ from app.services.member_statement import (
     get_member_statement,
 )
 from app.services.audit import record_audit
-from app.services.access_control import require_committee_access, require_member_access
+from app.services.access_control import (
+    grant_committee_access,
+    require_committee_admin_access,
+    require_committee_access,
+    require_member_access,
+)
 
 
 router = APIRouter(
@@ -36,7 +41,7 @@ def create_member_api(
     current_user = Depends(require_admin),
 ):
     try:
-        require_committee_access(
+        require_committee_admin_access(
             db,
             user=current_user,
             committee_id=data.committee_id,
@@ -45,8 +50,17 @@ def create_member_api(
         member = add_member(
             db,
             committee_id=data.committee_id,
+            username=data.username,
+            password=data.password,
             name=data.name,
             joined_on=data.joined_on,
+        )
+
+        grant_committee_access(
+            db,
+            user=db.get(User, member.user_id),
+            committee_id=data.committee_id,
+            granted_by_user=current_user,
         )
 
         record_audit(
@@ -63,6 +77,7 @@ def create_member_api(
 
         return {
             "id": member.id,
+            "user_id": member.user_id,
             "committee_id": member.committee_id,
             "name": member.name,
             "joined_on": member.joined_on,
@@ -89,10 +104,41 @@ def list_members_api(
         committee_id=committee_id,
     )
 
-    return list_members(
-        db,
-        committee_id=committee_id,
+    # Super Admins and assigned Committee Admins may view the
+    # complete member list for the selected committee.
+    if current_user.role in (
+        UserRole.SUPER_ADMIN.value,
+        UserRole.COMMITTEE_ADMIN.value,
+    ):
+        if current_user.role == UserRole.COMMITTEE_ADMIN.value:
+            require_committee_admin_access(
+                db,
+                user=current_user,
+                committee_id=committee_id,
+            )
+
+        return list_members(
+            db,
+            committee_id=committee_id,
+        )
+
+    # Committee Members may only see their own member record.
+    member = (
+        db.query(Member)
+        .filter(
+            Member.user_id == current_user.id,
+            Member.committee_id == committee_id,
+        )
+        .first()
     )
+
+    if member is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Member record not found",
+        )
+
+    return [member]
 
 
 @router.post(
@@ -106,10 +152,15 @@ def leave_member_api(
     current_user = Depends(require_admin),
 ):
     try:
-        require_member_access(
+        member = require_member_access(
             db,
             user=current_user,
             member_id=member_id,
+        )
+        require_committee_admin_access(
+            db,
+            user=current_user,
+            committee_id=member.committee_id,
         )
 
         member = leave_member(
@@ -132,6 +183,7 @@ def leave_member_api(
 
         return {
             "id": member.id,
+            "user_id": member.user_id,
             "committee_id": member.committee_id,
             "name": member.name,
             "joined_on": member.joined_on,

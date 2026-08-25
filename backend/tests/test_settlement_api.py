@@ -42,7 +42,17 @@ def test_create_settlement_api(db):
 
     from app.models import Member
 
+    member_user = User(
+        username="api_member",
+        password_hash="unused",
+        role=UserRole.MEMBER.value,
+        is_active=True,
+    )
+    db.add(member_user)
+    db.flush()
+
     member = Member(
+        user_id=member_user.id,
         committee_id=committee.id,
         name="API Member",
         joined_on=date(2026, 1, 1),
@@ -84,7 +94,7 @@ def test_create_settlement_api(db):
     test_user = User(
         username="test_admin",
         password_hash="unused",
-        role=UserRole.ADMIN.value,
+        role=UserRole.COMMITTEE_ADMIN.value,
         is_active=True,
     )
     db.add(test_user)
@@ -164,7 +174,17 @@ def test_pay_settlement_api(db):
 
     from app.models import Member
 
+    member_user = User(
+        username="api_payment_member",
+        password_hash="unused",
+        role=UserRole.MEMBER.value,
+        is_active=True,
+    )
+    db.add(member_user)
+    db.flush()
+
     member = Member(
+        user_id=member_user.id,
         committee_id=committee.id,
         name="API Payment Member",
         joined_on=date(2026, 1, 1),
@@ -215,7 +235,7 @@ def test_pay_settlement_api(db):
     test_user = User(
         username="test_admin",
         password_hash="unused",
-        role=UserRole.ADMIN.value,
+        role=UserRole.COMMITTEE_ADMIN.value,
         is_active=True,
     )
     db.add(test_user)

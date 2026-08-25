@@ -2,14 +2,17 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from app.models import Account, AccountType, Committee, Member
+from app.models import Account, AccountType, Committee, Member, User, UserRole
 from app.services.accounting import AccountingError
+from app.services.auth import hash_password
 
 
 def add_member(
     db: Session,
     *,
     committee_id: int,
+    username: str | None = None,
+    password: str | None = None,
     name: str,
     joined_on: date,
 ) -> Member:
@@ -36,7 +39,52 @@ def add_member(
             f"Committee is not active: {committee_id}"
         )
 
+    # Backward-compatible internal/test creation:
+    # the Member identity model still always creates a real User.
+    if username is None:
+        import secrets
+        username = f"member_{secrets.token_hex(12)}"
+
+    username = username.strip()
+
+    if not username:
+        raise AccountingError(
+            "Username cannot be empty."
+        )
+
+    if password is None:
+        import secrets
+        password = secrets.token_urlsafe(32)
+
+    if not password:
+        raise AccountingError(
+            "Password cannot be empty."
+        )
+
+    existing_user = (
+        db.query(User)
+        .filter(User.username == username)
+        .first()
+    )
+
+    if existing_user is not None:
+        raise AccountingError(
+            f"Username already exists: {username}"
+        )
+
+    user = User(
+        username=username,
+        password_hash=hash_password(password),
+        role=UserRole.MEMBER.value,
+        is_active=True,
+    )
+    db.add(user)
+    db.flush()
+
+    user_id = user.id
+
     member = Member(
+        user_id=user_id,
         committee_id=committee_id,
         name=name,
         joined_on=joined_on,

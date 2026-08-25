@@ -19,7 +19,7 @@ from app.services.committee_asset import (
     update_asset_value,
 )
 from app.services.audit import record_audit
-from app.services.access_control import require_asset_access, require_committee_access
+from app.services.access_control import require_asset_access, require_committee_access, require_committee_admin_access
 
 
 router = APIRouter(
@@ -39,7 +39,7 @@ def create_committee_asset(
     current_user = Depends(require_admin),
 ):
     try:
-        require_committee_access(
+        require_committee_admin_access(
             db,
             user=current_user,
             committee_id=committee_id,
