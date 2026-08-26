@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
-from app.api.permissions import require_admin, require_authenticated
+from app.api.permissions import require_authenticated
 from app.schemas.member import (
     MemberCreate,
     MemberFinancialSummaryResponse,
@@ -38,7 +38,7 @@ router = APIRouter(
 def create_member_api(
     data: MemberCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
         require_committee_admin_access(
@@ -149,14 +149,17 @@ def leave_member_api(
     member_id: int,
     data: MemberLeave,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
-        member = require_member_access(
-            db,
-            user=current_user,
-            member_id=member_id,
-        )
+        member = db.get(Member, member_id)
+
+        if member is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Member not found",
+            )
+
         require_committee_admin_access(
             db,
             user=current_user,

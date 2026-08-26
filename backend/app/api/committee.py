@@ -1,8 +1,7 @@
+from sqlalchemy import select
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_db
-from app.api.permissions import require_admin, require_authenticated, require_super_admin
 from app.schemas.committee import (
     CommitteeCreate,
     CommitteeFinancialPositionResponse,
@@ -11,7 +10,8 @@ from app.schemas.committee import (
 )
 
 from app.api.dependencies import get_db
-from app.api.permissions import require_admin, require_authenticated, require_super_admin
+from app.api.auth import get_current_user
+from app.api.permissions import require_authenticated, require_super_admin
 from app.services.accounting import AccountingError
 from app.services.committee import (
     create_committee,
@@ -23,8 +23,17 @@ from app.services.committee_financial import (
 )
 from app.services.committee_summary import get_committee_summary
 from app.services.audit import record_audit
-from app.models import User, UserCommitteeAccess, UserRole
-from app.services.access_control import require_committee_access, require_committee_admin_access
+from app.models import (
+    Committee,
+    User,
+    UserCommitteeAccess,
+    UserRole,
+)
+from app.services.access_control import (
+    grant_committee_access,
+    require_committee_access,
+    require_committee_admin_access,
+)
 
 
 router = APIRouter(
@@ -50,6 +59,7 @@ def create_committee_api(
             committee_id=committee.id,
             granted_by_user_id=current_user.id,
             is_active=True,
+            is_admin=False,
         )
         db.add(access)
 
@@ -212,6 +222,56 @@ def revoke_committee_admin_api(
         ) from exc
 
 
+
+@router.get(
+    "/{committee_id}/administrators",
+)
+def list_committee_administrators_api(
+    committee_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Return active Committee Admin assignments for one committee.
+
+    Super Admin may inspect any active committee.
+    Committee Admin may inspect the committee they administer.
+    """
+    committee = db.get(Committee, committee_id)
+
+    if committee is None:
+        raise HTTPException(status_code=404, detail="Committee not found")
+
+    # Super Admin has global committee visibility.
+    if current_user.role != UserRole.SUPER_ADMIN.value:
+        require_committee_admin_access(
+            db,
+            user=current_user,
+            committee_id=committee_id,
+        )
+
+    rows = db.execute(
+        select(UserCommitteeAccess, User)
+        .join(User, User.id == UserCommitteeAccess.user_id)
+        .where(
+            UserCommitteeAccess.committee_id == committee_id,
+            UserCommitteeAccess.is_active.is_(True),
+            UserCommitteeAccess.is_admin.is_(True),
+        )
+        .order_by(User.username.asc())
+    ).all()
+
+    return [
+        {
+            "user_id": access.user_id,
+            "username": user.username,
+            "role": user.role,
+            "is_active": access.is_active,
+            "is_admin": access.is_admin,
+        }
+        for access, user in rows
+    ]
+
 @router.get(
     "",
     response_model=list[CommitteeResponse],
@@ -233,7 +293,7 @@ def list_committees_api(
 def close_committee_api(
     committee_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
         require_committee_admin_access(

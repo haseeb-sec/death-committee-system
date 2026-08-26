@@ -8,10 +8,21 @@ from app.db.session import Base
 
 
 class UserRole(str, Enum):
+    """
+    System-level identity roles.
+
+    SUPER_ADMIN:
+        Global platform administrator.
+
+    COMMITTEE_ADMIN:
+        Administrator of explicitly assigned committees.
+
+    MEMBER:
+        Normal committee member with access to their own information.
+    """
     SUPER_ADMIN = "super_admin"
     COMMITTEE_ADMIN = "committee_admin"
     MEMBER = "member"
-
 
 class User(Base):
     __tablename__ = "users"

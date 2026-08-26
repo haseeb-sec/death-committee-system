@@ -43,3 +43,26 @@ htmlcov/
 
 # Local database backups
 *.db.*
+
+# Project development backups / snapshots
+*.backup-*
+*.backup_*
+*.bak
+*.old
+backups/
+
+# Local development archives
+*.tar.gz
+*.zip
+
+# Temporary one-off development scripts
+fix_*.py
+implement_*.py
+repair_*.py
+
+# Development snapshots / pre-change backups
+*.before-*
+*.before_*
+
+# Authorization migration snapshots
+.authorization_*/

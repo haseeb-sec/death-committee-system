@@ -193,6 +193,7 @@ def test_admin_can_create_death_support_and_receive_full_response(db):
             committee_id=committee.id,
             granted_by_user_id=admin.id,
             is_active=True,
+            is_admin=True,
         )
     )
     db.flush()
@@ -301,6 +302,7 @@ def test_member_financial_summary_returns_due_breakdown(db):
             committee_id=committee.id,
             granted_by_user_id=admin.id,
             is_active=True,
+            is_admin=True,
         )
     )
     db.flush()

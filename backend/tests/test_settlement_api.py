@@ -106,6 +106,7 @@ def test_create_settlement_api(db):
             committee_id=committee.id,
             granted_by_user_id=test_user.id,
             is_active=True,
+            is_admin=True,
         )
     )
     db.commit()
@@ -247,6 +248,7 @@ def test_pay_settlement_api(db):
             committee_id=committee.id,
             granted_by_user_id=test_user.id,
             is_active=True,
+            is_admin=True,
         )
     )
     db.commit()

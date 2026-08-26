@@ -15,7 +15,8 @@ from app.schemas.users import (
 
 from app.api.auth import get_db
 from app.api.permissions import require_super_admin, require_authenticated
-from app.models import User, UserCommitteeAccess
+from app.models.committee import Committee
+from app.models import User, UserCommitteeAccess, UserRole
 from app.services.auth import (
     create_password_reset_token,
     hash_password,
@@ -377,6 +378,7 @@ def grant_user_committee_access(
             user=target_user,
             committee_id=committee_id,
             granted_by_user=current_user,
+            is_admin=data.is_admin,
         )
 
         record_audit(
@@ -386,7 +388,8 @@ def grant_user_committee_access(
             entity_type="committee",
             entity_id=committee_id,
             description=(
-                f"Granted user '{target_user.username}' access "
+                f"Granted user '{target_user.username}' "
+                f"{'administrator' if data.is_admin else 'member'} access "
                 f"to committee {committee_id}"
             ),
         )
@@ -503,3 +506,61 @@ def deactivate_user_committee_access(
     db.refresh(access)
 
     return access
+
+
+@router.get(
+    "/{user_id}/committees/access",
+)
+def get_user_committee_assignments(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+):
+    """
+    Return every committee-access record for a user.
+
+    Super Admin only.
+    This is a read-only management view and does not replace the
+    existing grant/check/revoke access endpoints.
+    """
+    target_user = db.get(User, user_id)
+
+    if target_user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found",
+        )
+
+    records = (
+        db.query(UserCommitteeAccess)
+        .filter(UserCommitteeAccess.user_id == user_id)
+        .order_by(UserCommitteeAccess.committee_id.asc())
+        .all()
+    )
+
+    result = []
+
+    for access in records:
+        committee = db.get(Committee, access.committee_id)
+
+        result.append(
+            {
+                "id": access.id,
+                "user_id": access.user_id,
+                "committee_id": access.committee_id,
+                "committee_name": (
+                    committee.name
+                    if committee is not None
+                    else f"Committee #{access.committee_id}"
+                ),
+                "committee_is_active": (
+                    committee.is_active
+                    if committee is not None
+                    else False
+                ),
+                "is_active": access.is_active,
+                "is_admin": access.is_admin,
+            }
+        )
+
+    return result
