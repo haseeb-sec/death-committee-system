@@ -10,7 +10,7 @@ from app.schemas.member_due import (
 )
 
 from app.api.dependencies import get_db
-from app.api.permissions import require_admin, require_authenticated
+from app.api.permissions import require_authenticated
 from app.services.accounting import AccountingError
 from app.services.member_due import (
     add_member_due,
@@ -19,7 +19,7 @@ from app.services.member_due import (
     pay_member_due,
 )
 from app.services.audit import record_audit
-from app.services.access_control import require_member_access
+from app.services.access_control import require_member_access, require_committee_admin_access
 
 
 router = APIRouter(
@@ -36,7 +36,7 @@ def create_member_due(
     member_id: int,
     data: MemberDueCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
         require_member_access(
@@ -177,7 +177,7 @@ def pay_member_due_api(
     due_id: int,
     data: MemberDuePayment,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
         due = db.get(MemberDue, due_id)
@@ -187,10 +187,10 @@ def pay_member_due_api(
             )
 
         try:
-            require_member_access(
+            require_committee_admin_access(
                 db,
                 user=current_user,
-                member_id=due.member_id,
+                committee_id=due.committee_id,
             )
         except AccountingError as exc:
             db.rollback()

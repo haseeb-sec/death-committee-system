@@ -53,10 +53,9 @@ def test_committee_asset_api_lifecycle(db):
     db.commit()
 
     test_user = User(
-        id=1,
         username="test_admin",
         password_hash="unused",
-        role="admin",
+        role="committee_admin",
         is_active=True,
     )
     db.add(test_user)
@@ -68,6 +67,7 @@ def test_committee_asset_api_lifecycle(db):
             committee_id=committee.id,
             granted_by_user_id=test_user.id,
             is_active=True,
+            is_admin=True,
         )
     )
     db.commit()

@@ -5,6 +5,8 @@ from pydantic import BaseModel
 
 class MemberCreate(BaseModel):
     committee_id: int
+    username: str
+    password: str
     name: str
     joined_on: date
 
@@ -15,6 +17,7 @@ class MemberLeave(BaseModel):
 
 class MemberResponse(BaseModel):
     id: int
+    user_id: int
     committee_id: int
     name: str
     joined_on: date

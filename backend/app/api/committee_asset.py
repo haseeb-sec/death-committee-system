@@ -10,7 +10,7 @@ from app.schemas.committee_asset import (
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
-from app.api.permissions import require_admin, require_authenticated
+from app.api.permissions import require_authenticated
 from app.services.accounting import AccountingError
 from app.services.committee_asset import (
     add_committee_asset,
@@ -19,7 +19,7 @@ from app.services.committee_asset import (
     update_asset_value,
 )
 from app.services.audit import record_audit
-from app.services.access_control import require_asset_access, require_committee_access
+from app.services.access_control import require_asset_access, require_committee_access, require_committee_admin_access
 
 
 router = APIRouter(
@@ -36,10 +36,10 @@ def create_committee_asset(
     committee_id: int,
     data: CommitteeAssetCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
-        require_committee_access(
+        require_committee_admin_access(
             db,
             user=current_user,
             committee_id=committee_id,
@@ -113,7 +113,7 @@ def update_committee_asset_value(
     asset_id: int,
     data: AssetValueUpdate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
         require_asset_access(

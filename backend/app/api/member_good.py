@@ -10,7 +10,7 @@ from app.schemas.member_good import (
 )
 
 from app.api.dependencies import get_db
-from app.api.permissions import require_admin, require_authenticated
+from app.api.permissions import require_authenticated
 from app.services.accounting import AccountingError
 from app.services.member_good import (
     add_member_good,
@@ -40,7 +40,7 @@ def create_member_good(
     member_id: int,
     data: MemberGoodCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
         require_member_access(
@@ -252,7 +252,7 @@ def update_good_value(
     good_id: int,
     data: MemberGoodValueUpdate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
         try:

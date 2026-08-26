@@ -167,3 +167,452 @@ input:focus-visible {
     scroll-behavior: auto;
   }
 }
+
+/* ============================================================
+   Users / Access Management UI
+   ============================================================ */
+
+.users-access-panel,
+.users-accounts-panel {
+  overflow: hidden;
+}
+
+.section-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.users-access-form {
+  display: grid;
+  gap: 18px;
+}
+
+.users-access-step {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid #e5eaf1;
+  border-radius: 14px;
+  background: #fbfcfe;
+}
+
+.users-access-step-number {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #eaf2ff;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.users-access-step-content {
+  min-width: 0;
+}
+
+.users-access-step-title {
+  margin-bottom: 4px;
+  color: #172033;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.users-access-step-help {
+  margin-bottom: 12px;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.users-access-select {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 13px;
+  border: 1px solid #d8dee8;
+  border-radius: 9px;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+}
+
+.users-access-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.access-level-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.access-level-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #dfe5ee;
+  border-radius: 11px;
+  background: #fff;
+  color: #172033;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease,
+    background .15s ease;
+}
+
+.access-level-card:hover {
+  border-color: #93b4ec;
+}
+
+.access-level-card.selected {
+  border-color: #3b82f6;
+  background: #f5f9ff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.08);
+}
+
+.access-level-card span:last-child {
+  display: grid;
+  gap: 4px;
+}
+
+.access-level-card strong {
+  font-size: 14px;
+}
+
+.access-level-card small {
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.access-level-radio {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  background: #fff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.access-level-card.selected .access-level-radio {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.users-access-confirmation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px;
+  border: 1px solid #dbe5f4;
+  border-radius: 12px;
+  background: #f7faff;
+}
+
+.users-access-confirmation > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.users-access-confirmation-label {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.users-access-confirmation strong {
+  color: #172033;
+  font-size: 14px;
+}
+
+.users-access-confirmation span:last-child {
+  color: #64748b;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.users-access-grant-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.users-accounts-heading {
+  margin-bottom: 20px;
+}
+
+.users-table {
+  display: grid;
+  gap: 12px;
+}
+
+.user-account-card {
+  overflow: hidden;
+  border: 1px solid #e2e7ef;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.user-account-main {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+}
+
+.user-avatar {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #edf4ff;
+  color: #2563eb;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.user-account-identity {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.user-account-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.user-account-name-row strong {
+  color: #172033;
+  font-size: 15px;
+}
+
+.user-account-identity small {
+  color: #8a94a6;
+  font-size: 11px;
+}
+
+.user-role-badge,
+.assignment-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.user-role-badge.member {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.user-role-badge.administrator {
+  background: #eef5ff;
+  color: #2563eb;
+}
+
+.user-role-badge.system {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.user-account-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.user-account-access {
+  padding: 15px 18px 17px;
+  border-top: 1px solid #edf0f4;
+  background: #fafbfd;
+}
+
+.user-account-access-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.user-account-access-header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.user-account-access-header .eyebrow {
+  margin: 0;
+}
+
+.user-account-access-header strong {
+  color: #334155;
+  font-size: 13px;
+}
+
+.user-access-global-note,
+.user-access-empty {
+  display: grid;
+  gap: 4px;
+  padding: 13px 14px;
+  border: 1px dashed #d7dee9;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.user-access-global-note strong,
+.user-access-empty strong {
+  color: #334155;
+  font-size: 12px;
+}
+
+.user-access-global-note span,
+.user-access-empty span {
+  color: #7b8494;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.user-assignment-list {
+  display: grid;
+  gap: 7px;
+}
+
+.user-assignment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 13px;
+  border: 1px solid #e4e8ef;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.user-assignment-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.user-assignment-row strong {
+  color: #334155;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.user-assignment-row span {
+  color: #7b8494;
+  font-size: 11px;
+}
+
+.assignment-status.active {
+  background: #ecfdf3;
+  color: #15803d;
+}
+
+.assignment-status.revoked {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.user-account-current-access {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e7ebf1;
+}
+
+.user-account-current-access > span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.user-account-current-access > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+@media (max-width: 900px) {
+  .access-level-options {
+    grid-template-columns: 1fr;
+  }
+
+  .users-access-confirmation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .users-access-grant-button {
+    width: 100%;
+  }
+
+  .user-account-main {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .user-account-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .user-account-current-access {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .user-account-current-access > div {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .users-access-step {
+    grid-template-columns: 1fr;
+  }
+
+  .users-access-step-number {
+    width: 32px;
+    height: 32px;
+  }
+
+  .user-account-access-header,
+  .user-assignment-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .user-account-access-header button {
+    width: 100%;
+  }
+}

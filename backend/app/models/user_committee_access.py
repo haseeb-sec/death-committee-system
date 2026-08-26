@@ -42,6 +42,12 @@ class UserCommitteeAccess(Base):
         default=True,
     )
 
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+
     granted_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,

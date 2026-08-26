@@ -18,6 +18,7 @@ class UserResponse(BaseModel):
 
 class CommitteeAccessCreate(BaseModel):
     user_id: int
+    is_admin: bool = False
 
 
 class CommitteeAccessResponse(BaseModel):
@@ -25,6 +26,7 @@ class CommitteeAccessResponse(BaseModel):
     user_id: int
     committee_id: int
     is_active: bool
+    is_admin: bool
 
 
 class PasswordChange(BaseModel):

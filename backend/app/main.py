@@ -18,6 +18,7 @@ app = FastAPI(
     version="0.1.0",
 )
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -31,12 +32,27 @@ app.add_middleware(
 )
 
 
+# ============================================================
+# API ROUTER REGISTRATION
+# ============================================================
+#
+# IMPORTANT:
+# Keep these registrations at module level.
+# Do not put them inside functions, conditionals, or startup
+# callbacks. FastAPI needs these routers during application
+# construction so OpenAPI and TestClient can discover them.
+# ============================================================
+
 app.include_router(committee_router)
 app.include_router(contribution_router)
 app.include_router(settlement_router)
 app.include_router(death_support_router)
 app.include_router(member_good_router)
 app.include_router(member_router)
+app.include_router(committee_asset_router)
+app.include_router(member_due_router)
+app.include_router(auth_router)
+app.include_router(users_router)
 
 
 @app.get("/")
@@ -45,7 +61,3 @@ def root():
         "message": "Death Management Committee System API",
         "status": "running",
     }
-app.include_router(committee_asset_router)
-app.include_router(member_due_router)
-app.include_router(auth_router)
-app.include_router(users_router)

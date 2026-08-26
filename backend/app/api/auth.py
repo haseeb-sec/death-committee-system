@@ -40,6 +40,8 @@ def login(
         "access_token": token,
         "token_type": "bearer",
         "role": user.role,
+        "user_id": user.id,
+        "username": user.username,
     }
 
 

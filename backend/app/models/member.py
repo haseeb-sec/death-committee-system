@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Boolean, Date, ForeignKey, String
+from sqlalchemy import Boolean, Date, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -9,7 +9,16 @@ from app.db.session import Base
 class Member(Base):
     __tablename__ = "members"
 
+    __table_args__ = (
+        UniqueConstraint("user_id", name="uq_members_user_id"),
+    )
+
     id: Mapped[int] = mapped_column(primary_key=True)
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False,
+    )
 
     committee_id: Mapped[int] = mapped_column(
         ForeignKey("committees.id"),
@@ -35,6 +44,11 @@ class Member(Base):
         Boolean,
         default=True,
         nullable=False,
+    )
+
+    user: Mapped["User | None"] = relationship(
+        back_populates="member",
+        uselist=False,
     )
 
     committee: Mapped["Committee"] = relationship(

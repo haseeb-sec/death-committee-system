@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
-from app.api.permissions import require_admin
+from app.api.permissions import require_authenticated
 from app.schemas.settlement import (
     SettlementCreate,
     SettlementPreviewResponse,
@@ -15,8 +15,8 @@ from app.services.member_settlement import (
     settle_member,
 )
 from app.services.audit import record_audit
-from app.services.access_control import require_member_access
-from app.models import MemberSettlement
+from app.services.access_control import require_member_access, require_committee_admin_access
+from app.models import Member, MemberSettlement
 
 
 router = APIRouter(
@@ -32,7 +32,7 @@ router = APIRouter(
 def preview_member_settlement(
     member_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
         require_member_access(
@@ -76,13 +76,20 @@ def create_member_settlement(
     member_id: int,
     data: SettlementCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
-        require_member_access(
+        member = db.get(Member, member_id)
+
+        if member is None:
+            raise AccountingError(
+                f"Member not found: {member_id}"
+            )
+
+        require_committee_admin_access(
             db,
             user=current_user,
-            member_id=member_id,
+            committee_id=member.committee_id,
         )
     except AccountingError as exc:
         raise HTTPException(
@@ -140,7 +147,7 @@ def create_member_settlement(
 def pay_member_settlement_api(
     settlement_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
         settlement = db.get(MemberSettlement, settlement_id)
@@ -150,10 +157,17 @@ def pay_member_settlement_api(
             )
 
         try:
-            require_member_access(
+            member = db.get(Member, settlement.member_id)
+
+            if member is None:
+                raise AccountingError(
+                    f"Member not found: {settlement.member_id}"
+                )
+
+            require_committee_admin_access(
                 db,
                 user=current_user,
-                member_id=settlement.member_id,
+                committee_id=member.committee_id,
             )
         except AccountingError as exc:
             raise HTTPException(

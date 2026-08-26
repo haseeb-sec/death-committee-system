@@ -14,6 +14,7 @@ type CommitteeSummary = {
 }
 
 type CreatedCommittee = {
+  is_active?: boolean
   id?: number
   name?: string
   committee_name?: string
@@ -100,6 +101,12 @@ type MemberStatementRow = {
   description: string
   reference: string | null
   amount: number
+}
+
+type AuthenticatedUser = {
+  username: string
+  systemRole: string
+  token: string
 }
 
 type MemberFinancialSummary = {
@@ -254,6 +261,29 @@ async function getMembers(
   return response.json()
 }
 
+
+async function closeCommittee(
+  committeeId: number,
+  token: string,
+): Promise<Record<string, any>> {
+  const response = await fetch(
+    `${API_BASE}/committees/${committeeId}/close`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  )
+
+  const data = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(data?.detail ?? 'Unable to close committee')
+  }
+
+  return data ?? {}
+}
 
 async function createCommittee(
   name: string,
@@ -825,6 +855,24 @@ async function changeMyPassword(
 }
 
 
+async function getMyCommitteeAccess(
+  token: string,
+): Promise<Array<Record<string, any>>> {
+  const response = await fetch(`${API_BASE}/users/me/committees/access`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(
+      data?.detail ?? 'Unable to load committee permissions',
+    )
+  }
+
+  return response.json()
+}
+
+
 async function getUsers(token: string): Promise<Array<Record<string, any>>> {
   const response = await fetch(`${API_BASE}/users`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -842,6 +890,7 @@ async function grantUserCommitteeAccess(
   userId: number,
   committeeId: number,
   token: string,
+  isAdmin: boolean = false,
 ): Promise<Record<string, any>> {
   const response = await fetch(
     `${API_BASE}/users/${userId}/committees/${committeeId}/access`,
@@ -851,13 +900,58 @@ async function grantUserCommitteeAccess(
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ user_id: userId }),
+      body: JSON.stringify({
+        user_id: userId,
+        is_admin: isAdmin,
+      }),
     },
   )
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(data?.detail ?? 'Unable to grant committee access')
+  }
+
+  return response.json()
+}
+
+async function getCommitteeAdministrators(
+  committeeId: number,
+  token: string,
+): Promise<Array<Record<string, any>>> {
+  const response = await fetch(
+    `${API_BASE}/committees/${committeeId}/administrators`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  )
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(
+      data?.detail ?? 'Unable to load committee administrators',
+    )
+  }
+
+  return response.json()
+}
+
+async function getUserCommitteeAssignments(
+  userId: number,
+  token: string,
+): Promise<Array<Record<string, any>>> {
+  const response = await fetch(
+    `${API_BASE}/users/${userId}/committees/access`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  )
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(
+      data?.detail ?? 'Unable to load committee assignments',
+    )
   }
 
   return response.json()
@@ -1026,10 +1120,57 @@ async function payMemberSettlement(
   return response.json()
 }
 
+function getNavigationLabel(page: string): string {
+  const labels: Record<string, string> = {
+    Dashboard: 'Overview',
+    'Death Support': 'Death Assistance',
+    Dues: 'Outstanding Dues',
+    Goods: 'Member Purchases',
+    Assets: 'Committee Assets',
+    Settlements: 'Member Settlements',
+    'My Death Support': 'My Death Assistance',
+    'My Dues': 'My Outstanding Dues',
+    'My Goods': 'My Purchases',
+    'My Financial Position': 'My Financial Summary',
+    'My Settlement': 'My Settlement',
+  }
+
+  return labels[page] ?? page
+}
+
+
 function App() {
-  const [token, setToken] = useState(
-    () => localStorage.getItem('death_committee_token') ?? '',
-  )
+
+  // ----------------------------------------------------------
+  // FINAL RBAC SYSTEM-USER PERMISSION
+  //
+  // Only Super Admin manages system-level users.
+  // Committee Admin manages operations inside assigned
+  // committees but does NOT manage system users.
+  // Members have no system-management authority.
+  // ----------------------------------------------------------
+
+
+  const [authenticatedUser, setAuthenticatedUser] =
+    useState<AuthenticatedUser | null>(() => {
+      const storedToken = localStorage.getItem('death_committee_token')
+
+      if (!storedToken) return null
+
+      return {
+        username: '',
+        systemRole: '',
+        token: storedToken,
+      }
+    })
+
+  const token = authenticatedUser?.token ?? ''
+  const userRole = authenticatedUser?.systemRole ?? ''
+
+  // System-user management is restricted to Super Admin.
+  const canManageSystemUsers = userRole === 'super_admin'
+
+
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -1054,16 +1195,41 @@ function App() {
   const [usersLoading, setUsersLoading] = useState(false)
   const [userUsername, setUserUsername] = useState('')
   const [userPassword, setUserPassword] = useState('')
-  const [userRole, setUserRole] = useState('')
-  const [userCreateRole, setUserCreateRole] = useState('viewer')
+  const [userCreateRole, setUserCreateRole] = useState('member')
   const [createdUser, setCreatedUser] =
     useState<Record<string, any> | null>(null)
   const [selectedAccessUserId, setSelectedAccessUserId] = useState<number | null>(null)
   const [committeeAccessLoading, setCommitteeAccessLoading] = useState(false)
+  const [assignmentUserId, setAssignmentUserId] = useState('')
+  const [assignmentCommitteeId, setAssignmentCommitteeId] = useState('')
+  const [assignmentIsAdmin, setAssignmentIsAdmin] = useState(false)
+  const [userCommitteeAssignments, setUserCommitteeAssignments] =
+    useState<Record<string, Array<Record<string, any>>>>({})
+  const [assignmentOverviewLoading, setAssignmentOverviewLoading] =
+    useState<number | null>(null)
+
+  const [committeeAdministrators, setCommitteeAdministrators] =
+    useState<Record<string, Array<Record<string, any>>>>({})
+  const [committeeAdministratorsLoading, setCommitteeAdministratorsLoading] =
+    useState<string | null>(null)
+
   const [committeeAccessStatus, setCommitteeAccessStatus] =
     useState<Record<string, any>>({})
 
-  const canWrite = userRole === 'admin' || userRole === 'super_admin'
+  const [myCommitteeAccess, setMyCommitteeAccess] =
+    useState<Array<Record<string, any>>>([])
+
+  const selectedCommitteeAccess = myCommitteeAccess.find(
+    (access) =>
+      Number(access.committee_id) === Number(committeeId) &&
+      access.is_active === true,
+  )
+
+  const isSuperAdmin = userRole === 'super_admin'
+  const isSelectedCommitteeAdmin =
+    isSuperAdmin || selectedCommitteeAccess?.is_admin === true
+
+  const canWrite = isSelectedCommitteeAdmin
 
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -1071,6 +1237,8 @@ function App() {
   const [committeeName, setCommitteeName] = useState('')
   const [createdCommittee, setCreatedCommittee] =
     useState<Record<string, any> | null>(null)
+  const [committeeLifecycleStatus, setCommitteeLifecycleStatus] =
+    useState<Record<string, string>>({})
 
   const [assetName, setAssetName] = useState('')
   const [assetPurchaseDate, setAssetPurchaseDate] = useState('')
@@ -1230,7 +1398,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [token, activePage])
 
   useEffect(() => {
     if (!token || !committeeId) {
@@ -1548,10 +1716,14 @@ function App() {
 
     try {
       const data = await login(username, password)
-      setUserRole(data.role ?? '')
 
       localStorage.setItem('death_committee_token', data.access_token)
-      setToken(data.access_token)
+
+      setAuthenticatedUser({
+        username,
+        systemRole: data.role ?? '',
+        token: data.access_token,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -1786,7 +1958,7 @@ function App() {
     const purchasePrice = Number(goodPurchasePrice)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
-      setError('Enter a valid member ID')
+      setError('Select a valid member')
       return
     }
 
@@ -1972,7 +2144,7 @@ function App() {
     }
 
     if (!Number.isInteger(amount) || amount <= 0) {
-      setError('Due amount must be a positive whole number')
+      setError('Amount due must be a positive whole number')
       return
     }
 
@@ -2228,6 +2400,82 @@ function App() {
     }
   }
 
+async function handleCloseCommittee(committeeId: number) {
+    if (userRole !== 'super_admin') {
+      setError('Only Super Administrators can close committees')
+      return
+    }
+
+    if (!Number.isInteger(committeeId) || committeeId <= 0) {
+      setError('Invalid committee')
+      return
+    }
+
+    const committee = committees.find(
+      (item) => Number(item.id) === committeeId,
+    )
+
+    if (!committee) {
+      setError('Committee not found')
+      return
+    }
+
+    if (committee.is_active === false) {
+      setCommitteeLifecycleStatus((current) => ({
+        ...current,
+        [String(committeeId)]: 'Already closed',
+      }))
+      return
+    }
+
+    const confirmed = window.confirm(
+      'Close this committee? Closing a committee prevents further committee activity while preserving its historical records.',
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setError('')
+
+    setCommitteeLifecycleStatus((current) => ({
+      ...current,
+      [String(committeeId)]: 'Closing...',
+    }))
+
+    try {
+      await closeCommittee(committeeId, token)
+
+      setCommittees((current) =>
+        current.map((item) =>
+          Number(item.id) === committeeId
+            ? { ...item, is_active: false }
+            : item,
+        ),
+      )
+
+      setCommitteeLifecycleStatus((current) => ({
+        ...current,
+        [String(committeeId)]: 'Closed',
+      }))
+
+      if (Number(committeeId) === Number(committeeId)) {
+        setSummary((current) => current)
+      }
+    } catch (err) {
+      setCommitteeLifecycleStatus((current) => ({
+        ...current,
+        [String(committeeId)]: '',
+      }))
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to close committee',
+      )
+    }
+  }
+
 async function handleCreateCommittee(event: FormEvent) {
     event.preventDefault()
 
@@ -2333,7 +2581,7 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     if (!contributionDate) {
-      setError('Contribution date is required')
+      setError('Payment date is required')
       return
     }
 
@@ -2361,13 +2609,15 @@ async function handleCreateCommittee(event: FormEvent) {
     }
   }
 
-  async function handleLoadMemberFinancialSummary() {
+  async function handleLoadMemberFinancialSummary(
+    memberIdOverride?: number,
+  ) {
     if (!token) {
       setError('You are not authenticated')
       return
     }
 
-    const memberId = Number(financialMemberId)
+    const memberId = memberIdOverride ?? Number(financialMemberId)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
       setError('Enter a valid member ID')
@@ -2420,7 +2670,7 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     if (!Number.isInteger(amount) || amount <= 0) {
-      setError('Death support amount must be a positive whole number')
+      setError('Support amount must be a positive whole number')
       return
     }
 
@@ -2504,7 +2754,7 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     if (!name) {
-      setError('Member name is required')
+      setError('Full name is required')
       return
     }
 
@@ -2546,6 +2796,36 @@ async function handleCreateCommittee(event: FormEvent) {
     }
   }
 
+  async function handleLoadMyCommitteeAccess() {
+    if (!token) {
+      setMyCommitteeAccess([])
+      return
+    }
+
+    try {
+      const data = await getMyCommitteeAccess(token)
+      setMyCommitteeAccess(data)
+    } catch (err) {
+      setMyCommitteeAccess([])
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to load committee permissions',
+      )
+    }
+  }
+
+
+  useEffect(() => {
+    if (!token) {
+      setMyCommitteeAccess([])
+      return
+    }
+
+    void handleLoadMyCommitteeAccess()
+  }, [token, committeeId])
+
+
   async function handleLoadUsers() {
     if (!token) {
       setError('You are not authenticated')
@@ -2564,6 +2844,121 @@ async function handleCreateCommittee(event: FormEvent) {
       )
     } finally {
       setUsersLoading(false)
+    }
+  }
+
+  async function handleAssignUserToCommittee(event: FormEvent) {
+    event.preventDefault()
+
+    if (userRole !== 'super_admin') {
+      setError('Only Super Administrators can assign users to committees')
+      return
+    }
+
+    const userId = Number(assignmentUserId)
+    const selectedCommitteeId = Number(assignmentCommitteeId)
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      setError('Select a user to assign')
+      return
+    }
+
+    if (!Number.isInteger(selectedCommitteeId) || selectedCommitteeId <= 0) {
+      setError('Select a committee to assign')
+      return
+    }
+
+    setError('')
+    setLoading(true)
+
+    try {
+      await grantUserCommitteeAccess(
+        userId,
+        selectedCommitteeId,
+        token,
+        assignmentIsAdmin,
+      )
+
+      setAssignmentUserId('')
+      setAssignmentCommitteeId('')
+      setAssignmentIsAdmin(false)
+
+      // Refresh the visible access state for the newly assigned committee.
+      setCommitteeAccessStatus((current) => ({
+        ...current,
+        [userId]: {
+          ...(current[userId] ?? {}),
+          is_active: true,
+          is_admin: assignmentIsAdmin,
+        },
+      }))
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to assign user to committee',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLoadCommitteeAdministrators = async (
+    committeeId: number,
+  ) => {
+    setCommitteeAdministratorsLoading(String(committeeId))
+    setError('')
+
+    try {
+      const assignments = await getCommitteeAdministrators(
+        committeeId,
+        token,
+      )
+
+      setCommitteeAdministrators((current) => ({
+        ...current,
+        [String(committeeId)]: assignments,
+      }))
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to load committee administrators',
+      )
+    } finally {
+      setCommitteeAdministratorsLoading(null)
+    }
+  }
+
+  async function handleLoadUserCommitteeAssignments(
+    userId: number,
+  ) {
+    if (!token) {
+      setError('You are not authenticated')
+      return
+    }
+
+    setError('')
+    setAssignmentOverviewLoading(userId)
+
+    try {
+      const assignments = await getUserCommitteeAssignments(
+        userId,
+        token,
+      )
+
+      setUserCommitteeAssignments((current) => ({
+        ...current,
+        [String(userId)]: assignments,
+      }))
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to load committee assignments',
+      )
+    } finally {
+      setAssignmentOverviewLoading(null)
     }
   }
 
@@ -2604,8 +2999,8 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   async function handleGrantCommitteeAccess(userId: number) {
-    if (!canWrite) {
-      setError('You do not have permission to perform this action')
+    if (userRole !== 'super_admin') {
+      setError('Only Super Administrators can manage committee access')
       return
     }
 
@@ -2644,8 +3039,8 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   async function handleDeactivateCommitteeAccess(userId: number) {
-    if (!canWrite) {
-      setError('You do not have permission to perform this action')
+    if (userRole !== 'super_admin') {
+      setError('Only Super Administrators can manage committee access')
       return
     }
 
@@ -2684,6 +3079,13 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   async function handleCreateUser(event: FormEvent) {
+    if (!canManageSystemUsers) {
+      setError(
+        'Only Super Administrators can manage system user accounts.',
+      )
+      return
+    }
+
     event.preventDefault()
 
     if (!canWrite) {
@@ -2709,7 +3111,14 @@ async function handleCreateCommittee(event: FormEvent) {
       return
     }
 
-    if (!['super_admin', 'admin', 'viewer'].includes(userCreateRole)) {
+    if (!canManageSystemUsers && userCreateRole !== 'member') {
+      setError(
+        'Only Super Administrators can create system-level administrator accounts.',
+      )
+      return
+    }
+
+    if (!['super_admin', 'committee_admin', 'member'].includes(userCreateRole)) {
       setError('Select a valid user role')
       return
     }
@@ -2766,9 +3175,8 @@ async function handleCreateCommittee(event: FormEvent) {
   }
 
   function logout() {
-    setUserRole('')
     localStorage.removeItem('death_committee_token')
-    setToken('')
+    setAuthenticatedUser(null)
     setSummary(null)
     setUsername('')
     setPassword('')
@@ -2809,7 +3217,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   <span className="login-benefit-icon">02</span>
                   <div>
                     <strong>Financial tracking</strong>
-                    <p>Record contributions, support, dues, and assets.</p>
+                    <p>Record Contributions, support, dues, and assets.</p>
                   </div>
                 </div>
 
@@ -3006,18 +3414,40 @@ async function handleCreateCommittee(event: FormEvent) {
         </div>
 
         <nav>
-          {[
-            'Dashboard',
-            'Committees',
-            'Members',
-            'Contributions',
-            'Death Support',
-            'Dues',
-            'Goods',
-            'Assets',
-            'Settlements',
-            ...(userRole === 'super_admin' ? ['Users'] : []),
-          ].map((page) => (
+          {(isSuperAdmin
+              ? [
+                  'Dashboard',
+                  'Committees',
+                  'Users',
+                  'Members',
+                  'Contributions',
+                  'Death Support',
+                  'Dues',
+                  'Goods',
+                  'Assets',
+                  'Settlements',
+                ]
+              : isSelectedCommitteeAdmin
+                ? [
+                    'Dashboard',
+                    'Members',
+                    'Contributions',
+                    'Death Support',
+                    'Dues',
+                    'Goods',
+                    'Assets',
+                    'Settlements',
+                  ]
+                : [
+                    'Dashboard',
+                    'My Contributions',
+                    'My Death Support',
+                    'My Dues',
+                    'My Goods',
+                    'My Financial Position',
+                    'My Settlement',
+                  ]
+            ).map((page) => (
             <button
               key={page}
               className={`nav-item ${activePage === page ? 'active' : ''}`}
@@ -3026,7 +3456,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 setActivePage(page)
               }}
             >
-              {page}
+              {getNavigationLabel(page)}
             </button>
           ))}
         </nav>
@@ -3106,6 +3536,140 @@ async function handleCreateCommittee(event: FormEvent) {
                 </section>
               )}
 
+              {committees.length > 0 && (
+                <section className="information-card">
+                  <div>
+                    <p className="eyebrow">COMMITTEE MANAGEMENT</p>
+                    <h3>Committee administrators</h3>
+                    <p className="form-help">
+                      Review which users administer each committee. Committee
+                      administration is granted through committee access and
+                      does not change the user's system-level role.
+                    </p>
+                  </div>
+
+                  <div className="committee-list">
+                    {committees.map((committee) => {
+                      const committeeKey = String(committee.id)
+                      const administrators =
+                        committeeAdministrators[committeeKey] ?? []
+
+                      return (
+                        <div
+                          className="committee-list-item"
+                          key={committee.id}
+                        >
+                          <div>
+                            <strong>
+                              {committee.name ??
+                                committee.committee_name ??
+                                `Committee ${committee.id}`}
+                            </strong>
+
+                            <span>
+                              Committee ID: {committee.id}
+                            </span>
+                            <div className="committee-access-actions">
+                              <strong>
+                                {committee.is_active === false
+                                  ? 'Closed'
+                                  : 'Active'}
+                              </strong>
+
+                              {committeeLifecycleStatus[String(committee.id)] && (
+                                <span>
+                                  {committeeLifecycleStatus[String(committee.id)]}
+                                </span>
+                              )}
+
+                              {userRole === 'super_admin' &&
+                                committee.is_active !== false && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      void handleCloseCommittee(
+                                        Number(committee.id),
+                                      )
+                                    }
+                                    disabled={
+                                      committeeLifecycleStatus[
+                                        String(committee.id)
+                                      ] === 'Closing...'
+                                    }
+                                  >
+                                    {committeeLifecycleStatus[
+                                      String(committee.id)
+                                    ] === 'Closing...'
+                                      ? 'Closing...'
+                                      : 'Close Committee'}
+                                  </button>
+                                )}
+                            </div>
+
+                            <div className="form-help">
+                              <strong>Committee Administrators</strong>
+
+                              {administrators.length === 0 ? (
+                                <span>
+                                  No active Committee Administrator is
+                                  assigned.
+                                </span>
+                              ) : (
+                                administrators.map(
+                                  (admin: Record<string, any>) => (
+                                    <span key={admin.user_id}>
+                                      • {admin.username} ·{' '}
+                                      {admin.role === 'committee_admin'
+                                        ? 'Committee Administrator'
+                                        : admin.role} ·{' '}
+                                      {admin.is_active ? 'Active' : 'Inactive'}
+                                    </span>
+                                  ),
+                                )
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="committee-access-actions">
+                            <button
+                              type="button"
+                              className="management-action management-action-secondary"
+                              disabled={
+                                committeeAdministratorsLoading ===
+                                committeeKey
+                              }
+                              onClick={() =>
+                                void handleLoadCommitteeAdministrators(
+                                  Number(committee.id),
+                                )
+                              }
+                            >
+                              {committeeAdministratorsLoading ===
+                              committeeKey
+                                ? 'Loading...'
+                                : 'View Administrators'}
+                            </button>
+
+                            {canWrite && (
+                              <button
+                                type="button"
+                                className="management-action management-action-primary"
+                                onClick={() => {
+                                  setCommitteeId(String(committee.id))
+                                  setActivePage('Users')
+                                }}
+                              >
+                                Manage Access
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
+
               {createdCommittee && (
                 <section className="committee-banner">
                   <div>
@@ -3145,7 +3709,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 <section className="information-card">
                   <div>
                     <p className="eyebrow">NEW MEMBER</p>
-                    <h3>Create member</h3>
+                    <h3>Add Member</h3>
                   <p className="form-help">
                     Enter the committee, member name, and joining date.
                   </p>
@@ -3178,7 +3742,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Member name
+                      Full name
                       <input
                         value={memberName}
                         onChange={(event) =>
@@ -3190,7 +3754,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Joined on
+                      Joining date
                       <input
                         type="date"
                         value={memberJoinedOn}
@@ -3221,7 +3785,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       Committee ID:{' '}
                       {createdMember.committee_id ?? committeeId}
                       {' · '}
-                      Joined on:{' '}
+                      Joining date:{' '}
                       {createdMember.joined_on ?? memberJoinedOn}
                     </p>
 
@@ -3354,7 +3918,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       <p className="created-id">
                         Member ID: {memberFinancialSummary.member_id}
                         {' · '}
-                        Joined on: {memberFinancialSummary.joined_on}
+                        Joining date: {memberFinancialSummary.joined_on}
                       </p>
 
                       {memberFinancialSummary.left_on && (
@@ -3549,7 +4113,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       </div>
 
                       <div className="position-row">
-                        <span>Outstanding dues</span>
+                        <span>Outstanding amounts</span>
                         <strong>
                           {formatPKR(
                             memberFinancialSummary.settlement
@@ -3584,7 +4148,7 @@ async function handleCreateCommittee(event: FormEvent) {
               <section className="page-heading">
                 <div>
                   <p className="eyebrow">CONTRIBUTIONS</p>
-                  <h1>Contribution Rates</h1>
+                  <h1>Current contribution amounts</h1>
                   <p>
                     Define the amount members are required to contribute
                     from a specific effective date.
@@ -3640,7 +4204,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Contribution date
+                      Payment date
                       <input
                         type="date"
                         value={contributionDate}
@@ -3747,7 +4311,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   <button type="submit" disabled={loading}>
                     {loading
                       ? 'Creating...'
-                      : 'Create Contribution Rate'}
+                      : 'Create Current contribution amount'}
                   </button>
                 </form>
                 </section>
@@ -3762,7 +4326,7 @@ async function handleCreateCommittee(event: FormEvent) {
                         ? `Rs. ${createdContributionRate.amount.toLocaleString(
                             'en-PK',
                           )}`
-                        : 'Contribution rate created'}
+                        : 'Current contribution amount created'}
                     </h3>
 
                     <p className="created-id">
@@ -3805,7 +4369,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 <section className="information-card death-support-record-card">
                   <div>
                     <p className="eyebrow">RECORD SUPPORT</p>
-                    <h3>Record death support</h3>
+                    <h3>Record Death Support</h3>
                   <p className="form-help">
                     Select the affected member, enter the beneficiary and
                     support amount, and record the payment date.
@@ -4031,7 +4595,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     <p className="eyebrow">ACCESS MANAGEMENT</p>
                     <h1>Users</h1>
                     <p className="page-subtitle">
-                      Manage application users, roles, and account access.
+                      Manage platform accounts, committee access, and account security from one place.
                     </p>
                   </div>
                   <div className="page-heading-meta">
@@ -4049,18 +4613,24 @@ async function handleCreateCommittee(event: FormEvent) {
                   </div>
                 )}
 
-                <section className="information-card">
-                  <div>
-                    <p className="eyebrow">ACCOUNT SECURITY</p>
-                    <h3>Change your password</h3>
-                    <p className="form-help">
-                      Update the password for the currently signed-in Super Administrator account.
-                    </p>
+                <section className="information-card users-access-panel">
+                  <div className="section-heading-row">
+                    <div>
+                      <p className="eyebrow">ACCOUNT SECURITY</p>
+                      <h3>Change your password</h3>
+                      <p className="form-help">
+                        Update the password for the currently signed-in administrator account.
+                      </p>
+                    </div>
                   </div>
 
                   <form
                     className="committee-create-form"
-                    onSubmit={canWrite ? handleChangePassword : (event) => event.preventDefault()}
+                    onSubmit={
+                      canWrite
+                        ? handleChangePassword
+                        : (event) => event.preventDefault()
+                    }
                   >
                     <div className="rate-form-grid">
                       <label>
@@ -4072,7 +4642,6 @@ async function handleCreateCommittee(event: FormEvent) {
                             setCurrentPassword(event.target.value)
                           }
                           autoComplete="current-password"
-                          placeholder="Enter current password"
                           required
                         />
                       </label>
@@ -4086,7 +4655,6 @@ async function handleCreateCommittee(event: FormEvent) {
                             setNewPassword(event.target.value)
                           }
                           autoComplete="new-password"
-                          placeholder="Enter new password"
                           required
                         />
                       </label>
@@ -4100,7 +4668,6 @@ async function handleCreateCommittee(event: FormEvent) {
                             setConfirmNewPassword(event.target.value)
                           }
                           autoComplete="new-password"
-                          placeholder="Confirm new password"
                           required
                         />
                       </label>
@@ -4112,18 +4679,24 @@ async function handleCreateCommittee(event: FormEvent) {
                   </form>
                 </section>
 
-                <section className="information-card">
-                  <div>
-                    <p className="eyebrow">NEW USER</p>
-                    <h3>Create application user</h3>
-                    <p className="form-help">
-                      Create an account and assign its access role.
-                    </p>
+                <section className="information-card users-access-panel">
+                  <div className="section-heading-row">
+                    <div>
+                      <p className="eyebrow">ADD USER</p>
+                      <h3>Create a user account</h3>
+                      <p className="form-help">
+                        Create the login account first. Committee membership and administrator access can then be assigned separately.
+                      </p>
+                    </div>
                   </div>
 
                   <form
                     className="committee-create-form"
-                    onSubmit={canWrite ? handleCreateUser : (event) => event.preventDefault()}
+                    onSubmit={
+                      canWrite
+                        ? handleCreateUser
+                        : (event) => event.preventDefault()
+                    }
                   >
                     <div className="rate-form-grid">
                       <label>
@@ -4153,14 +4726,20 @@ async function handleCreateCommittee(event: FormEvent) {
                       </label>
 
                       <label>
-                        Role
+                        Platform role
                         <select
                           value={userCreateRole}
-                          onChange={(event) => setUserCreateRole(event.target.value)}
+                          onChange={(event) =>
+                            setUserCreateRole(event.target.value)
+                          }
                         >
-                          <option value="viewer">Viewer</option>
-                          <option value="admin">Admin</option>
-                          <option value="super_admin">Super Admin</option>
+                          <option value="member">Committee Member</option>
+                          <option value="committee_admin">
+                            Committee Admin
+                          </option>
+                          <option value="super_admin">
+                            Super Admin
+                          </option>
                         </select>
                       </label>
                     </div>
@@ -4177,10 +4756,10 @@ async function handleCreateCommittee(event: FormEvent) {
                       <p className="eyebrow">PASSWORD RECOVERY</p>
                       <h3>Recovery token issued</h3>
                       <p className="created-id">
-                        Give this token to the user so they can set a new
-                        password. It expires in{' '}
+                        Provide this token securely to the user. It expires in{' '}
                         {issuedResetExpiry ?? 15} minutes.
                       </p>
+
                       <div className="recovery-token-display">
                         <code>{issuedResetToken}</code>
                       </div>
@@ -4189,9 +4768,11 @@ async function handleCreateCommittee(event: FormEvent) {
                     <button
                       type="button"
                       className="management-action management-action-secondary"
-                      onClick={() => {
-                        void navigator.clipboard?.writeText(issuedResetToken)
-                      }}
+                      onClick={() =>
+                        void navigator.clipboard?.writeText(
+                          issuedResetToken,
+                        )
+                      }
                     >
                       Copy Token
                     </button>
@@ -4209,156 +4790,546 @@ async function handleCreateCommittee(event: FormEvent) {
                         Role: {createdUser.role ?? '—'}
                       </p>
                     </div>
+
                     <span className="active-badge">
-                      {createdUser.is_active === false ? 'Inactive' : 'Active'}
+                      {createdUser.is_active === false
+                        ? 'Inactive'
+                        : 'Active'}
                     </span>
                   </section>
                 )}
 
-                <section className="information-card">
-                  <div>
-                    <p className="eyebrow">USER ACCOUNTS</p>
-                    <h3>Application users</h3>
-                    <p className="form-help">
-                      Review current accounts and deactivate access when
-                      required. To help a user recover their password, click
-                      <strong> Issue Recovery Token</strong> beside their
-                      account, then securely provide the displayed token to
-                      them. The token expires after 15 minutes.
-                    </p>
+                <section className="information-card users-access-panel">
+                  <div className="section-heading-row">
+                    <div>
+                      <p className="eyebrow">COMMITTEE ACCESS</p>
+                      <h3>Assign a user to a committee</h3>
+                      <p className="form-help">
+                        Choose the application user, committee, and committee-level role.
+                      </p>
+                    </div>
                   </div>
 
-                  <button
-                    type="button"
-                    className="management-action management-action-secondary"
-                    disabled={usersLoading}
-                    onClick={() => void handleLoadUsers()}
+                  <form
+                    className="users-access-form"
+                    onSubmit={handleAssignUserToCommittee}
                   >
-                    {usersLoading ? 'Loading...' : 'Refresh Users'}
-                  </button>
+                    <div className="users-access-step">
+                      <div className="users-access-step-number">1</div>
+
+                      <div className="users-access-step-content">
+                        <div className="users-access-step-title">
+                          Select user
+                        </div>
+
+                        <div className="users-access-step-help">
+                          Select the account that should receive committee access.
+                        </div>
+
+                        <select
+                          className="users-access-select"
+                          value={assignmentUserId}
+                          onChange={(event) =>
+                            setAssignmentUserId(event.target.value)
+                          }
+                          required
+                        >
+                          <option value="">Select a user</option>
+
+                          {users
+                            .filter((user) => user.role !== 'super_admin')
+                            .map((user) => (
+                              <option key={user.id} value={user.id}>
+                                {user.username} · {user.role}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="users-access-step">
+                      <div className="users-access-step-number">2</div>
+
+                      <div className="users-access-step-content">
+                        <div className="users-access-step-title">
+                          Select committee
+                        </div>
+
+                        <div className="users-access-step-help">
+                          Access is isolated per committee.
+                        </div>
+
+                        <select
+                          className="users-access-select"
+                          value={assignmentCommitteeId}
+                          onChange={(event) =>
+                            setAssignmentCommitteeId(event.target.value)
+                          }
+                          required
+                        >
+                          <option value="">Select a committee</option>
+
+                          {committees.map((committee) => (
+                            <option
+                              key={committee.id}
+                              value={committee.id}
+                            >
+                              {committee.name ??
+                                committee.committee_name ??
+                                `Committee #${committee.id}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="users-access-step">
+                      <div className="users-access-step-number">3</div>
+
+                      <div className="users-access-step-content">
+                        <div className="users-access-step-title">
+                          Choose committee role
+                        </div>
+
+                        <div className="users-access-step-help">
+                          Administrator access applies only to the selected committee.
+                        </div>
+
+                        <div className="access-level-options">
+                          <label
+                            className={`access-level-card ${
+                              !assignmentIsAdmin ? 'selected' : ''
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="assignment-role"
+                              checked={!assignmentIsAdmin}
+                              onChange={() =>
+                                setAssignmentIsAdmin(false)
+                              }
+                            />
+
+                            <span>
+                              <strong>Committee Member</strong>
+                              <small>
+                                Member-level permissions
+                              </small>
+                            </span>
+                          </label>
+
+                          <label
+                            className={`access-level-card ${
+                              assignmentIsAdmin ? 'selected' : ''
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="assignment-role"
+                              checked={assignmentIsAdmin}
+                              onChange={() =>
+                                setAssignmentIsAdmin(true)
+                              }
+                            />
+
+                            <span>
+                              <strong>
+                                Committee Administrator
+                              </strong>
+                              <small>
+                                Manage the assigned committee
+                              </small>
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="users-access-confirmation">
+                      <div>
+                        <span className="users-access-confirmation-label">
+                          ASSIGNMENT
+                        </span>
+
+                        <strong>
+                          {assignmentUserId
+                            ? users.find(
+                                (user) =>
+                                  Number(user.id) ===
+                                  Number(assignmentUserId),
+                              )?.username ?? 'Selected user'
+                            : 'No user selected'}
+                        </strong>
+
+                        <span>
+                          {assignmentCommitteeId
+                            ? committees.find(
+                                (committee) =>
+                                  Number(committee.id) ===
+                                  Number(assignmentCommitteeId),
+                              )?.name ?? 'Selected committee'
+                            : 'No committee selected'}
+                          {' · '}
+                          {assignmentIsAdmin
+                            ? 'Committee Administrator'
+                            : 'Committee Member'}
+                        </span>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="users-access-grant-button"
+                        disabled={
+                          loading ||
+                          !assignmentUserId ||
+                          !assignmentCommitteeId
+                        }
+                      >
+                        {loading
+                          ? 'Assigning...'
+                          : 'Assign to Committee'}
+                      </button>
+                    </div>
+                  </form>
                 </section>
 
-                {users.length > 0 ? (
-                  <section className="information-card">
-                    <div className="committee-list">
-                      {users.map((user) => (
-                        <div className="committee-list-item" key={user.id}>
-                          <div>
-                            <strong>{user.username ?? 'Unknown user'}</strong>
-                            <small>
-                              User ID: {user.id ?? '—'}
-                              {' · '}
-                              Role: {user.role ?? '—'}
-                            </small>
-                          </div>
+                <section className="information-card users-accounts-panel">
+                  <div className="section-heading-row users-accounts-heading">
+                    <div>
+                      <p className="eyebrow">USER ACCOUNTS</p>
+                      <h3>Accounts & committee access</h3>
+                      <p className="form-help">
+                        Review account status, recovery controls, and committee assignments.
+                      </p>
+                    </div>
 
-                          <div>
-                            <span className="active-badge">
-                              {user.is_active === false ? 'Inactive' : 'Active'}
-                            </span>
+                    <button
+                      type="button"
+                      className="management-action management-action-secondary"
+                      disabled={usersLoading}
+                      onClick={() => void handleLoadUsers()}
+                    >
+                      {usersLoading
+                        ? 'Loading...'
+                        : 'Refresh User List'}
+                    </button>
+                  </div>
 
-                            {user.is_active !== false && (
-                              <>
-                                <button
-                                  type="button"
-                                  className="management-action management-action-secondary"
-                                  disabled={loading}
-                                  onClick={canWrite ? () =>
-                                    void handleIssuePasswordReset(Number(user.id))
-                                  : undefined}
-                                >
-                                  Issue Recovery Token
-                                </button>
+                  {users.length > 0 ? (
+                    <div className="users-table">
+                      {users.map((user) => {
+                        const isSuperAdmin =
+                          user.role === 'super_admin'
 
-                                <button
-                                  type="button"
-                                  className="management-action management-action-danger"
-                                  disabled={usersLoading}
-                                  onClick={canWrite ? () =>
-                                    void handleDeactivateUser(Number(user.id))
-                                  : undefined}
-                                >
-                                  Deactivate
-                                </button>
-                              </>
-                            )}
+                        const isCurrentAccessUser =
+                          selectedAccessUserId === Number(user.id)
 
-                            <div className="committee-access-actions">
-                              <small>
-                                Committee access:{' '}
-                                {selectedAccessUserId === Number(user.id) &&
-                                committeeAccessStatus.is_active === true
-                                  ? 'Active'
-                                  : selectedAccessUserId === Number(user.id) &&
-                                      committeeAccessStatus.is_active === false
-                                    ? 'Inactive'
-                                    : 'Not checked'}
-                              </small>
+                        const accessActive =
+                          isCurrentAccessUser &&
+                          committeeAccessStatus.is_active === true
 
-                              <button
-                                type="button"
-                                className="management-action management-action-secondary"
-                                disabled={
-                                  committeeAccessLoading &&
-                                  selectedAccessUserId === Number(user.id)
-                                }
-                                onClick={() =>
-                                  void handleLoadCommitteeAccess(
-                                    Number(user.id),
-                                  )
-                                }
-                              >
-                                {committeeAccessLoading &&
-                                selectedAccessUserId === Number(user.id)
-                                  ? 'Checking...'
-                                  : 'Check Access'}
-                              </button>
+                        const accessInactive =
+                          isCurrentAccessUser &&
+                          committeeAccessStatus.is_active === false
 
-                              <button
-                                type="button"
-                                className="management-action management-action-primary"
-                                disabled={
-                                  committeeAccessLoading ||
-                                  user.is_active === false
-                                }
-                                onClick={canWrite ? () =>
-                                  void handleGrantCommitteeAccess(
-                                    Number(user.id),
-                                  )
-                                : undefined}
-                              >
-                                Grant Access
-                              </button>
+                        const assignments =
+                          userCommitteeAssignments[String(user.id)]
 
-                              {selectedAccessUserId === Number(user.id) &&
-                                committeeAccessStatus.is_active === true && (
+                        const roleLabel = isSuperAdmin
+                          ? 'Super Administrator'
+                          : user.role === 'committee_admin'
+                            ? 'Committee Administrator'
+                            : 'Committee Member'
+
+                        const roleClass = isSuperAdmin
+                          ? 'system'
+                          : user.role === 'committee_admin'
+                            ? 'administrator'
+                            : 'member'
+
+                        const initial = (
+                          user.username ?? 'U'
+                        )
+                          .slice(0, 1)
+                          .toUpperCase()
+
+                        return (
+                          <article
+                            className="user-account-card"
+                            key={user.id}
+                          >
+                            <div className="user-account-main">
+                              <div className="user-avatar">
+                                {initial}
+                              </div>
+
+                              <div className="user-account-identity">
+                                <div className="user-account-name-row">
+                                  <strong>
+                                    {user.username ??
+                                      'Unknown user'}
+                                  </strong>
+
+                                  <span
+                                    className={`user-role-badge ${roleClass}`}
+                                  >
+                                    {roleLabel}
+                                  </span>
+
+                                  <span
+                                    className={`assignment-status ${
+                                      user.is_active === false
+                                        ? 'revoked'
+                                        : 'active'
+                                    }`}
+                                  >
+                                    {user.is_active === false
+                                      ? 'Inactive'
+                                      : 'Active'}
+                                  </span>
+                                </div>
+
+                                <small>
+                                  User ID: {user.id ?? '—'}
+                                </small>
+                              </div>
+
+                              <div className="user-account-actions">
+                                {user.is_active !== false && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="management-action management-action-secondary"
+                                      disabled={loading}
+                                      onClick={
+                                        canWrite
+                                          ? () =>
+                                              void handleIssuePasswordReset(
+                                                Number(user.id),
+                                              )
+                                          : undefined
+                                      }
+                                    >
+                                      Issue Recovery Token
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      className="management-action management-action-danger"
+                                      disabled={usersLoading}
+                                      onClick={
+                                        canWrite
+                                          ? () =>
+                                              void handleDeactivateUser(
+                                                Number(user.id),
+                                              )
+                                          : undefined
+                                      }
+                                    >
+                                      Deactivate
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="user-account-access">
+                              <div className="user-account-access-header">
+                                <div>
+                                  <p className="eyebrow">
+                                    COMMITTEE ACCESS
+                                  </p>
+
+                                  <strong>
+                                    {isSuperAdmin
+                                      ? 'Global platform authority'
+                                      : 'Assigned committees'}
+                                  </strong>
+                                </div>
+
+                                {!isSuperAdmin && (
                                   <button
                                     type="button"
-                                    className="management-action management-action-danger"
-                                    disabled={committeeAccessLoading}
-                                    onClick={canWrite ? () =>
-                                      void handleDeactivateCommitteeAccess(
+                                    className="management-action management-action-secondary"
+                                    disabled={
+                                      assignmentOverviewLoading ===
+                                      Number(user.id)
+                                    }
+                                    onClick={() =>
+                                      void handleLoadUserCommitteeAssignments(
                                         Number(user.id),
                                       )
-                                    : undefined}
+                                    }
                                   >
-                                    Revoke Access
+                                    {assignmentOverviewLoading ===
+                                    Number(user.id)
+                                      ? 'Loading...'
+                                      : 'View Access'}
                                   </button>
                                 )}
+                              </div>
+
+                              {isSuperAdmin ? (
+                                <div className="user-access-global-note">
+                                  <strong>
+                                    System administrator
+                                  </strong>
+                                  <span>
+                                    No ordinary committee assignment is required.
+                                  </span>
+                                </div>
+                              ) : assignments ? (
+                                assignments.length > 0 ? (
+                                  <div className="user-assignment-list">
+                                    {assignments.map(
+                                      (assignment) => (
+                                        <div
+                                          className="user-assignment-row"
+                                          key={assignment.id}
+                                        >
+                                          <div>
+                                            <strong>
+                                              {
+                                                assignment.committee_name
+                                              }
+                                            </strong>
+
+                                            <span>
+                                              {assignment.is_admin
+                                                ? 'Committee Administrator'
+                                                : 'Committee Member'}
+                                            </span>
+                                          </div>
+
+                                          <span
+                                            className={`assignment-status ${
+                                              assignment.is_active
+                                                ? 'active'
+                                                : 'revoked'
+                                            }`}
+                                          >
+                                            {assignment.is_active
+                                              ? 'Active'
+                                              : 'Revoked'}
+                                          </span>
+                                        </div>
+                                      ),
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="user-access-empty">
+                                    <strong>
+                                      No committee assignments
+                                    </strong>
+                                    <span>
+                                      This account has not been assigned to a committee yet.
+                                    </span>
+                                  </div>
+                                )
+                              ) : (
+                                <div className="user-access-empty">
+                                  <strong>
+                                    Access not loaded
+                                  </strong>
+                                  <span>
+                                    Select View Access to load this user's committee assignments.
+                                  </span>
+                                </div>
+                              )}
+
+                              {!isSuperAdmin && (
+                                <div className="user-account-current-access">
+                                  <span>
+                                    Current selected committee:{' '}
+                                    {committees.find(
+                                      (committee) =>
+                                        Number(committee.id) ===
+                                        Number(committeeId),
+                                    )?.name ??
+                                      'No committee selected'}
+                                    {' · '}
+                                    {accessActive
+                                      ? 'Access active'
+                                      : accessInactive
+                                        ? 'Access inactive'
+                                        : 'Not checked'}
+                                  </span>
+
+                                  <div>
+                                    <button
+                                      type="button"
+                                      className="management-action management-action-secondary"
+                                      disabled={
+                                        committeeAccessLoading &&
+                                        isCurrentAccessUser
+                                      }
+                                      onClick={() =>
+                                        void handleLoadCommitteeAccess(
+                                          Number(user.id),
+                                        )
+                                      }
+                                    >
+                                      {committeeAccessLoading &&
+                                      isCurrentAccessUser
+                                        ? 'Checking...'
+                                        : 'Check Access'}
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      className="management-action management-action-primary"
+                                      disabled={
+                                        committeeAccessLoading ||
+                                        user.is_active === false
+                                      }
+                                      onClick={
+                                        canWrite
+                                          ? () =>
+                                              void handleGrantCommitteeAccess(
+                                                Number(user.id),
+                                              )
+                                          : undefined
+                                      }
+                                    >
+                                      Grant Access
+                                    </button>
+
+                                    {accessActive && (
+                                      <button
+                                        type="button"
+                                        className="management-action management-action-danger"
+                                        disabled={
+                                          committeeAccessLoading
+                                        }
+                                        onClick={
+                                          canWrite
+                                            ? () =>
+                                                void handleDeactivateCommitteeAccess(
+                                                  Number(user.id),
+                                                )
+                                            : undefined
+                                        }
+                                      >
+                                        Revoke Access
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        </div>
-                      ))}
+                          </article>
+                        )
+                      })}
                     </div>
-                  </section>
-                ) : (
-                  <section className="information-card">
-                    <p className="form-help">
-                      No users loaded yet. Select Refresh Users to retrieve
-                      the current accounts.
-                    </p>
-                  </section>
-                )}
+                  ) : (
+                    <div className="user-access-empty">
+                      <strong>No users loaded</strong>
+                      <span>
+                        Select Refresh User List to retrieve the current accounts.
+                      </span>
+                    </div>
+                  )}
+                </section>
               </section>
 ) : activePage === 'Assets' ? (
             <section className="assets-module">
@@ -4549,7 +5520,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 <section className="committee-banner">
                   <div>
                     <p className="eyebrow">VALUATION UPDATED</p>
-                    <h3>Asset value updated</h3>
+                    <h3>Current asset value updated</h3>
 
                     <p className="created-id">
                       Asset ID:{' '}
@@ -4720,7 +5691,7 @@ async function handleCreateCommittee(event: FormEvent) {
               <section className="information-card goods-create-card">
                 <div>
                   <p className="eyebrow">NEW GOOD</p>
-                  <h3>Create member good</h3>
+                  <h3>Add Member good</h3>
                   <p className="form-help">
                     Record a good against a member account.
                   </p>
@@ -5048,39 +6019,52 @@ async function handleCreateCommittee(event: FormEvent) {
 
             </section>
           ) : activePage === 'Dues' ? (
-            <section className="module-content">
-
+            <section className="module-page dues-module">
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">MEMBER DUES</p>
-                  <h1>Member Dues</h1>
-                  <p>
-                    Record member obligations, monitor outstanding balances,
-                    and apply payments against individual dues.
+                  <p className="eyebrow">FINANCIAL MANAGEMENT</p>
+                  <h1>Outstanding Dues</h1>
+                  <p className="page-subtitle">
+                    Record member obligations, review outstanding balances,
+                    and apply payments with a clear financial trail.
                   </p>
+                </div>
+
+                <div className="page-heading-meta">
+                  <span className="active-badge">
+                    {members.length} {members.length === 1 ? 'Member' : 'Members'}
+                  </span>
                 </div>
               </div>
 
+              {error && <div className="error page-error">{error}</div>}
+
               {canWrite && (
                 <section className="information-card dues-create-card">
-                  <div>
-                    <p className="eyebrow">NEW DUE</p>
-                    <h3>Create member due</h3>
-                  <p className="form-help">
-                    Record an amount owed by a member with its due date and supporting details.
-                  </p>
-                </div>
+                  <div className="section-heading-row">
+                    <div>
+                      <p className="eyebrow">RECORD OBLIGATION</p>
+                      <h3>Create a member due</h3>
+                      <p className="form-help">
+                        Record an amount owed by a committee member with its
+                        due date and supporting reference.
+                      </p>
+                    </div>
+                    <span className="active-badge">New Due</span>
+                  </div>
 
-                <form
-                  className="committee-create-form"
-                  onSubmit={handleCreateMemberDue}
-                >
-                  <div className="rate-form-grid">
-                                          <label>
+                  <form
+                    className="committee-create-form"
+                    onSubmit={handleCreateMemberDue}
+                  >
+                    <div className="rate-form-grid">
+                      <label>
                         Member
                         <select
                           value={dueMemberId}
-                          onChange={(event) => setDueMemberId(event.target.value)}
+                          onChange={(event) =>
+                            setDueMemberId(event.target.value)
+                          }
                           required
                         >
                           <option value="">
@@ -5090,6 +6074,7 @@ async function handleCreateCommittee(event: FormEvent) {
                                 ? 'No members available'
                                 : 'Select a member'}
                           </option>
+
                           {members.map((member) => (
                             <option key={member.id} value={member.id}>
                               {member.name} · ID {member.id}
@@ -5098,55 +6083,65 @@ async function handleCreateCommittee(event: FormEvent) {
                         </select>
                       </label>
 
+                      <label>
+                        Amount
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={dueAmount}
+                          onChange={(event) =>
+                            setDueAmount(event.target.value)
+                          }
+                          placeholder="e.g. 5000"
+                          required
+                        />
+                      </label>
+
+                      <label>
+                        Due date
+                        <input
+                          type="date"
+                          value={dueDate}
+                          onChange={(event) =>
+                            setDueDate(event.target.value)
+                          }
+                          required
+                        />
+                      </label>
+
+                      <label>
+                        Reference
+                        <input
+                          type="text"
+                          value={dueReference}
+                          onChange={(event) =>
+                            setDueReference(event.target.value)
+                          }
+                          placeholder="Optional reference"
+                        />
+                      </label>
+                    </div>
+
                     <label>
-                      Amount
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={dueAmount}
-                        onChange={(event) => setDueAmount(event.target.value)}
-                        placeholder="e.g. 5000"
+                      Description
+                      <textarea
+                        value={dueDescription}
+                        onChange={(event) =>
+                          setDueDescription(event.target.value)
+                        }
+                        placeholder="Reason or description for this due"
+                        rows={3}
                         required
                       />
                     </label>
 
-                    <label>
-                      Due date
-                      <input
-                        type="date"
-                        value={dueDate}
-                        onChange={(event) => setDueDate(event.target.value)}
-                        required
-                      />
-                    </label>
-
-                    <label>
-                      Reference
-                      <input
-                        type="text"
-                        value={dueReference}
-                        onChange={(event) => setDueReference(event.target.value)}
-                        placeholder="Optional reference"
-                      />
-                    </label>
-                  </div>
-
-                  <label>
-                    Description
-                    <textarea
-                      value={dueDescription}
-                      onChange={(event) => setDueDescription(event.target.value)}
-                      placeholder="Reason or description for this due"
-                      rows={3}
-                      required
-                    />
-                  </label>
-
-                  <button type="submit" disabled={loading}>
-                    {loading ? 'Recording...' : 'Record Due'}
-                  </button>
-                </form>
+                    <div className="form-actions">
+                      <button type="submit" disabled={loading}>
+                        {loading ? 'Recording...' : 'Record Due'}
+                      </button>
+                    </div>
+                  </form>
                 </section>
               )}
 
@@ -5154,7 +6149,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 <section className="committee-banner">
                   <div>
                     <p className="eyebrow">DUE RECORDED</p>
-                    <h3>Member due recorded</h3>
+                    <h3>Member due recorded successfully</h3>
                     <p className="created-id">
                       Due ID: {createdMemberDue.id}
                       {' · '}
@@ -5174,17 +6169,21 @@ async function handleCreateCommittee(event: FormEvent) {
                       )}
                     </p>
                   </div>
+
                   <span className="active-badge">Recorded</span>
                 </section>
               )}
 
-              <section className="information-card dues-history-card">
-                <div>
-                  <p className="eyebrow">DUE HISTORY</p>
-                  <h3>View member dues</h3>
-                  <p className="form-help">
-                    Load all recorded dues for a member.
-                  </p>
+              <section className="information-card dues-lookup-card">
+                <div className="section-heading-row">
+                  <div>
+                    <p className="eyebrow">DUE HISTORY</p>
+                    <h3>Review member dues</h3>
+                    <p className="form-help">
+                      Select a member to inspect their recorded dues and
+                      payment status.
+                    </p>
+                  </div>
                 </div>
 
                 <form
@@ -5194,7 +6193,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     void handleLoadMemberDues()
                   }}
                 >
-                                      <label>
+                  <div className="rate-form-grid">
+                    <label>
                       Member
                       <select
                         value={duesListMemberId}
@@ -5203,13 +6203,7 @@ async function handleCreateCommittee(event: FormEvent) {
                         }
                         required
                       >
-                        <option value="">
-                          {membersLoading
-                            ? 'Loading members...'
-                            : members.length === 0
-                              ? 'No members available'
-                              : 'Select a member'}
-                        </option>
+                        <option value="">Select a member</option>
                         {members.map((member) => (
                           <option key={member.id} value={member.id}>
                             {member.name} · ID {member.id}
@@ -5218,55 +6212,106 @@ async function handleCreateCommittee(event: FormEvent) {
                       </select>
                     </label>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? 'Loading...' : 'Load Dues'}
-                  </button>
+                    <div className="form-actions form-actions-end">
+                      <button type="submit" disabled={loading}>
+                        {loading ? 'Loading...' : 'Load Due History'}
+                      </button>
+                    </div>
+                  </div>
                 </form>
+
+                {memberDues.length > 0 ? (
+                  <div className="dues-record-list">
+                    {memberDues.map((due, index) => (
+                      <div
+                        className="due-record-card"
+                        key={due.id ?? `${due.member_id}-${index}`}
+                      >
+                        <div className="due-record-main">
+                          <div>
+                            <p className="eyebrow">DUE #{due.id ?? '—'}</p>
+                            <strong>
+                              {due.description ?? 'Member obligation'}
+                            </strong>
+                            <span>
+                              Due date: {due.due_date ?? '—'}
+                              {due.reference
+                                ? ` · Ref: ${due.reference}`
+                                : ''}
+                            </span>
+                          </div>
+
+                          <div className="due-record-amounts">
+                            <div>
+                              <small>Total</small>
+                              <strong>
+                                {formatPKR(Number(due.amount ?? 0))}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <small>Outstanding</small>
+                              <strong>
+                                {formatPKR(
+                                  Number(
+                                    due.outstanding_amount ??
+                                      due.remaining_amount ??
+                                      due.amount ??
+                                      0,
+                                  ),
+                                )}
+                              </strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="due-record-footer">
+                          <span
+                            className={
+                              Number(
+                                due.outstanding_amount ??
+                                  due.remaining_amount ??
+                                  due.amount ??
+                                  0,
+                              ) > 0
+                                ? 'due-status due-status-open'
+                                : 'due-status due-status-paid'
+                            }
+                          >
+                            {Number(
+                              due.outstanding_amount ??
+                                due.remaining_amount ??
+                                due.amount ??
+                                0,
+                            ) > 0
+                              ? 'Outstanding'
+                              : 'Paid'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : duesListMemberId ? (
+                  <div className="information-empty-state">
+                    <strong>No dues found</strong>
+                    <span>
+                      This member currently has no recorded dues in the loaded
+                      history.
+                    </span>
+                  </div>
+                ) : null}
               </section>
 
-              {memberDues.length > 0 && (
-                <section className="information-card">
-                  <p className="eyebrow">RECORDED DUES</p>
-                  <h3>Member due history</h3>
-
-                  {memberDues.map((due) => (
-                    <div className="position-row" key={due.id}>
-                      <div>
-                        <strong>{due.description || 'Member due'}</strong>
-                        <small>
-                          Due ID: {due.id}
-                          {' · '}
-                          Due date: {due.due_date}
-                          {due.reference
-                            ? ` · Reference: ${due.reference}`
-                            : ''}
-                        </small>
-                      </div>
-
-                      <div>
-                        <strong>
-                          {formatPKR(due.outstanding_amount ?? 0)}
-                        </strong>
-                        <small>
-                          Outstanding
-                          {' · '}
-                          Paid: {formatPKR(due.paid_amount ?? 0)}
-                          {' · '}
-                          Total: {formatPKR(due.amount ?? 0)}
-                        </small>
-                      </div>
-                    </div>
-                  ))}
-                </section>
-              )}
-
               <section className="information-card dues-outstanding-card">
-                <div>
-                  <p className="eyebrow">OUTSTANDING BALANCE</p>
-                  <h3>View outstanding dues</h3>
-                  <p className="form-help">
-                    Check the total amount currently outstanding for a member.
-                  </p>
+                <div className="section-heading-row">
+                  <div>
+                    <p className="eyebrow">OUTSTANDING BALANCE</p>
+                    <h3>Check what a member currently owes</h3>
+                    <p className="form-help">
+                      View the current outstanding amount before recording a
+                      payment.
+                    </p>
+                  </div>
                 </div>
 
                 <form
@@ -5276,7 +6321,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     void handleLoadOutstandingDues()
                   }}
                 >
-                                      <label>
+                  <div className="rate-form-grid">
+                    <label>
                       Member
                       <select
                         value={outstandingDuesMemberId}
@@ -5285,13 +6331,7 @@ async function handleCreateCommittee(event: FormEvent) {
                         }
                         required
                       >
-                        <option value="">
-                          {membersLoading
-                            ? 'Loading members...'
-                            : members.length === 0
-                              ? 'No members available'
-                              : 'Select a member'}
-                        </option>
+                        <option value="">Select a member</option>
                         {members.map((member) => (
                           <option key={member.id} value={member.id}>
                             {member.name} · ID {member.id}
@@ -5300,105 +6340,123 @@ async function handleCreateCommittee(event: FormEvent) {
                       </select>
                     </label>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? 'Loading...' : 'Check Outstanding'}
-                  </button>
+                    <div className="form-actions form-actions-end">
+                      <button type="submit" disabled={loading}>
+                        {loading ? 'Checking...' : 'Check Outstanding'}
+                      </button>
+                    </div>
+                  </div>
                 </form>
+
+                {memberOutstandingDues && (
+                  <div className="dues-balance-panel">
+                    <div>
+                      <span>Member</span>
+                      <strong>
+                        {memberOutstandingDues.member_name ??
+                          memberOutstandingDues.member_id ??
+                          outstandingDuesMemberId}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Outstanding</span>
+                      <strong className="dues-balance-value">
+                        {formatPKR(
+                          Number(
+                            memberOutstandingDues.outstanding_dues ?? 0,
+                          ),
+                        )}
+                      </strong>
+                    </div>
+                  </div>
+                )}
               </section>
 
-              {memberOutstandingDues && (
-                <section className="committee-banner">
-                  <div>
-                    <p className="eyebrow">OUTSTANDING DUES</p>
-                    <h3>
-                      {formatPKR(
-                        memberOutstandingDues.outstanding_dues ?? 0,
-                      )}
-                    </h3>
-                    <p className="created-id">
-                      Member ID:{' '}
-                      {memberOutstandingDues.member_id ??
-                        outstandingDuesMemberId}
-                    </p>
-                  </div>
-                  <span className="active-badge">Current</span>
-                </section>
-              )}
-
-              <section className="information-card dues-payment-card">
-                <div>
-                  <p className="eyebrow">PAYMENT</p>
-                  <h3>Pay member due</h3>
-                  <p className="form-help">
-                    Apply a full or partial payment to a specific due.
-                  </p>
-                </div>
-
-                <form
-                  className="committee-create-form"
-                  onSubmit={canWrite ? handlePayMemberDue : (event) => event.preventDefault()}
-                >
-                  <div className="rate-form-grid">
-                    <label>
-                      Due ID
-                      <input
-                        type="number"
-                        min="1"
-                        value={duePaymentId}
-                        onChange={(event) =>
-                          setDuePaymentId(event.target.value)
-                        }
-                        required
-                      />
-                    </label>
-
-                    <label>
-                      Payment amount
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={duePaymentAmount}
-                        onChange={(event) =>
-                          setDuePaymentAmount(event.target.value)
-                        }
-                        placeholder="e.g. 2500"
-                        required
-                      />
-                    </label>
+              {canWrite && (
+                <section className="information-card dues-payment-card">
+                  <div className="section-heading-row">
+                    <div>
+                      <p className="eyebrow">PAYMENT</p>
+                      <h3>Apply a due payment</h3>
+                      <p className="form-help">
+                        Apply a payment against an existing due. Payments are
+                        recorded against the selected due rather than changing
+                        the original obligation.
+                      </p>
+                    </div>
                   </div>
 
-                  {canWrite && (
-                    <button type="submit" disabled={loading}>
-                      {loading ? 'Processing...' : 'Record Payment'}
-                    </button>
+                  <form
+                    className="committee-create-form"
+                    onSubmit={handlePayMemberDue}
+                  >
+                    <div className="rate-form-grid">
+                      <label>
+                        Due ID
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={duePaymentId}
+                          onChange={(event) =>
+                            setDuePaymentId(event.target.value)
+                          }
+                          placeholder="e.g. 12"
+                          required
+                        />
+                      </label>
+
+                      <label>
+                        Payment amount
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={duePaymentAmount}
+                          onChange={(event) =>
+                            setDuePaymentAmount(event.target.value)
+                          }
+                          placeholder="e.g. 2000"
+                          required
+                        />
+                      </label>
+                    </div>
+
+                    <div className="form-actions">
+                      <button type="submit" disabled={loading}>
+                        {loading ? 'Applying...' : 'Apply Payment'}
+                      </button>
+                    </div>
+                  </form>
+
+                  {paidMemberDue && (
+                    <div className="committee-banner dues-payment-result">
+                      <div>
+                        <p className="eyebrow">PAYMENT RECORDED</p>
+                        <h3>Due payment applied</h3>
+                        <p className="created-id">
+                          Due ID: {paidMemberDue.id ?? duePaymentId}
+                        </p>
+                        <p className="created-id">
+                          Outstanding:{' '}
+                          {formatPKR(
+                            Number(
+                              paidMemberDue.outstanding_amount ??
+                                paidMemberDue.remaining_amount ??
+                                0,
+                            ),
+                          )}
+                        </p>
+                      </div>
+
+                      <span className="active-badge">Updated</span>
+                    </div>
                   )}
-                </form>
-              </section>
-
-              {paidMemberDue && (
-                <section className="committee-banner">
-                  <div>
-                    <p className="eyebrow">PAYMENT RECORDED</p>
-                    <h3>Due payment recorded</h3>
-                    <p className="created-id">
-                      Due ID: {paidMemberDue.id ?? duePaymentId}
-                      {' · '}
-                      Member ID: {paidMemberDue.member_id ?? '—'}
-                    </p>
-                    <p className="created-id">
-                      Paid: {formatPKR(paidMemberDue.paid_amount ?? 0)}
-                      {' · '}
-                      Remaining:{' '}
-                      {formatPKR(paidMemberDue.outstanding_amount ?? 0)}
-                    </p>
-                  </div>
-                  <span className="active-badge">Updated</span>
                 </section>
               )}
-
             </section>
-          ) : activePage === 'Settlements' ? (
+) : activePage === 'Settlements' ? (
             <section className="module-page">
               <div className="page-heading">
                 <div>
@@ -5604,7 +6662,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   <section className="information-card">
                     <div>
                       <p className="eyebrow">FINAL PAYMENT</p>
-                      <h3>Pay settlement</h3>
+                      <h3>Record Settlement Payment</h3>
                       <p className="form-help">
                         This records the final settlement payment and closes
                         the member's settlement.
@@ -5681,42 +6739,55 @@ async function handleCreateCommittee(event: FormEvent) {
               </h1>
               <p>
                 {summary
-                  ? 'Here is the current financial position of your committee.'
-                  : 'Select a committee to view its current financial position.'}
+                  ? 'All information and actions shown here belong to the committee you are currently managing.'
+                  : 'Select a committee to enter its isolated workspace.'}
               </p>
             </div>
 
             <div className="committee-loader">
-              <label htmlFor="committee-id">Committee</label>
-              <div>
-                <select
-                  id="committee-id"
-                  value={committeeId}
-                  onChange={(event) => {
-                    setCommitteeId(event.target.value)
-                    setSummary(null)
-                    setError('')
-                  }}
-                  disabled={loading || committees.length === 0}
-                >
-                  {committees.length === 0 ? (
-                    <option value="">No accessible committees</option>
-                  ) : (
-                    committees.map((committee) => (
-                      <option key={committee.id} value={committee.id}>
-                        {committee.name ?? committee.committee_name ?? `Committee ${committee.id}`}
-                      </option>
-                    ))
-                  )}
-                </select>
+              <label htmlFor="committee-id">Committee workspace</label>
 
-                <button
-                  onClick={handleLoadCommittee}
-                  disabled={loading || !committeeId}
-                >
-                  {loading ? 'Loading...' : 'Load'}
-                </button>
+              <div className="committee-context-help">
+                {committees.length > 1
+                  ? 'Choose the committee you want to work with.'
+                  : 'This is the committee currently available to you.'}
               </div>
+
+              <select
+                id="committee-id"
+                value={committeeId}
+                onChange={(event) => {
+                  const nextCommitteeId = event.target.value
+                  setError('')
+                  setSummary(null)
+                  setCommitteeId(nextCommitteeId)
+
+                  if (nextCommitteeId) {
+                    window.setTimeout(() => {
+                      void handleLoadCommittee()
+                    }, 0)
+                  }
+                }}
+                disabled={loading || committees.length === 0}
+              >
+                {committees.length === 0 ? (
+                  <option value="">No committee available</option>
+                ) : (
+                  committees.map((committee) => (
+                    <option key={committee.id} value={committee.id}>
+                      {committee.name ??
+                        committee.committee_name ??
+                        `Committee ${committee.id}`}
+                    </option>
+                  ))
+                )}
+              </select>
+
+              <p className="committee-context-note">
+                All members, contributions, dues, goods, assets, death
+                assistance, and settlements shown below belong to this
+                committee.
+              </p>
             </div>
           </div>
 
@@ -5725,10 +6796,11 @@ async function handleCreateCommittee(event: FormEvent) {
           {!summary && !error && (
             <section className="empty-state">
               <div className="empty-icon">₨</div>
-              <h3>No committee loaded</h3>
+              <h3>No committee workspace loaded</h3>
               <p>
-                Enter a committee ID above and load its real financial data
-                from the backend.
+                Choose a committee above to open its workspace. Everything
+                you see and manage in this workspace belongs only to that
+                committee.
               </p>
             </section>
           )}
@@ -5740,7 +6812,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   <p className="eyebrow">ACTIVE WORKSPACE</p>
                   <h3>{summary.committee_name}</h3>
                   <p className="created-id">
-                    Committee ID: {summary.committee_id}
+                    This workspace contains only this committee's records.
                   </p>
                 </div>
 
@@ -5759,7 +6831,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 <article className="stat-card">
                   <span>Total Contributions</span>
                   <strong>{formatPKR(summary.total_contributions)}</strong>
-                  <small>Member contributions recorded</small>
+                  <small>Member Contributions recorded</small>
                 </article>
 
                 <article className="stat-card">

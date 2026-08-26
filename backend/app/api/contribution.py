@@ -10,12 +10,12 @@ from app.schemas.contribution import (
 )
 
 from app.api.dependencies import get_db
-from app.api.permissions import require_admin
-from app.models import ContributionRate
+from app.api.permissions import require_authenticated
+from app.models import ContributionRate, Member
 from app.services.accounting import AccountingError
 from app.services.contribution import record_contribution
 from app.services.audit import record_audit
-from app.services.access_control import require_committee_access, require_member_access
+from app.services.access_control import require_committee_admin_access, require_committee_access, require_member_access
 
 
 router = APIRouter(
@@ -31,10 +31,10 @@ def create_contribution_rate(
     committee_id: int,
     data: ContributionRateCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
-        require_committee_access(
+        require_committee_admin_access(
             db,
             user=current_user,
             committee_id=committee_id,
@@ -87,13 +87,20 @@ def create_contribution(
     member_id: int,
     data: ContributionCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin),
+    current_user = Depends(require_authenticated),
 ):
     try:
-        require_member_access(
+        member = db.get(Member, member_id)
+
+        if member is None:
+            raise AccountingError(
+                f"Member not found: {member_id}"
+            )
+
+        require_committee_admin_access(
             db,
             user=current_user,
-            member_id=member_id,
+            committee_id=member.committee_id,
         )
     except AccountingError as exc:
         raise HTTPException(
