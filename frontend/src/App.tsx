@@ -1348,6 +1348,18 @@ function App() {
   const [memberStatement, setMemberStatement] =
     useState<MemberStatementRow[]>([])
 
+  const [myFinancialSummary, setMyFinancialSummary] =
+    useState<MemberFinancialSummary | null>(null)
+
+  const [myStatement, setMyStatement] =
+    useState<MemberStatementRow[]>([])
+
+  const [myFinancialSummaryLoading, setMyFinancialSummaryLoading] =
+    useState(false)
+
+  const [myFinancialSummaryError, setMyFinancialSummaryError] =
+    useState('')
+
   const [settlementMemberId, setSettlementMemberId] = useState('')
   const [settlementPreview, setSettlementPreview] =
     useState<Record<string, any> | null>(null)
@@ -1480,6 +1492,8 @@ function App() {
     setContributionMemberId("")
     setMemberFinancialSummary(null)
     setMemberStatement([])
+    setMyFinancialSummary(null)
+    setMyStatement([])
 
     // Committee access state
     setSelectedAccessUserId(null)
@@ -1573,6 +1587,58 @@ function App() {
       cancelled = true
     }
   }, [committeeId, token])
+
+  useEffect(() => {
+    if (activePage !== 'My Financial Position') return
+    if (!token || members.length === 0) return
+
+    const ownMemberId = members[0].id
+
+    let cancelled = false
+
+    async function loadMyFinancialPosition() {
+      setMyFinancialSummaryLoading(true)
+      setMyFinancialSummaryError('')
+
+      try {
+        const summaryData = await getMemberFinancialSummary(
+          ownMemberId,
+          token,
+        )
+
+        if (cancelled) return
+
+        setMyFinancialSummary(summaryData)
+
+        const statementData = await getMemberStatement(
+          ownMemberId,
+          token,
+        )
+
+        if (cancelled) return
+
+        setMyStatement(statementData)
+      } catch (err) {
+        if (cancelled) return
+
+        setMyFinancialSummaryError(
+          err instanceof Error
+            ? err.message
+            : 'Unable to load your financial position',
+        )
+      } finally {
+        if (!cancelled) {
+          setMyFinancialSummaryLoading(false)
+        }
+      }
+    }
+
+    loadMyFinancialPosition()
+
+    return () => {
+      cancelled = true
+    }
+  }, [activePage, token, members])
 
 
   async function handleIssuePasswordReset(userId: number) {
@@ -6702,6 +6768,240 @@ async function handleCreateCommittee(event: FormEvent) {
                   </div>
                   <span className="active-badge">Completed</span>
                 </section>
+              )}
+            </section>
+          ) : activePage === 'My Financial Position' ? (
+            <section className="module-page">
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">YOUR ACCOUNT</p>
+                  <h1>My Financial Position</h1>
+                  <p className="page-subtitle">
+                    Your current contributions, dues, asset share, and
+                    account history within this committee.
+                  </p>
+                </div>
+              </div>
+
+              {myFinancialSummaryLoading && (
+                <p className="form-help">Loading your financial position...</p>
+              )}
+
+              {myFinancialSummaryError && (
+                <p className="form-error">{myFinancialSummaryError}</p>
+              )}
+
+              {!myFinancialSummaryLoading &&
+                !myFinancialSummaryError &&
+                members.length === 0 && (
+                  <p className="form-help">
+                    No member record was found for you in this committee.
+                  </p>
+                )}
+
+              {myFinancialSummary && (
+                <>
+                  <section className="committee-banner">
+                    <div>
+                      <p className="eyebrow">MEMBER</p>
+                      <h3>{myFinancialSummary.member_name}</h3>
+
+                      <p className="created-id">
+                        Member ID: {myFinancialSummary.member_id}
+                        {' · '}
+                        Joining date: {myFinancialSummary.joined_on}
+                      </p>
+
+                      {myFinancialSummary.left_on && (
+                        <p className="created-id">
+                          Left on: {myFinancialSummary.left_on}
+                        </p>
+                      )}
+                    </div>
+
+                    <span
+                      className={
+                        myFinancialSummary.is_active
+                          ? 'active-badge'
+                          : 'inactive-badge'
+                      }
+                    >
+                      {myFinancialSummary.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </section>
+
+                  <section className="information-card">
+                    <p className="eyebrow">CURRENT POSITION</p>
+                    <h3>Financial breakdown</h3>
+
+                    <div className="position-row">
+                      <span>Total contributions</span>
+                      <strong>
+                        {formatPKR(myFinancialSummary.total_contributions)}
+                      </strong>
+                    </div>
+
+                    <div className="position-row">
+                      <span>Contribution balance</span>
+                      <strong>
+                        {formatPKR(myFinancialSummary.contribution_balance)}
+                      </strong>
+                    </div>
+
+                    <div className="position-row">
+                      <span>Committee asset share</span>
+                      <strong>
+                        {formatPKR(myFinancialSummary.asset_share)}
+                      </strong>
+                    </div>
+
+                    <div className="position-row">
+                      <span>Goods value</span>
+                      <strong>
+                        {formatPKR(myFinancialSummary.goods_value)}
+                      </strong>
+                    </div>
+
+                    <div className="position-row">
+                      <span>Ordinary dues</span>
+                      <strong>
+                        {formatPKR(myFinancialSummary.ordinary_dues)}
+                      </strong>
+                    </div>
+
+                    <div className="position-row">
+                      <span>Qarz-e-Hasana</span>
+                      <strong>
+                        {formatPKR(myFinancialSummary.qarz_e_hasana_dues)}
+                      </strong>
+                    </div>
+
+                    <div className="position-row">
+                      <span>Total outstanding dues</span>
+                      <strong>
+                        {formatPKR(myFinancialSummary.outstanding_dues)}
+                      </strong>
+                    </div>
+
+                    <div className="position-row">
+                      <span>Gross current value</span>
+                      <strong>
+                        {formatPKR(myFinancialSummary.current_gross_value)}
+                      </strong>
+                    </div>
+
+                    <div className="position-row">
+                      <span>Final current value</span>
+                      <strong>
+                        {formatPKR(myFinancialSummary.current_final_value)}
+                      </strong>
+                    </div>
+                  </section>
+
+                  <section className="information-card">
+                    <p className="eyebrow">ACCOUNT HISTORY</p>
+                    <h3>Your statement</h3>
+
+                    {myStatement.length === 0 ? (
+                      <p className="form-help">
+                        No financial transactions recorded yet.
+                      </p>
+                    ) : (
+                      <div>
+                        {myStatement.map((row, index) => (
+                          <div
+                            className="position-row"
+                            key={`${row.date}-${index}`}
+                          >
+                            <div>
+                              <strong>{row.description}</strong>
+                              <small>
+                                {row.date}
+                                {row.reference ? ` · ${row.reference}` : ''}
+                              </small>
+                            </div>
+
+                            <strong>{formatPKR(row.amount)}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+
+                  {myFinancialSummary.death_support && (
+                    <section className="information-card">
+                      <p className="eyebrow">DEATH SUPPORT</p>
+                      <h3>Support record</h3>
+
+                      <div className="position-row">
+                        <span>Beneficiary</span>
+                        <strong>
+                          {myFinancialSummary.death_support.beneficiary_name}
+                        </strong>
+                      </div>
+
+                      <div className="position-row">
+                        <span>Amount</span>
+                        <strong>
+                          {formatPKR(myFinancialSummary.death_support.amount)}
+                        </strong>
+                      </div>
+
+                      <div className="position-row">
+                        <span>Support date</span>
+                        <strong>
+                          {myFinancialSummary.death_support.support_date}
+                        </strong>
+                      </div>
+                    </section>
+                  )}
+
+                  {myFinancialSummary.settlement && (
+                    <section className="information-card">
+                      <p className="eyebrow">SETTLEMENT</p>
+                      <h3>Settlement record</h3>
+
+                      <div className="position-row">
+                        <span>Settlement date</span>
+                        <strong>
+                          {myFinancialSummary.settlement.settlement_date}
+                        </strong>
+                      </div>
+
+                      <div className="position-row">
+                        <span>Gross amount</span>
+                        <strong>
+                          {formatPKR(
+                            myFinancialSummary.settlement.gross_amount,
+                          )}
+                        </strong>
+                      </div>
+
+                      <div className="position-row">
+                        <span>Outstanding amounts</span>
+                        <strong>
+                          {formatPKR(
+                            myFinancialSummary.settlement.outstanding_dues,
+                          )}
+                        </strong>
+                      </div>
+
+                      <div className="position-row">
+                        <span>Final amount</span>
+                        <strong>
+                          {formatPKR(
+                            myFinancialSummary.settlement.final_amount,
+                          )}
+                        </strong>
+                      </div>
+
+                      <div className="position-row">
+                        <span>Status</span>
+                        <strong>{myFinancialSummary.settlement.status}</strong>
+                      </div>
+                    </section>
+                  )}
+                </>
               )}
             </section>
           ) : activePage !== 'Dashboard' ? (
