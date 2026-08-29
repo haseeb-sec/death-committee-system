@@ -63,6 +63,7 @@ def create_committee_asset(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=committee_id,
             action="create",
             entity_type="committee_asset",
             entity_id=asset.id,
@@ -75,6 +76,7 @@ def create_committee_asset(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=committee_id,
             action="update_value",
             entity_type="committee_asset",
             entity_id=asset.id,
@@ -138,6 +140,7 @@ def update_committee_asset_value(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=asset.committee_id,
             action="update_value",
             entity_type="committee_asset",
             entity_id=asset.id,

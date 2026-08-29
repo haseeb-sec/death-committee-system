@@ -66,6 +66,7 @@ def create_committee_api(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=committee.id,
             action="create",
             entity_type="committee",
             entity_id=committee.id,
@@ -75,6 +76,7 @@ def create_committee_api(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=committee.id,
             action="grant_access",
             entity_type="committee",
             entity_id=committee.id,
@@ -136,6 +138,7 @@ def assign_committee_admin_api(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=committee_id,
             action="grant_committee_admin",
             entity_type="committee",
             entity_id=committee_id,
@@ -196,6 +199,7 @@ def revoke_committee_admin_api(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=committee_id,
             action="revoke_committee_admin",
             entity_type="committee",
             entity_id=committee_id,
@@ -310,6 +314,7 @@ def close_committee_api(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=committee.id,
             action="close",
             entity_type="committee",
             entity_id=committee.id,

@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Integer
+from sqlalchemy import ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -6,6 +6,14 @@ from app.db.session import Base
 
 class AssetParticipation(Base):
     __tablename__ = "asset_participations"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "asset_id",
+            "member_id",
+            name="uq_asset_participations_asset_member",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
 

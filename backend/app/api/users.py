@@ -384,6 +384,7 @@ def grant_user_committee_access(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=committee_id,
             action="grant_access",
             entity_type="committee",
             entity_id=committee_id,
@@ -493,6 +494,7 @@ def deactivate_user_committee_access(
     record_audit(
         db,
         user_id=current_user.id,
+        committee_id=committee_id,
         action="revoke_access",
         entity_type="committee",
         entity_id=committee_id,

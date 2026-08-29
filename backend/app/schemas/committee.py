@@ -18,6 +18,7 @@ class CommitteeSummaryResponse(BaseModel):
     total_contributions: int
     total_death_support: int
     cash_balance: int
+    total_asset_value: int
 
 
 class CommitteeFinancialPositionResponse(BaseModel):

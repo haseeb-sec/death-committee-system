@@ -66,6 +66,7 @@ def create_member_api(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=member.committee_id,
             action="create",
             entity_type="member",
             entity_id=member.id,
@@ -175,6 +176,7 @@ def leave_member_api(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=member.committee_id,
             action="leave",
             entity_type="member",
             entity_id=member.id,

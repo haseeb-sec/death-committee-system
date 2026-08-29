@@ -14,6 +14,7 @@ class MemberSettlement(Base):
     member_id: Mapped[int] = mapped_column(
         ForeignKey("members.id"),
         nullable=False,
+        unique=True,
     )
 
     settlement_date: Mapped[date] = mapped_column(
