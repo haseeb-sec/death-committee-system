@@ -9,6 +9,7 @@ from app.models import (
     JournalLine,
 )
 from app.services.accounting import AccountingError
+from app.services.asset_share import get_committee_asset_value
 
 
 def get_committee_summary(
@@ -90,6 +91,11 @@ def get_committee_summary(
         and line.amount < 0
     )
 
+    total_asset_value = get_committee_asset_value(
+        db,
+        committee_id=committee_id,
+    )
+
     return {
         "committee_id": committee.id,
         "committee_name": committee.name,
@@ -97,4 +103,5 @@ def get_committee_summary(
         "total_contributions": total_contributions,
         "total_death_support": total_death_support,
         "cash_balance": cash_balance,
+        "total_asset_value": total_asset_value,
     }
