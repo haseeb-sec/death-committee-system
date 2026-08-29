@@ -206,6 +206,20 @@ def pay_member_due_api(
             amount=data.amount,
         )
 
+        record_audit(
+            db,
+            user_id=current_user.id,
+            committee_id=due.committee_id,
+            action="pay",
+            entity_type="member_due",
+            entity_id=due.id,
+            description=(
+                f"Paid {data.amount} toward due {due.id} "
+                f"for member {due.member_id}, "
+                f"outstanding now {due.amount - due.paid_amount}"
+            ),
+        )
+
         db.commit()
         db.refresh(due)
 
