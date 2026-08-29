@@ -81,6 +81,7 @@ def create_death_support(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=support.committee_id,
             action="create",
             entity_type="death_support",
             entity_id=support.id,

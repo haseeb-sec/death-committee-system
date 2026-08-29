@@ -43,7 +43,7 @@ def create_member_good(
     current_user = Depends(require_authenticated),
 ):
     try:
-        require_member_access(
+        member = require_member_access(
             db,
             user=current_user,
             member_id=member_id,
@@ -61,6 +61,7 @@ def create_member_good(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=member.committee_id,
             action="create",
             entity_type="member_good",
             entity_id=good.id,
@@ -73,6 +74,7 @@ def create_member_good(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=member.committee_id,
             action="update_value",
             entity_type="member_good",
             entity_id=good.id,
@@ -277,6 +279,7 @@ def update_good_value(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=good.member.committee_id,
             action="update_value",
             entity_type="member_good",
             entity_id=good.id,

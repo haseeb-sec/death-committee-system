@@ -107,6 +107,7 @@ def create_member_settlement(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=member.committee_id,
             action="create",
             entity_type="member_settlement",
             entity_id=settlement.id,
@@ -183,6 +184,7 @@ def pay_member_settlement_api(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=member.committee_id,
             action="pay",
             entity_type="member_settlement",
             entity_id=settlement.id,

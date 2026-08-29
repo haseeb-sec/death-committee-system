@@ -302,7 +302,9 @@ def test_non_super_admin_cannot_list_audit_logs(db):
         )
 
         assert response.status_code == 403
-        assert response.json()["detail"] == "Super Admin access required"
+        assert response.json()["detail"] == (
+            "committee_id is required for Committee Admin audit log access"
+        )
 
     finally:
         app.dependency_overrides.clear()

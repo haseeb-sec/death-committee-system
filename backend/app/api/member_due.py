@@ -57,6 +57,7 @@ def create_member_due(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=due.committee_id,
             action="create",
             entity_type="member_due",
             entity_id=due.id,

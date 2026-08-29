@@ -77,6 +77,7 @@ def create_contribution_rate(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=committee_id,
             action="create",
             entity_type="contribution_rate",
             entity_id=rate.id,
@@ -144,6 +145,7 @@ def create_contribution(
         record_audit(
             db,
             user_id=current_user.id,
+            committee_id=member.committee_id,
             action="create",
             entity_type="contribution",
             entity_id=entry.id,

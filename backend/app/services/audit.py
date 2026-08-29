@@ -9,6 +9,7 @@ def record_audit(
     db: Session,
     *,
     user_id: int | None,
+    committee_id: int | None = None,
     action: str,
     entity_type: str,
     entity_id: int | None = None,
@@ -16,6 +17,7 @@ def record_audit(
 ) -> AuditLog:
     log = AuditLog(
         user_id=user_id,
+        committee_id=committee_id,
         action=action,
         entity_type=entity_type,
         entity_id=entity_id,
@@ -34,6 +36,7 @@ def get_audit_logs(
     entity_type: str | None = None,
     entity_id: int | None = None,
     user_id: int | None = None,
+    committee_id: int | None = None,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     skip: int = 0,
@@ -49,6 +52,9 @@ def get_audit_logs(
 
     if user_id is not None:
         query = query.filter(AuditLog.user_id == user_id)
+
+    if committee_id is not None:
+        query = query.filter(AuditLog.committee_id == committee_id)
 
     if start_date is not None:
         query = query.filter(AuditLog.created_at >= start_date)
