@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_db
 from app.api.permissions import require_authenticated
 from app.schemas.member import (
+    MemberAssetBreakdownEntry,
     MemberCreate,
     MemberFinancialSummaryResponse,
     MemberLeave,
@@ -19,6 +20,7 @@ from app.services.member_financial import (
 from app.services.member_statement import (
     get_member_statement,
 )
+from app.services.asset_share import get_member_asset_breakdown
 from app.services.audit import record_audit
 from app.services.access_control import (
     grant_committee_access,
@@ -248,6 +250,33 @@ def member_statement(
         )
 
         return get_member_statement(
+            db,
+            member_id=member_id,
+        )
+    except AccountingError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/{member_id}/asset-breakdown",
+    response_model=list[MemberAssetBreakdownEntry],
+)
+def member_asset_breakdown(
+    member_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_authenticated),
+):
+    try:
+        require_member_access(
+            db,
+            user=current_user,
+            member_id=member_id,
+        )
+
+        return get_member_asset_breakdown(
             db,
             member_id=member_id,
         )

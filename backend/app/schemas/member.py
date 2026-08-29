@@ -52,6 +52,15 @@ class MemberSettlementSummary(BaseModel):
     status: str
 
 
+class MemberAssetBreakdownEntry(BaseModel):
+    asset_id: int
+    asset_name: str
+    current_value: int
+    ownership_units: int
+    total_units: int
+    share_value: int
+
+
 class MemberFinancialSummaryResponse(BaseModel):
     member_id: int
     member_name: str
