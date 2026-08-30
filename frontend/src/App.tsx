@@ -103,6 +103,20 @@ type MemberStatementRow = {
   amount: number
 }
 
+type ContributionHistoryEntry = {
+  journal_entry_id: number
+  member_id: number
+  contribution_date: string
+  amount: number
+  reference: string | null
+  description: string
+}
+
+type ContributionTotalResponse = {
+  member_id: number
+  total_contributed: number
+}
+
 type AuthenticatedUser = {
   username: string
   systemRole: string
@@ -715,6 +729,52 @@ async function getMemberStatement(
     const data = await response.json().catch(() => null)
     throw new Error(
       data?.detail ?? 'Unable to load member statement',
+    )
+  }
+
+  return response.json()
+}
+
+async function getMemberContributions(
+  memberId: number,
+  token: string,
+): Promise<ContributionHistoryEntry[]> {
+  const response = await fetch(
+    `${API_BASE}/members/${memberId}/contributions`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(
+      data?.detail ?? 'Unable to load contribution history',
+    )
+  }
+
+  return response.json()
+}
+
+async function getMemberContributionTotal(
+  memberId: number,
+  token: string,
+): Promise<ContributionTotalResponse> {
+  const response = await fetch(
+    `${API_BASE}/members/${memberId}/contributions/total`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(
+      data?.detail ?? 'Unable to load contribution total',
     )
   }
 
@@ -1360,6 +1420,18 @@ function App() {
   const [myFinancialSummaryError, setMyFinancialSummaryError] =
     useState('')
 
+  const [myContributions, setMyContributions] =
+    useState<ContributionHistoryEntry[]>([])
+
+  const [myContributionTotal, setMyContributionTotal] =
+    useState<ContributionTotalResponse | null>(null)
+
+  const [myContributionsLoading, setMyContributionsLoading] =
+    useState(false)
+
+  const [myContributionsError, setMyContributionsError] =
+    useState('')
+
   const [settlementMemberId, setSettlementMemberId] = useState('')
   const [settlementPreview, setSettlementPreview] =
     useState<Record<string, any> | null>(null)
@@ -1494,6 +1566,8 @@ function App() {
     setMemberStatement([])
     setMyFinancialSummary(null)
     setMyStatement([])
+    setMyContributions([])
+    setMyContributionTotal(null)
 
     // Committee access state
     setSelectedAccessUserId(null)
@@ -1634,6 +1708,58 @@ function App() {
     }
 
     loadMyFinancialPosition()
+
+    return () => {
+      cancelled = true
+    }
+  }, [activePage, token, members])
+
+  useEffect(() => {
+    if (activePage !== 'My Contributions') return
+    if (!token || members.length === 0) return
+
+    const ownMemberId = members[0].id
+
+    let cancelled = false
+
+    async function loadMyContributions() {
+      setMyContributionsLoading(true)
+      setMyContributionsError('')
+
+      try {
+        const historyData = await getMemberContributions(
+          ownMemberId,
+          token,
+        )
+
+        if (cancelled) return
+
+        setMyContributions(historyData)
+
+        const totalData = await getMemberContributionTotal(
+          ownMemberId,
+          token,
+        )
+
+        if (cancelled) return
+
+        setMyContributionTotal(totalData)
+      } catch (err) {
+        if (cancelled) return
+
+        setMyContributionsError(
+          err instanceof Error
+            ? err.message
+            : 'Unable to load your contribution history',
+        )
+      } finally {
+        if (!cancelled) {
+          setMyContributionsLoading(false)
+        }
+      }
+    }
+
+    loadMyContributions()
 
     return () => {
       cancelled = true
@@ -7003,6 +7129,85 @@ async function handleCreateCommittee(event: FormEvent) {
                   )}
                 </>
               )}
+            </section>
+          ) : activePage === 'My Contributions' ? (
+            <section className="module-page">
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">YOUR ACCOUNT</p>
+                  <h1>My Contributions</h1>
+                  <p className="page-subtitle">
+                    Your recorded contribution history and running total
+                    within this committee.
+                  </p>
+                </div>
+              </div>
+
+              {myContributionsLoading && (
+                <p className="form-help">
+                  Loading your contribution history...
+                </p>
+              )}
+
+              {myContributionsError && (
+                <p className="form-error">{myContributionsError}</p>
+              )}
+
+              {!myContributionsLoading &&
+                !myContributionsError &&
+                members.length === 0 && (
+                  <p className="form-help">
+                    No member record was found for you in this committee.
+                  </p>
+                )}
+
+              {myContributionTotal && (
+                <section className="information-card">
+                  <p className="eyebrow">RUNNING TOTAL</p>
+                  <h3>Total contributed</h3>
+
+                  <div className="position-row">
+                    <span>All recorded contributions</span>
+                    <strong>
+                      {formatPKR(myContributionTotal.total_contributed)}
+                    </strong>
+                  </div>
+                </section>
+              )}
+
+              <section className="information-card">
+                <p className="eyebrow">HISTORY</p>
+                <h3>Contribution records</h3>
+
+                {!myContributionsLoading &&
+                !myContributionsError &&
+                myContributions.length === 0 ? (
+                  <p className="form-help">
+                    No contributions have been recorded yet.
+                  </p>
+                ) : (
+                  <div>
+                    {myContributions.map((entry) => (
+                      <div
+                        className="position-row"
+                        key={entry.journal_entry_id}
+                      >
+                        <div>
+                          <strong>{entry.description}</strong>
+                          <small>
+                            {entry.contribution_date}
+                            {entry.reference
+                              ? ` · ${entry.reference}`
+                              : ''}
+                          </small>
+                        </div>
+
+                        <strong>{formatPKR(entry.amount)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
             </section>
           ) : activePage !== 'Dashboard' ? (
             <section className="module-placeholder">
