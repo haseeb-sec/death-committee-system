@@ -117,6 +117,23 @@ type ContributionTotalResponse = {
   total_contributed: number
 }
 
+type MemberDueRecord = {
+  id: number
+  committee_id: number
+  member_id: number
+  amount: number
+  paid_amount: number
+  outstanding_amount: number
+  due_date: string
+  description: string
+  reference: string | null
+}
+
+type MemberOutstandingDuesResponse = {
+  member_id: number
+  outstanding_dues: number
+}
+
 type AuthenticatedUser = {
   username: string
   systemRole: string
@@ -781,6 +798,52 @@ async function getMemberContributionTotal(
   return response.json()
 }
 
+async function getMyMemberDues(
+  memberId: number,
+  token: string,
+): Promise<MemberDueRecord[]> {
+  const response = await fetch(
+    `${API_BASE}/members/${memberId}/dues`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(
+      data?.detail ?? 'Unable to load dues',
+    )
+  }
+
+  return response.json()
+}
+
+async function getMyOutstandingDues(
+  memberId: number,
+  token: string,
+): Promise<MemberOutstandingDuesResponse> {
+  const response = await fetch(
+    `${API_BASE}/members/${memberId}/dues/outstanding`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(
+      data?.detail ?? 'Unable to load outstanding dues',
+    )
+  }
+
+  return response.json()
+}
+
 async function getCommitteeSummary(
   committeeId: number,
   token: string,
@@ -1432,6 +1495,15 @@ function App() {
   const [myContributionsError, setMyContributionsError] =
     useState('')
 
+  const [myDues, setMyDues] = useState<MemberDueRecord[]>([])
+
+  const [myOutstandingDues, setMyOutstandingDues] =
+    useState<MemberOutstandingDuesResponse | null>(null)
+
+  const [myDuesLoading, setMyDuesLoading] = useState(false)
+
+  const [myDuesError, setMyDuesError] = useState('')
+
   const [settlementMemberId, setSettlementMemberId] = useState('')
   const [settlementPreview, setSettlementPreview] =
     useState<Record<string, any> | null>(null)
@@ -1568,6 +1640,8 @@ function App() {
     setMyStatement([])
     setMyContributions([])
     setMyContributionTotal(null)
+    setMyDues([])
+    setMyOutstandingDues(null)
 
     // Committee access state
     setSelectedAccessUserId(null)
@@ -1760,6 +1834,58 @@ function App() {
     }
 
     loadMyContributions()
+
+    return () => {
+      cancelled = true
+    }
+  }, [activePage, token, members])
+
+  useEffect(() => {
+    if (activePage !== 'My Dues') return
+    if (!token || members.length === 0) return
+
+    const ownMemberId = members[0].id
+
+    let cancelled = false
+
+    async function loadMyDues() {
+      setMyDuesLoading(true)
+      setMyDuesError('')
+
+      try {
+        const duesData = await getMyMemberDues(
+          ownMemberId,
+          token,
+        )
+
+        if (cancelled) return
+
+        setMyDues(duesData)
+
+        const outstandingData = await getMyOutstandingDues(
+          ownMemberId,
+          token,
+        )
+
+        if (cancelled) return
+
+        setMyOutstandingDues(outstandingData)
+      } catch (err) {
+        if (cancelled) return
+
+        setMyDuesError(
+          err instanceof Error
+            ? err.message
+            : 'Unable to load your dues',
+        )
+      } finally {
+        if (!cancelled) {
+          setMyDuesLoading(false)
+        }
+      }
+    }
+
+    loadMyDues()
 
     return () => {
       cancelled = true
@@ -7203,6 +7329,85 @@ async function handleCreateCommittee(event: FormEvent) {
                         </div>
 
                         <strong>{formatPKR(entry.amount)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </section>
+          ) : activePage === 'My Dues' ? (
+            <section className="module-page">
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">YOUR ACCOUNT</p>
+                  <h1>My Dues</h1>
+                  <p className="page-subtitle">
+                    Your recorded dues and current outstanding balance
+                    within this committee.
+                  </p>
+                </div>
+              </div>
+
+              {myDuesLoading && (
+                <p className="form-help">Loading your dues...</p>
+              )}
+
+              {myDuesError && (
+                <p className="form-error">{myDuesError}</p>
+              )}
+
+              {!myDuesLoading &&
+                !myDuesError &&
+                members.length === 0 && (
+                  <p className="form-help">
+                    No member record was found for you in this committee.
+                  </p>
+                )}
+
+              {myOutstandingDues && (
+                <section className="information-card">
+                  <p className="eyebrow">CURRENT STANDING</p>
+                  <h3>Outstanding dues</h3>
+
+                  <div className="position-row">
+                    <span>Total outstanding</span>
+                    <strong>
+                      {formatPKR(myOutstandingDues.outstanding_dues)}
+                    </strong>
+                  </div>
+                </section>
+              )}
+
+              <section className="information-card">
+                <p className="eyebrow">HISTORY</p>
+                <h3>Due records</h3>
+
+                {!myDuesLoading &&
+                !myDuesError &&
+                myDues.length === 0 ? (
+                  <p className="form-help">
+                    No dues have been recorded yet.
+                  </p>
+                ) : (
+                  <div>
+                    {myDues.map((due) => (
+                      <div className="position-row" key={due.id}>
+                        <div>
+                          <strong>{due.description}</strong>
+                          <small>
+                            {due.due_date}
+                            {due.reference ? ` · ${due.reference}` : ''}
+                          </small>
+                        </div>
+
+                        <div>
+                          <strong>{formatPKR(due.amount)}</strong>
+                          <small>
+                            {' '}
+                            (paid {formatPKR(due.paid_amount)}, owed{' '}
+                            {formatPKR(due.outstanding_amount)})
+                          </small>
+                        </div>
                       </div>
                     ))}
                   </div>
