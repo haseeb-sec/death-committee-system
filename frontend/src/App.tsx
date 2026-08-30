@@ -134,6 +134,22 @@ type MemberOutstandingDuesResponse = {
   outstanding_dues: number
 }
 
+type MemberGoodRecord = {
+  id: number
+  member_id: number
+  name: string
+  purchase_date: string
+  purchase_price: number
+  current_value: number
+  description: string | null
+  is_active: boolean
+}
+
+type MemberGoodsTotalResponse = {
+  member_id: number
+  total_goods_value: number
+}
+
 type AuthenticatedUser = {
   username: string
   systemRole: string
@@ -844,6 +860,52 @@ async function getMyOutstandingDues(
   return response.json()
 }
 
+async function getMyMemberGoods(
+  memberId: number,
+  token: string,
+): Promise<MemberGoodRecord[]> {
+  const response = await fetch(
+    `${API_BASE}/members/${memberId}/goods`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(
+      data?.detail ?? 'Unable to load goods',
+    )
+  }
+
+  return response.json()
+}
+
+async function getMyGoodsTotal(
+  memberId: number,
+  token: string,
+): Promise<MemberGoodsTotalResponse> {
+  const response = await fetch(
+    `${API_BASE}/members/${memberId}/goods/total`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(
+      data?.detail ?? 'Unable to load goods total',
+    )
+  }
+
+  return response.json()
+}
+
 async function getCommitteeSummary(
   committeeId: number,
   token: string,
@@ -1504,6 +1566,15 @@ function App() {
 
   const [myDuesError, setMyDuesError] = useState('')
 
+  const [myGoods, setMyGoods] = useState<MemberGoodRecord[]>([])
+
+  const [myGoodsTotal, setMyGoodsTotal] =
+    useState<MemberGoodsTotalResponse | null>(null)
+
+  const [myGoodsLoading, setMyGoodsLoading] = useState(false)
+
+  const [myGoodsError, setMyGoodsError] = useState('')
+
   const [settlementMemberId, setSettlementMemberId] = useState('')
   const [settlementPreview, setSettlementPreview] =
     useState<Record<string, any> | null>(null)
@@ -1642,6 +1713,8 @@ function App() {
     setMyContributionTotal(null)
     setMyDues([])
     setMyOutstandingDues(null)
+    setMyGoods([])
+    setMyGoodsTotal(null)
 
     // Committee access state
     setSelectedAccessUserId(null)
@@ -1886,6 +1959,58 @@ function App() {
     }
 
     loadMyDues()
+
+    return () => {
+      cancelled = true
+    }
+  }, [activePage, token, members])
+
+  useEffect(() => {
+    if (activePage !== 'My Goods') return
+    if (!token || members.length === 0) return
+
+    const ownMemberId = members[0].id
+
+    let cancelled = false
+
+    async function loadMyGoods() {
+      setMyGoodsLoading(true)
+      setMyGoodsError('')
+
+      try {
+        const goodsData = await getMyMemberGoods(
+          ownMemberId,
+          token,
+        )
+
+        if (cancelled) return
+
+        setMyGoods(goodsData)
+
+        const totalData = await getMyGoodsTotal(
+          ownMemberId,
+          token,
+        )
+
+        if (cancelled) return
+
+        setMyGoodsTotal(totalData)
+      } catch (err) {
+        if (cancelled) return
+
+        setMyGoodsError(
+          err instanceof Error
+            ? err.message
+            : 'Unable to load your goods',
+        )
+      } finally {
+        if (!cancelled) {
+          setMyGoodsLoading(false)
+        }
+      }
+    }
+
+    loadMyGoods()
 
     return () => {
       cancelled = true
@@ -7406,6 +7531,90 @@ async function handleCreateCommittee(event: FormEvent) {
                             {' '}
                             (paid {formatPKR(due.paid_amount)}, owed{' '}
                             {formatPKR(due.outstanding_amount)})
+                          </small>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </section>
+          ) : activePage === 'My Goods' ? (
+            <section className="module-page">
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">YOUR ACCOUNT</p>
+                  <h1>My Goods</h1>
+                  <p className="page-subtitle">
+                    Your recorded purchases through this committee and
+                    their current value.
+                  </p>
+                </div>
+              </div>
+
+              {myGoodsLoading && (
+                <p className="form-help">Loading your goods...</p>
+              )}
+
+              {myGoodsError && (
+                <p className="form-error">{myGoodsError}</p>
+              )}
+
+              {!myGoodsLoading &&
+                !myGoodsError &&
+                members.length === 0 && (
+                  <p className="form-help">
+                    No member record was found for you in this committee.
+                  </p>
+                )}
+
+              {myGoodsTotal && (
+                <section className="information-card">
+                  <p className="eyebrow">CURRENT VALUE</p>
+                  <h3>Total goods value</h3>
+
+                  <div className="position-row">
+                    <span>All recorded goods</span>
+                    <strong>
+                      {formatPKR(myGoodsTotal.total_goods_value)}
+                    </strong>
+                  </div>
+                </section>
+              )}
+
+              <section className="information-card">
+                <p className="eyebrow">HISTORY</p>
+                <h3>Goods records</h3>
+
+                {!myGoodsLoading &&
+                !myGoodsError &&
+                myGoods.length === 0 ? (
+                  <p className="form-help">
+                    No goods have been recorded yet.
+                  </p>
+                ) : (
+                  <div>
+                    {myGoods.map((good) => (
+                      <div className="position-row" key={good.id}>
+                        <div>
+                          <strong>{good.name}</strong>
+                          <small>
+                            Purchased {good.purchase_date}
+                            {good.description
+                              ? ` · ${good.description}`
+                              : ''}
+                            {!good.is_active ? ' · Inactive' : ''}
+                          </small>
+                        </div>
+
+                        <div>
+                          <strong>
+                            {formatPKR(good.current_value)}
+                          </strong>
+                          <small>
+                            {' '}
+                            (purchased at{' '}
+                            {formatPKR(good.purchase_price)})
                           </small>
                         </div>
                       </div>
