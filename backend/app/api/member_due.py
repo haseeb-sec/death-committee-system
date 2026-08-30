@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import MemberDue
+from app.models import Member, MemberDue
 from app.schemas.member_due import (
     MemberDueCreate,
     MemberDuePayment,
@@ -39,12 +39,25 @@ def create_member_due(
     current_user = Depends(require_authenticated),
 ):
     try:
-        require_member_access(
+        member = db.get(Member, member_id)
+
+        if member is None:
+            raise AccountingError(
+                f"Member not found: {member_id}"
+            )
+
+        require_committee_admin_access(
             db,
             user=current_user,
-            member_id=member_id,
+            committee_id=member.committee_id,
         )
+    except AccountingError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
 
+    try:
         due = add_member_due(
             db,
             member_id=member_id,
