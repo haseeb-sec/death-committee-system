@@ -1575,6 +1575,14 @@ function App() {
 
   const [myGoodsError, setMyGoodsError] = useState('')
 
+  const [myDeathSupportInfo, setMyDeathSupportInfo] =
+    useState<MemberFinancialSummary | null>(null)
+
+  const [myDeathSupportLoading, setMyDeathSupportLoading] =
+    useState(false)
+
+  const [myDeathSupportError, setMyDeathSupportError] = useState('')
+
   const [settlementMemberId, setSettlementMemberId] = useState('')
   const [settlementPreview, setSettlementPreview] =
     useState<Record<string, any> | null>(null)
@@ -1715,6 +1723,7 @@ function App() {
     setMyOutstandingDues(null)
     setMyGoods([])
     setMyGoodsTotal(null)
+    setMyDeathSupportInfo(null)
 
     // Committee access state
     setSelectedAccessUserId(null)
@@ -2011,6 +2020,49 @@ function App() {
     }
 
     loadMyGoods()
+
+    return () => {
+      cancelled = true
+    }
+  }, [activePage, token, members])
+
+  useEffect(() => {
+    if (activePage !== 'My Death Support') return
+    if (!token || members.length === 0) return
+
+    const ownMemberId = members[0].id
+
+    let cancelled = false
+
+    async function loadMyDeathSupport() {
+      setMyDeathSupportLoading(true)
+      setMyDeathSupportError('')
+
+      try {
+        const summaryData = await getMemberFinancialSummary(
+          ownMemberId,
+          token,
+        )
+
+        if (cancelled) return
+
+        setMyDeathSupportInfo(summaryData)
+      } catch (err) {
+        if (cancelled) return
+
+        setMyDeathSupportError(
+          err instanceof Error
+            ? err.message
+            : 'Unable to load your death support record',
+        )
+      } finally {
+        if (!cancelled) {
+          setMyDeathSupportLoading(false)
+        }
+      }
+    }
+
+    loadMyDeathSupport()
 
     return () => {
       cancelled = true
@@ -7622,6 +7674,83 @@ async function handleCreateCommittee(event: FormEvent) {
                   </div>
                 )}
               </section>
+            </section>
+          ) : activePage === 'My Death Support' ? (
+            <section className="module-page">
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">YOUR ACCOUNT</p>
+                  <h1>My Death Support</h1>
+                  <p className="page-subtitle">
+                    Your death support record within this committee, if
+                    one has been recorded.
+                  </p>
+                </div>
+              </div>
+
+              {myDeathSupportLoading && (
+                <p className="form-help">
+                  Loading your death support record...
+                </p>
+              )}
+
+              {myDeathSupportError && (
+                <p className="form-error">{myDeathSupportError}</p>
+              )}
+
+              {!myDeathSupportLoading &&
+                !myDeathSupportError &&
+                members.length === 0 && (
+                  <p className="form-help">
+                    No member record was found for you in this committee.
+                  </p>
+                )}
+
+              {!myDeathSupportLoading &&
+                !myDeathSupportError &&
+                myDeathSupportInfo &&
+                !myDeathSupportInfo.death_support && (
+                  <p className="form-help">
+                    No death support has been recorded for you.
+                  </p>
+                )}
+
+              {myDeathSupportInfo?.death_support && (
+                <section className="information-card">
+                  <p className="eyebrow">SUPPORT RECORD</p>
+                  <h3>Recorded death support</h3>
+
+                  <div className="position-row">
+                    <span>Beneficiary</span>
+                    <strong>
+                      {myDeathSupportInfo.death_support.beneficiary_name}
+                    </strong>
+                  </div>
+
+                  <div className="position-row">
+                    <span>Amount</span>
+                    <strong>
+                      {formatPKR(myDeathSupportInfo.death_support.amount)}
+                    </strong>
+                  </div>
+
+                  <div className="position-row">
+                    <span>Support date</span>
+                    <strong>
+                      {myDeathSupportInfo.death_support.support_date}
+                    </strong>
+                  </div>
+
+                  {myDeathSupportInfo.death_support.reference && (
+                    <div className="position-row">
+                      <span>Reference</span>
+                      <strong>
+                        {myDeathSupportInfo.death_support.reference}
+                      </strong>
+                    </div>
+                  )}
+                </section>
+              )}
             </section>
           ) : activePage !== 'Dashboard' ? (
             <section className="module-placeholder">
