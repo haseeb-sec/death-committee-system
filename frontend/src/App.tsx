@@ -150,6 +150,16 @@ type MemberGoodsTotalResponse = {
   total_goods_value: number
 }
 
+type SettlementPreview = {
+  member_id: number
+  contribution_balance: number
+  asset_share: number
+  goods_value: number
+  outstanding_dues: number
+  gross_amount: number
+  final_amount: number
+}
+
 type AuthenticatedUser = {
   username: string
   systemRole: string
@@ -906,6 +916,29 @@ async function getMyGoodsTotal(
   return response.json()
 }
 
+async function getMySettlementPreview(
+  memberId: number,
+  token: string,
+): Promise<SettlementPreview> {
+  const response = await fetch(
+    `${API_BASE}/members/${memberId}/settlement`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(
+      data?.detail ?? 'Unable to load settlement preview',
+    )
+  }
+
+  return response.json()
+}
+
 async function getCommitteeSummary(
   committeeId: number,
   token: string,
@@ -1583,6 +1616,13 @@ function App() {
 
   const [myDeathSupportError, setMyDeathSupportError] = useState('')
 
+  const [mySettlementPreview, setMySettlementPreview] =
+    useState<SettlementPreview | null>(null)
+
+  const [mySettlementLoading, setMySettlementLoading] = useState(false)
+
+  const [mySettlementError, setMySettlementError] = useState('')
+
   const [settlementMemberId, setSettlementMemberId] = useState('')
   const [settlementPreview, setSettlementPreview] =
     useState<Record<string, any> | null>(null)
@@ -1724,6 +1764,7 @@ function App() {
     setMyGoods([])
     setMyGoodsTotal(null)
     setMyDeathSupportInfo(null)
+    setMySettlementPreview(null)
 
     // Committee access state
     setSelectedAccessUserId(null)
@@ -2063,6 +2104,49 @@ function App() {
     }
 
     loadMyDeathSupport()
+
+    return () => {
+      cancelled = true
+    }
+  }, [activePage, token, members])
+
+  useEffect(() => {
+    if (activePage !== 'My Settlement') return
+    if (!token || members.length === 0) return
+
+    const ownMemberId = members[0].id
+
+    let cancelled = false
+
+    async function loadMySettlementPreview() {
+      setMySettlementLoading(true)
+      setMySettlementError('')
+
+      try {
+        const previewData = await getMySettlementPreview(
+          ownMemberId,
+          token,
+        )
+
+        if (cancelled) return
+
+        setMySettlementPreview(previewData)
+      } catch (err) {
+        if (cancelled) return
+
+        setMySettlementError(
+          err instanceof Error
+            ? err.message
+            : 'Unable to load your settlement preview',
+        )
+      } finally {
+        if (!cancelled) {
+          setMySettlementLoading(false)
+        }
+      }
+    }
+
+    loadMySettlementPreview()
 
     return () => {
       cancelled = true
@@ -7749,6 +7833,87 @@ async function handleCreateCommittee(event: FormEvent) {
                       </strong>
                     </div>
                   )}
+                </section>
+              )}
+            </section>
+          ) : activePage === 'My Settlement' ? (
+            <section className="module-page">
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">YOUR ACCOUNT</p>
+                  <h1>My Settlement</h1>
+                  <p className="page-subtitle">
+                    A live preview of what your settlement would be if
+                    calculated today. This updates as your contributions,
+                    dues, asset share, and goods change.
+                  </p>
+                </div>
+              </div>
+
+              {mySettlementLoading && (
+                <p className="form-help">
+                  Calculating your settlement preview...
+                </p>
+              )}
+
+              {mySettlementError && (
+                <p className="form-error">{mySettlementError}</p>
+              )}
+
+              {!mySettlementLoading &&
+                !mySettlementError &&
+                members.length === 0 && (
+                  <p className="form-help">
+                    No member record was found for you in this committee.
+                  </p>
+                )}
+
+              {mySettlementPreview && (
+                <section className="information-card">
+                  <p className="eyebrow">SETTLEMENT PREVIEW</p>
+                  <h3>If settled today</h3>
+
+                  <div className="position-row">
+                    <span>Contribution balance</span>
+                    <strong>
+                      {formatPKR(mySettlementPreview.contribution_balance)}
+                    </strong>
+                  </div>
+
+                  <div className="position-row">
+                    <span>Committee asset share</span>
+                    <strong>
+                      {formatPKR(mySettlementPreview.asset_share)}
+                    </strong>
+                  </div>
+
+                  <div className="position-row">
+                    <span>Goods value</span>
+                    <strong>
+                      {formatPKR(mySettlementPreview.goods_value)}
+                    </strong>
+                  </div>
+
+                  <div className="position-row">
+                    <span>Outstanding dues</span>
+                    <strong>
+                      {formatPKR(mySettlementPreview.outstanding_dues)}
+                    </strong>
+                  </div>
+
+                  <div className="position-row">
+                    <span>Gross amount</span>
+                    <strong>
+                      {formatPKR(mySettlementPreview.gross_amount)}
+                    </strong>
+                  </div>
+
+                  <div className="position-row">
+                    <span>Final settlement amount</span>
+                    <strong>
+                      {formatPKR(mySettlementPreview.final_amount)}
+                    </strong>
+                  </div>
                 </section>
               )}
             </section>
