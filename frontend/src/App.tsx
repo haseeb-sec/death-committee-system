@@ -306,6 +306,8 @@ function App() {
     useState<CreatedContribution | null>(null)
 
   const [memberName, setMemberName] = useState('')
+  const [memberUsername, setMemberUsername] = useState('')
+  const [memberPassword, setMemberPassword] = useState('')
   const [memberJoinedOn, setMemberJoinedOn] = useState(
     new Date().toISOString().slice(0, 10),
   )
@@ -2090,6 +2092,18 @@ async function handleCreateCommittee(event: FormEvent) {
       return
     }
 
+    const username = memberUsername.trim()
+
+    if (!username) {
+      setError('Username is required')
+      return
+    }
+
+    if (!memberPassword) {
+      setError('Password is required')
+      return
+    }
+
     if (!memberJoinedOn) {
       setError('Joined date is required')
       return
@@ -2102,12 +2116,16 @@ async function handleCreateCommittee(event: FormEvent) {
       const data = await createMember(
         selectedCommitteeId,
         name,
+        username,
+        memberPassword,
         memberJoinedOn,
         token,
       )
 
       setCreatedMember(data)
       setMemberName('')
+      setMemberUsername('')
+      setMemberPassword('')
 
       const refreshedMembers = await getMembers(
         selectedCommitteeId,
@@ -3081,6 +3099,31 @@ async function handleCreateCommittee(event: FormEvent) {
                           setMemberName(event.target.value)
                         }
                         placeholder="e.g. Muhammad Ahmad"
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      Username
+                      <input
+                        value={memberUsername}
+                        onChange={(event) =>
+                          setMemberUsername(event.target.value)
+                        }
+                        placeholder="Login username for this member"
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      Password
+                      <input
+                        type="password"
+                        value={memberPassword}
+                        onChange={(event) =>
+                          setMemberPassword(event.target.value)
+                        }
+                        placeholder="Initial login password"
                         required
                       />
                     </label>

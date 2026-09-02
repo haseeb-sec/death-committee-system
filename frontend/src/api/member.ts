@@ -28,6 +28,8 @@ export async function getMembers(
 export async function createMember(
   committeeId: number,
   name: string,
+  username: string,
+  password: string,
   joinedOn: string,
   token: string,
 ): Promise<CreatedMember> {
@@ -40,6 +42,8 @@ export async function createMember(
     body: JSON.stringify({
       committee_id: committeeId,
       name,
+      username,
+      password,
       joined_on: joinedOn,
     }),
   })
