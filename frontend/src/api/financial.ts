@@ -3,6 +3,7 @@ import type {
   MemberFinancialSummary,
 } from '../types'
 import { API_BASE } from '../config'
+import { formatApiError } from '../errors'
 
 export async function getMemberFinancialSummary(
   memberId: number,
@@ -20,7 +21,7 @@ export async function getMemberFinancialSummary(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load member financial summary',
+      formatApiError(data?.detail, 'Unable to load member financial summary'),
     )
   }
 
@@ -43,7 +44,7 @@ export async function getMemberStatement(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load member statement',
+      formatApiError(data?.detail, 'Unable to load member statement'),
     )
   }
 

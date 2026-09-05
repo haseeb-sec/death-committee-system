@@ -3,6 +3,7 @@ import type {
   DeathSupportStatus,
 } from '../types'
 import { API_BASE } from '../config'
+import { formatApiError } from '../errors'
 
 export async function createDeathSupport(
   memberId: number,
@@ -32,7 +33,7 @@ export async function createDeathSupport(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to record death support',
+      formatApiError(data?.detail, 'Unable to record death support'),
     )
   }
 
@@ -55,7 +56,7 @@ export async function getDeathSupportStatus(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load death support status',
+      formatApiError(data?.detail, 'Unable to load death support status'),
     )
   }
 

@@ -3,6 +3,7 @@ import type {
   MemberOutstandingDuesResponse,
 } from '../types'
 import { API_BASE } from '../config'
+import { formatApiError } from '../errors'
 
 export async function getMyMemberDues(
   memberId: number,
@@ -20,7 +21,7 @@ export async function getMyMemberDues(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load dues',
+      formatApiError(data?.detail, 'Unable to load dues'),
     )
   }
 
@@ -43,7 +44,7 @@ export async function getMyOutstandingDues(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load outstanding dues',
+      formatApiError(data?.detail, 'Unable to load outstanding dues'),
     )
   }
 
@@ -74,7 +75,7 @@ export async function createMemberDue(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to create member due')
+    throw new Error(formatApiError(data?.detail, 'Unable to create member due'))
   }
 
   return response.json()
@@ -90,7 +91,7 @@ export async function getMemberDues(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load member dues')
+    throw new Error(formatApiError(data?.detail, 'Unable to load member dues'))
   }
 
   return response.json()
@@ -109,7 +110,7 @@ export async function getOutstandingDues(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load outstanding dues')
+    throw new Error(formatApiError(data?.detail, 'Unable to load outstanding dues'))
   }
 
   return response.json()
@@ -131,7 +132,7 @@ export async function payMemberDue(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to pay member due')
+    throw new Error(formatApiError(data?.detail, 'Unable to pay member due'))
   }
 
   return response.json()

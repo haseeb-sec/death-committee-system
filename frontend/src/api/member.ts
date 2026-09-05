@@ -3,6 +3,7 @@ import type {
   Member,
 } from '../types'
 import { API_BASE } from '../config'
+import { formatApiError } from '../errors'
 
 export async function getMembers(
   committeeId: number,
@@ -19,7 +20,7 @@ export async function getMembers(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load committee members')
+    throw new Error(formatApiError(data?.detail, 'Unable to load committee members'))
   }
 
   return response.json()
@@ -50,7 +51,7 @@ export async function createMember(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to create member')
+    throw new Error(formatApiError(data?.detail, 'Unable to create member'))
   }
 
   return response.json()

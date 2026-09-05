@@ -1,4 +1,5 @@
 import { API_BASE } from '../config'
+import { formatApiError } from '../errors'
 
 export async function login(username: string, password: string) {
   const body = new URLSearchParams()
@@ -35,7 +36,7 @@ export async function resetPassword(token: string, newPassword: string) {
   const data = await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new Error(data?.detail ?? 'Unable to reset password')
+    throw new Error(formatApiError(data?.detail, 'Unable to reset password'))
   }
 
   return data
@@ -58,7 +59,7 @@ export async function issuePasswordReset(
   const data = await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new Error(data?.detail ?? 'Unable to issue recovery token')
+    throw new Error(formatApiError(data?.detail, 'Unable to issue recovery token'))
   }
 
   return data
@@ -83,7 +84,7 @@ export async function changeMyPassword(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to change password')
+    throw new Error(formatApiError(data?.detail, 'Unable to change password'))
   }
 
   return response.json()

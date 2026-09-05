@@ -3,6 +3,7 @@ import type {
   CreatedCommittee,
 } from '../types'
 import { API_BASE } from '../config'
+import { formatApiError } from '../errors'
 
 export async function getCommittees(token: string): Promise<CreatedCommittee[]> {
   const response = await fetch(`${API_BASE}/committees`, {
@@ -13,7 +14,7 @@ export async function getCommittees(token: string): Promise<CreatedCommittee[]> 
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load committees')
+    throw new Error(formatApiError(data?.detail, 'Unable to load committees'))
   }
 
   return response.json()
@@ -36,7 +37,7 @@ export async function closeCommittee(
   const data = await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new Error(data?.detail ?? 'Unable to close committee')
+    throw new Error(formatApiError(data?.detail, 'Unable to close committee'))
   }
 
   return data ?? {}
@@ -57,7 +58,7 @@ export async function createCommittee(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to create committee')
+    throw new Error(formatApiError(data?.detail, 'Unable to create committee'))
   }
 
   return response.json()
@@ -78,7 +79,7 @@ export async function getCommitteeSummary(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load committee')
+    throw new Error(formatApiError(data?.detail, 'Unable to load committee'))
   }
 
   return response.json()
@@ -94,7 +95,7 @@ export async function getMyCommitteeAccess(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load committee permissions',
+      formatApiError(data?.detail, 'Unable to load committee permissions'),
     )
   }
 

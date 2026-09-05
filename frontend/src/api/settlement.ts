@@ -2,6 +2,7 @@ import type {
   SettlementPreview,
 } from '../types'
 import { API_BASE } from '../config'
+import { formatApiError } from '../errors'
 
 export async function getMySettlementPreview(
   memberId: number,
@@ -19,7 +20,7 @@ export async function getMySettlementPreview(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load settlement preview',
+      formatApiError(data?.detail, 'Unable to load settlement preview'),
     )
   }
 
@@ -42,7 +43,7 @@ export async function getMemberSettlement(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? "Unable to load member settlement preview",
+      formatApiError(data?.detail, "Unable to load member settlement preview"),
     )
   }
 
@@ -71,7 +72,7 @@ export async function createMemberSettlement(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? "Unable to create member settlement",
+      formatApiError(data?.detail, "Unable to create member settlement"),
     )
   }
 
@@ -95,7 +96,7 @@ export async function payMemberSettlement(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? "Unable to pay member settlement",
+      formatApiError(data?.detail, "Unable to pay member settlement"),
     )
   }
 

@@ -1,4 +1,5 @@
 import { API_BASE } from '../config'
+import { formatApiError } from '../errors'
 
 export async function getUsers(token: string): Promise<Array<Record<string, any>>> {
   const response = await fetch(`${API_BASE}/users`, {
@@ -7,7 +8,7 @@ export async function getUsers(token: string): Promise<Array<Record<string, any>
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load users')
+    throw new Error(formatApiError(data?.detail, 'Unable to load users'))
   }
 
   return response.json()
@@ -36,7 +37,7 @@ export async function grantUserCommitteeAccess(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to grant committee access')
+    throw new Error(formatApiError(data?.detail, 'Unable to grant committee access'))
   }
 
   return response.json()
@@ -56,7 +57,7 @@ export async function getCommitteeAdministrators(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load committee administrators',
+      formatApiError(data?.detail, 'Unable to load committee administrators'),
     )
   }
 
@@ -77,7 +78,7 @@ export async function getUserCommitteeAssignments(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load committee assignments',
+      formatApiError(data?.detail, 'Unable to load committee assignments'),
     )
   }
 
@@ -104,7 +105,7 @@ export async function getUserCommitteeAccess(
         access_status: 'Not granted',
       }
     }
-    throw new Error(data?.detail ?? 'Unable to load committee access')
+    throw new Error(formatApiError(data?.detail, 'Unable to load committee access'))
   }
 
   return response.json()
@@ -125,7 +126,7 @@ export async function deactivateUserCommitteeAccess(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to revoke committee access')
+    throw new Error(formatApiError(data?.detail, 'Unable to revoke committee access'))
   }
 
   return response.json()
@@ -148,7 +149,7 @@ export async function createUser(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to create user')
+    throw new Error(formatApiError(data?.detail, 'Unable to create user'))
   }
 
   return response.json()
@@ -165,7 +166,7 @@ export async function deactivateUser(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to deactivate user')
+    throw new Error(formatApiError(data?.detail, 'Unable to deactivate user'))
   }
 
   return response.json()

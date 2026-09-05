@@ -5,6 +5,7 @@ import type {
   ContributionTotalResponse,
 } from '../types'
 import { API_BASE } from '../config'
+import { formatApiError } from '../errors'
 
 export async function createContributionRate(
   committeeId: number,
@@ -30,7 +31,7 @@ export async function createContributionRate(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to create contribution rate',
+      formatApiError(data?.detail, 'Unable to create contribution rate'),
     )
   }
 
@@ -61,7 +62,7 @@ export async function createContribution(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to record contribution',
+      formatApiError(data?.detail, 'Unable to record contribution'),
     )
   }
 
@@ -84,7 +85,7 @@ export async function getMemberContributions(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load contribution history',
+      formatApiError(data?.detail, 'Unable to load contribution history'),
     )
   }
 
@@ -107,7 +108,7 @@ export async function getMemberContributionTotal(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load contribution total',
+      formatApiError(data?.detail, 'Unable to load contribution total'),
     )
   }
 

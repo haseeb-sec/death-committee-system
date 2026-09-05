@@ -3,6 +3,7 @@ import type {
   MemberGoodsTotalResponse,
 } from '../types'
 import { API_BASE } from '../config'
+import { formatApiError } from '../errors'
 
 export async function createMemberGood(
   memberId: number,
@@ -32,7 +33,7 @@ export async function createMemberGood(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to create member good',
+      formatApiError(data?.detail, 'Unable to create member good'),
     )
   }
 
@@ -55,7 +56,7 @@ export async function getMemberGoods(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load member goods',
+      formatApiError(data?.detail, 'Unable to load member goods'),
     )
   }
 
@@ -78,7 +79,7 @@ export async function getMemberGoodsTotal(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load member goods total',
+      formatApiError(data?.detail, 'Unable to load member goods total'),
     )
   }
 
@@ -109,7 +110,7 @@ export async function updateMemberGoodValue(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to update member good value',
+      formatApiError(data?.detail, 'Unable to update member good value'),
     )
   }
 
@@ -132,7 +133,7 @@ export async function getMyMemberGoods(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load goods',
+      formatApiError(data?.detail, 'Unable to load goods'),
     )
   }
 
@@ -155,7 +156,7 @@ export async function getMyGoodsTotal(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load goods total',
+      formatApiError(data?.detail, 'Unable to load goods total'),
     )
   }
 

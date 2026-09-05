@@ -4,6 +4,7 @@ import type {
   AssetParticipation,
 } from '../types'
 import { API_BASE } from '../config'
+import { formatApiError } from '../errors'
 
 export async function createCommitteeAsset(
   committeeId: number,
@@ -32,7 +33,7 @@ export async function createCommitteeAsset(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to create committee asset')
+    throw new Error(formatApiError(data?.detail, 'Unable to create committee asset'))
   }
 
   return response.json()
@@ -53,7 +54,7 @@ export async function getAssetValuations(
 
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load asset valuations')
+    throw new Error(formatApiError(data?.detail, 'Unable to load asset valuations'))
   }
 
   return response.json()
@@ -75,7 +76,7 @@ export async function getAssetParticipation(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to load asset participation',
+      formatApiError(data?.detail, 'Unable to load asset participation'),
     )
   }
 
@@ -106,7 +107,7 @@ export async function updateCommitteeAssetValue(
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new Error(
-      data?.detail ?? 'Unable to update asset value',
+      formatApiError(data?.detail, 'Unable to update asset value'),
     )
   }
 
