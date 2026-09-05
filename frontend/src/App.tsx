@@ -10,9 +10,6 @@ import type {
   DeathSupportStatus,
   CreatedMember,
   Member,
-  CreatedAsset,
-  AssetValuation,
-  AssetParticipation,
   MemberStatementRow,
   ContributionHistoryEntry,
   ContributionTotalResponse,
@@ -25,7 +22,61 @@ import type {
   MemberFinancialSummary,
 } from './types'
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? `http://${window.location.hostname}:8000`
+import { login, resetPassword, issuePasswordReset, changeMyPassword } from './api/auth'
+import {
+  getCommittees,
+  closeCommittee,
+  createCommittee,
+  getCommitteeSummary,
+  getMyCommitteeAccess,
+} from './api/committee'
+import { getMembers, createMember } from './api/member'
+import {
+  createContributionRate,
+  createContribution,
+  getMemberContributions,
+  getMemberContributionTotal,
+} from './api/contribution'
+import { createDeathSupport, getDeathSupportStatus } from './api/deathSupport'
+import {
+  createCommitteeAsset,
+  getAssetValuations,
+  getAssetParticipation,
+  updateCommitteeAssetValue,
+} from './api/asset'
+import {
+  createMemberGood,
+  getMemberGoods,
+  getMemberGoodsTotal,
+  updateMemberGoodValue,
+  getMyMemberGoods,
+  getMyGoodsTotal,
+} from './api/good'
+import { getMemberFinancialSummary, getMemberStatement } from './api/financial'
+import {
+  getMyMemberDues,
+  getMyOutstandingDues,
+  createMemberDue,
+  getMemberDues,
+  getOutstandingDues,
+  payMemberDue,
+} from './api/due'
+import {
+  getMySettlementPreview,
+  getMemberSettlement,
+  createMemberSettlement,
+  payMemberSettlement,
+} from './api/settlement'
+import {
+  getUsers,
+  grantUserCommitteeAccess,
+  getCommitteeAdministrators,
+  getUserCommitteeAssignments,
+  getUserCommitteeAccess,
+  deactivateUserCommitteeAccess,
+  createUser,
+  deactivateUser,
+} from './api/user'
 
 function getTimeGreeting() {
   const hour = new Date().getHours()
@@ -38,1129 +89,6 @@ function getTimeGreeting() {
 
 function formatPKR(amount: number) {
   return `Rs. ${amount.toLocaleString('en-PK')}`
-}
-
-async function login(username: string, password: string) {
-  const body = new URLSearchParams()
-  body.set('username', username)
-  body.set('password', password)
-
-  const response = await fetch(`${API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body,
-  })
-
-  if (!response.ok) {
-    throw new Error('Invalid username or password')
-  }
-
-  return response.json()
-}
-
-async function resetPassword(token: string, newPassword: string) {
-  const response = await fetch(`${API_BASE}/users/password-reset`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      token,
-      new_password: newPassword,
-    }),
-  })
-
-  const data = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    throw new Error(data?.detail ?? 'Unable to reset password')
-  }
-
-  return data
-}
-
-
-async function issuePasswordReset(
-  token: string,
-  userId: number,
-) {
-  const response = await fetch(
-    `${API_BASE}/users/${userId}/password-reset`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  const data = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    throw new Error(data?.detail ?? 'Unable to issue recovery token')
-  }
-
-  return data
-}
-
-
-async function getCommittees(token: string): Promise<CreatedCommittee[]> {
-  const response = await fetch(`${API_BASE}/committees`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load committees')
-  }
-
-  return response.json()
-}
-
-
-async function getMembers(
-  committeeId: number,
-  token: string,
-): Promise<Member[]> {
-  const response = await fetch(
-    `${API_BASE}/members?committee_id=${committeeId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load committee members')
-  }
-
-  return response.json()
-}
-
-
-async function closeCommittee(
-  committeeId: number,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(
-    `${API_BASE}/committees/${committeeId}/close`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  const data = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    throw new Error(data?.detail ?? 'Unable to close committee')
-  }
-
-  return data ?? {}
-}
-
-async function createCommittee(
-  name: string,
-  token: string,
-): Promise<CreatedCommittee> {
-  const response = await fetch(`${API_BASE}/committees`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ name }),
-  })
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to create committee')
-  }
-
-  return response.json()
-}
-
-async function createContributionRate(
-  committeeId: number,
-  amount: number,
-  effectiveFrom: string,
-  token: string,
-): Promise<CreatedContributionRate> {
-  const response = await fetch(
-    `${API_BASE}/committees/${committeeId}/contribution-rates`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount,
-        effective_from: effectiveFrom,
-      }),
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to create contribution rate',
-    )
-  }
-
-  return response.json()
-}
-
-
-async function createContribution(
-  memberId: number,
-  contributionDate: string,
-  reference: string,
-  token: string,
-): Promise<CreatedContribution> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/contributions`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contribution_date: contributionDate,
-        reference: reference.trim() || null,
-      }),
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to record contribution',
-    )
-  }
-
-  return response.json()
-}
-
-async function createDeathSupport(
-  memberId: number,
-  beneficiaryName: string,
-  amount: number,
-  supportDate: string,
-  reference: string,
-  token: string,
-): Promise<CreatedDeathSupport> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/death-support`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        beneficiary_name: beneficiaryName.trim(),
-        amount,
-        support_date: supportDate,
-        reference: reference.trim() || null,
-      }),
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to record death support',
-    )
-  }
-
-  return response.json()
-}
-
-async function getDeathSupportStatus(
-  memberId: number,
-  token: string,
-): Promise<DeathSupportStatus> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/death-support/status`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load death support status',
-    )
-  }
-
-  return response.json()
-}
-
-async function createMember(
-  committeeId: number,
-  name: string,
-  joinedOn: string,
-  token: string,
-): Promise<CreatedMember> {
-  const response = await fetch(`${API_BASE}/members`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      committee_id: committeeId,
-      name,
-      joined_on: joinedOn,
-    }),
-  })
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to create member')
-  }
-
-  return response.json()
-}
-
-async function createCommitteeAsset(
-  committeeId: number,
-  name: string,
-  purchaseDate: string,
-  purchaseValue: number,
-  description: string,
-  token: string,
-): Promise<CreatedAsset> {
-  const response = await fetch(
-    `${API_BASE}/committees/${committeeId}/assets`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name,
-        purchase_date: purchaseDate,
-        purchase_value: purchaseValue,
-        description: description.trim() || null,
-      }),
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to create committee asset')
-  }
-
-  return response.json()
-}
-
-async function getAssetValuations(
-  assetId: number,
-  token: string,
-): Promise<AssetValuation[]> {
-  const response = await fetch(
-    `${API_BASE}/committees/assets/${assetId}/valuations`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load asset valuations')
-  }
-
-  return response.json()
-}
-
-async function getAssetParticipation(
-  assetId: number,
-  token: string,
-): Promise<AssetParticipation[]> {
-  const response = await fetch(
-    `${API_BASE}/committees/assets/${assetId}/participation`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load asset participation',
-    )
-  }
-
-  return response.json()
-}
-
-async function updateCommitteeAssetValue(
-  assetId: number,
-  valuationDate: string,
-  newValue: number,
-  token: string,
-): Promise<unknown> {
-  const response = await fetch(
-    `${API_BASE}/committees/assets/${assetId}/value`,
-    {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        valuation_date: valuationDate,
-        new_value: newValue,
-      }),
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to update asset value',
-    )
-  }
-
-  return response.json()
-}
-
-
-async function createMemberGood(
-  memberId: number,
-  name: string,
-  purchaseDate: string,
-  purchasePrice: number,
-  description: string,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/goods`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name,
-        purchase_date: purchaseDate,
-        purchase_price: purchasePrice,
-        description: description.trim() || null,
-      }),
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to create member good',
-    )
-  }
-
-  return response.json()
-}
-
-async function getMemberGoods(
-  memberId: number,
-  token: string,
-): Promise<Array<Record<string, any>>> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/goods`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load member goods',
-    )
-  }
-
-  return response.json()
-}
-
-async function getMemberGoodsTotal(
-  memberId: number,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/goods/total`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load member goods total',
-    )
-  }
-
-  return response.json()
-}
-
-async function updateMemberGoodValue(
-  goodId: number,
-  valuationDate: string,
-  newValue: number,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(
-    `${API_BASE}/members/goods/${goodId}/value`,
-    {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        valuation_date: valuationDate,
-        new_value: newValue,
-      }),
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to update member good value',
-    )
-  }
-
-  return response.json()
-}
-
-async function getMemberFinancialSummary(
-  memberId: number,
-  token: string,
-): Promise<MemberFinancialSummary> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/financial-summary`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load member financial summary',
-    )
-  }
-
-  return response.json()
-}
-
-async function getMemberStatement(
-  memberId: number,
-  token: string,
-): Promise<MemberStatementRow[]> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/statement`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load member statement',
-    )
-  }
-
-  return response.json()
-}
-
-async function getMemberContributions(
-  memberId: number,
-  token: string,
-): Promise<ContributionHistoryEntry[]> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/contributions`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load contribution history',
-    )
-  }
-
-  return response.json()
-}
-
-async function getMemberContributionTotal(
-  memberId: number,
-  token: string,
-): Promise<ContributionTotalResponse> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/contributions/total`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load contribution total',
-    )
-  }
-
-  return response.json()
-}
-
-async function getMyMemberDues(
-  memberId: number,
-  token: string,
-): Promise<MemberDueRecord[]> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/dues`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load dues',
-    )
-  }
-
-  return response.json()
-}
-
-async function getMyOutstandingDues(
-  memberId: number,
-  token: string,
-): Promise<MemberOutstandingDuesResponse> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/dues/outstanding`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load outstanding dues',
-    )
-  }
-
-  return response.json()
-}
-
-async function getMyMemberGoods(
-  memberId: number,
-  token: string,
-): Promise<MemberGoodRecord[]> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/goods`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load goods',
-    )
-  }
-
-  return response.json()
-}
-
-async function getMyGoodsTotal(
-  memberId: number,
-  token: string,
-): Promise<MemberGoodsTotalResponse> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/goods/total`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load goods total',
-    )
-  }
-
-  return response.json()
-}
-
-async function getMySettlementPreview(
-  memberId: number,
-  token: string,
-): Promise<SettlementPreview> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/settlement`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load settlement preview',
-    )
-  }
-
-  return response.json()
-}
-
-async function getCommitteeSummary(
-  committeeId: number,
-  token: string,
-): Promise<CommitteeSummary> {
-  const response = await fetch(
-    `${API_BASE}/committees/${committeeId}/summary`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load committee')
-  }
-
-  return response.json()
-}
-
-async function createMemberDue(
-  memberId: number,
-  amount: number,
-  dueDate: string,
-  description: string,
-  reference: string,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(`${API_BASE}/members/${memberId}/dues`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      amount,
-      due_date: dueDate,
-      description,
-      reference: reference.trim() || null,
-    }),
-  })
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to create member due')
-  }
-
-  return response.json()
-}
-
-async function getMemberDues(
-  memberId: number,
-  token: string,
-): Promise<Array<Record<string, any>>> {
-  const response = await fetch(`${API_BASE}/members/${memberId}/dues`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load member dues')
-  }
-
-  return response.json()
-}
-
-async function getOutstandingDues(
-  memberId: number,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/dues/outstanding`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load outstanding dues')
-  }
-
-  return response.json()
-}
-
-async function payMemberDue(
-  dueId: number,
-  amount: number,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(`${API_BASE}/members/dues/${dueId}/pay`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ amount }),
-  })
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to pay member due')
-  }
-
-  return response.json()
-}
-
-async function changeMyPassword(
-  currentPassword: string,
-  newPassword: string,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(`${API_BASE}/users/me/password`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      current_password: currentPassword,
-      new_password: newPassword,
-    }),
-  })
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to change password')
-  }
-
-  return response.json()
-}
-
-
-async function getMyCommitteeAccess(
-  token: string,
-): Promise<Array<Record<string, any>>> {
-  const response = await fetch(`${API_BASE}/users/me/committees/access`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load committee permissions',
-    )
-  }
-
-  return response.json()
-}
-
-
-async function getUsers(token: string): Promise<Array<Record<string, any>>> {
-  const response = await fetch(`${API_BASE}/users`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to load users')
-  }
-
-  return response.json()
-}
-
-async function grantUserCommitteeAccess(
-  userId: number,
-  committeeId: number,
-  token: string,
-  isAdmin: boolean = false,
-): Promise<Record<string, any>> {
-  const response = await fetch(
-    `${API_BASE}/users/${userId}/committees/${committeeId}/access`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        user_id: userId,
-        is_admin: isAdmin,
-      }),
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to grant committee access')
-  }
-
-  return response.json()
-}
-
-async function getCommitteeAdministrators(
-  committeeId: number,
-  token: string,
-): Promise<Array<Record<string, any>>> {
-  const response = await fetch(
-    `${API_BASE}/committees/${committeeId}/administrators`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load committee administrators',
-    )
-  }
-
-  return response.json()
-}
-
-async function getUserCommitteeAssignments(
-  userId: number,
-  token: string,
-): Promise<Array<Record<string, any>>> {
-  const response = await fetch(
-    `${API_BASE}/users/${userId}/committees/access`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? 'Unable to load committee assignments',
-    )
-  }
-
-  return response.json()
-}
-
-async function getUserCommitteeAccess(
-  userId: number,
-  committeeId: number,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(
-    `${API_BASE}/users/${userId}/committees/${committeeId}/access`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    if (response.status === 404) {
-      return {
-        is_active: false,
-        access_status: 'Not granted',
-      }
-    }
-    throw new Error(data?.detail ?? 'Unable to load committee access')
-  }
-
-  return response.json()
-}
-
-async function deactivateUserCommitteeAccess(
-  userId: number,
-  committeeId: number,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(
-    `${API_BASE}/users/${userId}/committees/${committeeId}/access/deactivate`,
-    {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}` },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to revoke committee access')
-  }
-
-  return response.json()
-}
-
-async function createUser(
-  username: string,
-  password: string,
-  role: string,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(`${API_BASE}/users`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ username, password, role }),
-  })
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to create user')
-  }
-
-  return response.json()
-}
-
-async function deactivateUser(
-  userId: number,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(`${API_BASE}/users/${userId}/deactivate`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-  })
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.detail ?? 'Unable to deactivate user')
-  }
-
-  return response.json()
-}
-
-async function getMemberSettlement(
-  memberId: number,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/settlement`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? "Unable to load member settlement preview",
-    )
-  }
-
-  return response.json()
-}
-
-async function createMemberSettlement(
-  memberId: number,
-  settlementDate: string,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(
-    `${API_BASE}/members/${memberId}/settlement`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        settlement_date: settlementDate,
-      }),
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? "Unable to create member settlement",
-    )
-  }
-
-  return response.json()
-}
-
-async function payMemberSettlement(
-  settlementId: number,
-  token: string,
-): Promise<Record<string, any>> {
-  const response = await fetch(
-    `${API_BASE}/members/settlement/${settlementId}/pay`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(
-      data?.detail ?? "Unable to pay member settlement",
-    )
-  }
-
-  return response.json()
 }
 
 function getNavigationLabel(page: string): string {
@@ -1378,6 +306,8 @@ function App() {
     useState<CreatedContribution | null>(null)
 
   const [memberName, setMemberName] = useState('')
+  const [memberUsername, setMemberUsername] = useState('')
+  const [memberPassword, setMemberPassword] = useState('')
   const [memberJoinedOn, setMemberJoinedOn] = useState(
     new Date().toISOString().slice(0, 10),
   )
@@ -3162,6 +2092,18 @@ async function handleCreateCommittee(event: FormEvent) {
       return
     }
 
+    const username = memberUsername.trim()
+
+    if (!username) {
+      setError('Username is required')
+      return
+    }
+
+    if (!memberPassword) {
+      setError('Password is required')
+      return
+    }
+
     if (!memberJoinedOn) {
       setError('Joined date is required')
       return
@@ -3174,12 +2116,16 @@ async function handleCreateCommittee(event: FormEvent) {
       const data = await createMember(
         selectedCommitteeId,
         name,
+        username,
+        memberPassword,
         memberJoinedOn,
         token,
       )
 
       setCreatedMember(data)
       setMemberName('')
+      setMemberUsername('')
+      setMemberPassword('')
 
       const refreshedMembers = await getMembers(
         selectedCommitteeId,
@@ -4153,6 +3099,31 @@ async function handleCreateCommittee(event: FormEvent) {
                           setMemberName(event.target.value)
                         }
                         placeholder="e.g. Muhammad Ahmad"
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      Username
+                      <input
+                        value={memberUsername}
+                        onChange={(event) =>
+                          setMemberUsername(event.target.value)
+                        }
+                        placeholder="Login username for this member"
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      Password
+                      <input
+                        type="password"
+                        value={memberPassword}
+                        onChange={(event) =>
+                          setMemberPassword(event.target.value)
+                        }
+                        placeholder="Initial login password"
                         required
                       />
                     </label>
