@@ -2530,6 +2530,7 @@ async function handleCreateCommittee(event: FormEvent) {
     setSummary(null)
     setUsername('')
     setPassword('')
+    setActivePage('Dashboard')
   }
 
   if (!token) {
