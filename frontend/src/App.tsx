@@ -78,7 +78,7 @@ import {
   deactivateUser,
 } from './api/user'
 
-import { getTimeGreeting, formatPKR, getNavigationLabel } from './utils'
+import { decodeJwtPayload, getTimeGreeting, formatPKR, getNavigationLabel } from './utils'
 
 
 function App() {
@@ -99,9 +99,24 @@ function App() {
 
       if (!storedToken) return null
 
+      const payload = decodeJwtPayload(storedToken)
+
+      if (!payload) {
+        localStorage.removeItem('death_committee_token')
+        return null
+      }
+
+      if (
+        typeof payload.exp === 'number' &&
+        payload.exp * 1000 < Date.now()
+      ) {
+        localStorage.removeItem('death_committee_token')
+        return null
+      }
+
       return {
         username: '',
-        systemRole: '',
+        systemRole: payload.role ?? '',
         token: storedToken,
       }
     })
