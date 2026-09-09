@@ -79,9 +79,13 @@ import {
 } from './api/user'
 
 import { decodeJwtPayload, getTimeGreeting, formatPKR, getNavigationLabel } from './utils'
+import { useLanguage, loginTranslations } from './i18n'
 
 
 function App() {
+
+  const [language, setLanguage] = useLanguage()
+  const t = loginTranslations[language]
 
   // ----------------------------------------------------------
   // FINAL RBAC SYSTEM-USER PERMISSION
@@ -2522,222 +2526,183 @@ async function handleCreateCommittee(event: FormEvent) {
   if (!token) {
     return (
       <main className="login-page">
-        <section className="login-layout">
-          <div className="login-intro">
-            <div className="login-intro-glow" />
-
-            <div className="login-brand">
-              <div className="brand-mark">DC</div>
-              <span>Death Committee System</span>
-            </div>
-
-            <div className="login-intro-content">
-              <p className="eyebrow">MUTUAL SUPPORT MANAGEMENT</p>
-
-              <h1>Manage your committee with clarity.</h1>
-
-              <p className="login-intro-description">
-                Keep members, contributions, support, dues, assets, and
-                settlements organized in one place.
-              </p>
-
-              <div className="login-benefits">
-                <div className="login-benefit">
-                  <span className="login-benefit-icon">01</span>
-                  <div>
-                    <strong>Member records</strong>
-                    <p>Keep member balances and activity organized.</p>
-                  </div>
-                </div>
-
-                <div className="login-benefit">
-                  <span className="login-benefit-icon">02</span>
-                  <div>
-                    <strong>Financial tracking</strong>
-                    <p>Record Contributions, support, dues, and assets.</p>
-                  </div>
-                </div>
-
-                <div className="login-benefit">
-                  <span className="login-benefit-icon">03</span>
-                  <div>
-                    <strong>Clear settlements</strong>
-                    <p>Review each member's financial position clearly.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="login-intro-footer">
-              <span className="login-footer-dot" />
-              <span>Simple records. Clear financial oversight.</span>
-            </div>
+        <div className="login-language-switcher">
+          <div className="login-language-options">
+            <button
+              type="button"
+              className={`login-language-option ${language === 'en' ? 'active' : ''}`}
+              onClick={() => setLanguage('en')}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              className={`login-language-option ${language === 'ur' ? 'active' : ''}`}
+              onClick={() => setLanguage('ur')}
+            >
+              اردو
+            </button>
           </div>
+        </div>
 
-          <div className="login-panel">
-            <div className="login-panel-header">
-              <span className="login-panel-label">ADMINISTRATOR</span>
-              <h2>{recoveryMode ? 'Reset your password' : 'Sign in'}</h2>
-              <p>
-                {recoveryMode
-                  ? 'Ask a Super Admin to issue a recovery token, then use it below to create a new password.'
-                  : 'Access your committee records and financial information.'}
-              </p>
-            </div>
-            {recoveryMode ? (
-              <form
-                onSubmit={handlePasswordRecovery}
-                className="login-form"
+        <div className="login-brand-block">
+          <div className="login-brand-mark">DC</div>
+          <h1 className="login-brand-name">{t.appName}</h1>
+          <p className="login-brand-tagline">{t.tagline}</p>
+        </div>
+
+        <div className="login-card">
+          <h2 className="login-card-title">
+            {recoveryMode ? t.resetTitle : t.signInTitle}
+          </h2>
+          <p className="login-card-subtitle">
+            {recoveryMode ? t.resetSubtitle : t.signInSubtitle}
+          </p>
+
+          {recoveryMode ? (
+            <form onSubmit={handlePasswordRecovery} className="login-form">
+              <label>
+                <span>{t.recoveryToken}</span>
+                <input
+                  value={recoveryToken}
+                  onChange={(event) => setRecoveryToken(event.target.value)}
+                  autoComplete="off"
+                  placeholder={t.recoveryTokenPlaceholder}
+                  required
+                />
+              </label>
+
+              <label>
+                <span>{t.newPassword}</span>
+                <input
+                  type="password"
+                  value={recoveryNewPassword}
+                  onChange={(event) =>
+                    setRecoveryNewPassword(event.target.value)
+                  }
+                  autoComplete="new-password"
+                  placeholder={t.newPasswordPlaceholder}
+                  required
+                />
+              </label>
+
+              <label>
+                <span>{t.confirmNewPassword}</span>
+                <input
+                  type="password"
+                  value={recoveryConfirmPassword}
+                  onChange={(event) =>
+                    setRecoveryConfirmPassword(event.target.value)
+                  }
+                  autoComplete="new-password"
+                  placeholder={t.confirmNewPasswordPlaceholder}
+                  required
+                />
+              </label>
+
+              {error && <div className="login-error">{error}</div>}
+
+              {recoveryMessage && (
+                <div className="login-success">{recoveryMessage}</div>
+              )}
+
+              <button
+                type="submit"
+                className="login-submit-button"
+                disabled={loading}
               >
-                <label>
-                  <span>Recovery token</span>
+                {loading ? t.resetting : t.resetButton}
+              </button>
+
+              <button
+                type="button"
+                className="login-forgot-button"
+                onClick={() => {
+                  setRecoveryMode(false)
+                  setError('')
+                  setRecoveryMessage('')
+                }}
+              >
+                {t.backToSignIn}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleLogin} className="login-form">
+              <label>
+                <span>{t.username}</span>
+                <input
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  autoComplete="username"
+                  placeholder={t.usernamePlaceholder}
+                  required
+                />
+              </label>
+
+              <label>
+                <span>{t.password}</span>
+                <div className="login-password-field">
                   <input
-                    value={recoveryToken}
-                    onChange={(event) =>
-                      setRecoveryToken(event.target.value)
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="current-password"
+                    placeholder={t.passwordPlaceholder}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="login-password-toggle"
+                    onClick={() => setShowPassword((value) => !value)}
+                    aria-label={
+                      showPassword ? 'Hide password' : 'Show password'
                     }
-                    autoComplete="off"
-                    placeholder="Enter your recovery token"
-                    required
-                  />
-                </label>
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                        <circle cx="12" cy="12" r="2.8" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3 3l18 18" />
+                        <path d="M10.6 6.2A10.5 10.5 0 0 1 12 6c6 0 9.5 6 9.5 6a18.7 18.7 0 0 1-3.1 3.9M6.2 6.8C3.8 8.4 2.5 12 2.5 12s3.5 6 9.5 6c1.4 0 2.7-.3 3.8-.8" />
+                        <path d="M9.9 9.9a2.8 2.8 0 0 0 4.2 4.2" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </label>
 
-                <label>
-                  <span>New password</span>
-                  <input
-                    type="password"
-                    value={recoveryNewPassword}
-                    onChange={(event) =>
-                      setRecoveryNewPassword(event.target.value)
-                    }
-                    autoComplete="new-password"
-                    placeholder="Enter your new password"
-                    required
-                  />
-                </label>
+              {error && <div className="login-error">{error}</div>}
 
-                <label>
-                  <span>Confirm new password</span>
-                  <input
-                    type="password"
-                    value={recoveryConfirmPassword}
-                    onChange={(event) =>
-                      setRecoveryConfirmPassword(event.target.value)
-                    }
-                    autoComplete="new-password"
-                    placeholder="Confirm your new password"
-                    required
-                  />
-                </label>
+              <button
+                type="submit"
+                className="login-submit-button"
+                disabled={loading}
+              >
+                {loading ? t.signingIn : t.signInButton}
+              </button>
 
-                {error && <div className="error">{error}</div>}
-
-                {recoveryMessage && (
-                  <div className="success">
-                    {recoveryMessage}
-                  </div>
-                )}
-
-                <button type="submit" disabled={loading}>
-                  {loading ? 'Resetting...' : 'Reset Password'}
-                </button>
-
-                <button
-                  type="button"
-                  className="forgot-password-button"
-                  onClick={() => {
-                    setRecoveryMode(false)
-                    setError('')
-                    setRecoveryMessage('')
-                  }}
-                >
-                  Back to sign in
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleLogin} className="login-form">
-                <label>
-                  <span>Username</span>
-                  <input
-                    value={username}
-                    onChange={(event) => setUsername(event.target.value)}
-                    autoComplete="username"
-                    placeholder="Enter your username"
-                    required
-                  />
-                </label>
-
-                <label>
-                  <span>Password</span>
-                  <div className="password-field">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      autoComplete="current-password"
-                      placeholder="Enter your password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="password-toggle"
-                      onClick={() => setShowPassword((value) => !value)}
-                      aria-label={
-                        showPassword ? 'Hide password' : 'Show password'
-                      }
-                      title={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? (
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path
-                            d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
-                          />
-                          <circle cx="12" cy="12" r="2.8" />
-                        </svg>
-                      ) : (
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M3 3l18 18" />
-                          <path
-                            d="M10.6 6.2A10.5 10.5 0 0 1 12 6c6 0 9.5 6 9.5 6a18.7 18.7 0 0 1-3.1 3.9M6.2 6.8C3.8 8.4 2.5 12 2.5 12s3.5 6 9.5 6c1.4 0 2.7-.3 3.8-.8"
-                          />
-                          <path d="M9.9 9.9a2.8 2.8 0 0 0 4.2 4.2" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                </label>
-
-                {error && <div className="error">{error}</div>}
-
-                <button type="submit" disabled={loading}>
-                  {loading ? 'Signing in...' : 'Sign in'}
-                </button>
-
-                <button
-                  type="button"
-                  className="forgot-password-button"
-                  onClick={() => {
-                    setRecoveryMode(true)
-                    setError('')
-                    setRecoveryMessage('')
-                  }}
-                >
-                  Forgot password?
-                </button>
-              </form>
-            )}
-
-            <div className="login-security-note">
-              <span className="security-icon">✓</span>
-              <div>
-                <strong>Secure administrator access</strong>
-                <p>Your committee records are available after sign in.</p>
-              </div>
-            </div>
-          </div>
-        </section>
+              <button
+                type="button"
+                className="login-forgot-button"
+                onClick={() => {
+                  setRecoveryMode(true)
+                  setError('')
+                  setRecoveryMessage('')
+                }}
+              >
+                {t.forgotPassword}
+              </button>
+            </form>
+          )}
+        </div>
       </main>
     )
   }
+
 
   return (
     <div className="app-shell">
