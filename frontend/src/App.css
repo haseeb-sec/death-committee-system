@@ -1787,3 +1787,226 @@
     flex-basis: auto;
   }
 }
+/* =========================================================
+   MY FINANCIAL POSITION (redesigned)
+   ========================================================= */
+
+.finpos-member-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 10px rgba(15, 27, 45, 0.06);
+  margin-bottom: 18px;
+  animation: finposFadeUp 0.4s ease both;
+}
+
+.finpos-member-banner h3 {
+  margin: 2px 0 4px;
+  font-size: 18px;
+}
+
+.finpos-member-banner p {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.finpos-hero {
+  background: linear-gradient(135deg, #059669, #0d9488);
+  border-radius: 22px;
+  padding: 26px 24px;
+  color: #ffffff;
+  margin-bottom: 18px;
+  box-shadow: 0 16px 36px rgba(5, 150, 105, 0.28);
+  animation: finposFadeUp 0.4s ease 0.05s both;
+}
+
+.finpos-hero-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 6px;
+}
+
+.finpos-hero-amount {
+  font-size: 34px;
+  font-weight: 800;
+  margin: 0 0 8px;
+  line-height: 1.1;
+}
+
+.finpos-hero-note {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.finpos-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.finpos-stat-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 2px 10px rgba(15, 27, 45, 0.06);
+  border-inline-start: 4px solid transparent;
+  animation: finposFadeUp 0.4s ease both;
+}
+
+.finpos-stat-card--positive {
+  border-inline-start-color: #10b981;
+}
+
+.finpos-stat-card--warning {
+  border-inline-start-color: #f59e0b;
+}
+
+.finpos-stat-card--neutral {
+  border-inline-start-color: #3b82f6;
+}
+
+.finpos-stat-label {
+  font-size: 12.5px;
+  color: #6b7280;
+  margin: 0 0 6px;
+  line-height: 1.35;
+}
+
+.finpos-stat-amount {
+  font-size: 19px;
+  font-weight: 700;
+  color: #0f1b2d;
+  margin: 0;
+}
+
+.finpos-section {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(15, 27, 45, 0.06);
+  margin-bottom: 16px;
+  animation: finposFadeUp 0.4s ease both;
+}
+
+.finpos-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f1b2d;
+  margin: 0 0 14px;
+}
+
+.finpos-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f3f6;
+}
+
+.finpos-history-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.finpos-history-row div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.finpos-history-row strong {
+  font-size: 14px;
+  color: #0f1b2d;
+}
+
+.finpos-history-row small {
+  font-size: 12.5px;
+  color: #9aa2ad;
+}
+
+.finpos-history-amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: #059669;
+  white-space: nowrap;
+}
+
+.finpos-empty {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+@keyframes finposFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 720px) {
+  .finpos-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .finpos-hero-amount {
+    font-size: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .finpos-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .finpos-hero {
+    padding: 22px 18px;
+  }
+
+  .finpos-hero-amount {
+    font-size: 30px;
+  }
+}
+
+[dir='rtl'] .finpos-stat-card {
+  border-inline-start: none;
+  border-inline-end: 4px solid transparent;
+}
+
+[dir='rtl'] .finpos-stat-card--positive {
+  border-inline-end-color: #10b981;
+}
+
+[dir='rtl'] .finpos-stat-card--warning {
+  border-inline-end-color: #f59e0b;
+}
+
+[dir='rtl'] .finpos-stat-card--neutral {
+  border-inline-end-color: #3b82f6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finpos-member-banner,
+  .finpos-hero,
+  .finpos-stat-card,
+  .finpos-section {
+    animation: none;
+  }
+}
