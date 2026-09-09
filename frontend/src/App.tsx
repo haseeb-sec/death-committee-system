@@ -6038,8 +6038,8 @@ async function handleCreateCommittee(event: FormEvent) {
                   <p className="eyebrow">YOUR ACCOUNT</p>
                   <h1>My Financial Position</h1>
                   <p className="page-subtitle">
-                    Your current contributions, dues, asset share, and
-                    account history within this committee.
+                    A simple summary of what you have contributed, what
+                    you own a share of, and what you currently owe.
                   </p>
                 </div>
               </div>
@@ -6062,22 +6062,17 @@ async function handleCreateCommittee(event: FormEvent) {
 
               {myFinancialSummary && (
                 <>
-                  <section className="committee-banner">
+                  <div className="finpos-member-banner">
                     <div>
                       <p className="eyebrow">MEMBER</p>
                       <h3>{myFinancialSummary.member_name}</h3>
-
-                      <p className="created-id">
-                        Member ID: {myFinancialSummary.member_id}
-                        {' · '}
-                        Joining date: {myFinancialSummary.joined_on}
+                      <p>
+                        Member ID {myFinancialSummary.member_id} · Joined{' '}
+                        {myFinancialSummary.joined_on}
+                        {myFinancialSummary.left_on
+                          ? ` · Left ${myFinancialSummary.left_on}`
+                          : ''}
                       </p>
-
-                      {myFinancialSummary.left_on && (
-                        <p className="created-id">
-                          Left on: {myFinancialSummary.left_on}
-                        </p>
-                      )}
                     </div>
 
                     <span
@@ -6089,89 +6084,97 @@ async function handleCreateCommittee(event: FormEvent) {
                     >
                       {myFinancialSummary.is_active ? 'Active' : 'Inactive'}
                     </span>
-                  </section>
+                  </div>
 
-                  <section className="information-card">
-                    <p className="eyebrow">CURRENT POSITION</p>
-                    <h3>Financial breakdown</h3>
+                  <div className="finpos-hero">
+                    <p className="finpos-hero-label">
+                      What you would receive today
+                    </p>
+                    <p className="finpos-hero-amount">
+                      {formatPKR(myFinancialSummary.current_final_value)}
+                    </p>
+                    <p className="finpos-hero-note">
+                      This is your total value after your dues are
+                      subtracted. Gross value before dues:{' '}
+                      {formatPKR(myFinancialSummary.current_gross_value)}.
+                    </p>
+                  </div>
 
-                    <div className="position-row">
-                      <span>Total contributions</span>
-                      <strong>
+                  <div className="finpos-grid">
+                    <div className="finpos-stat-card finpos-stat-card--positive">
+                      <p className="finpos-stat-label">
+                        Total contributions paid
+                      </p>
+                      <p className="finpos-stat-amount">
                         {formatPKR(myFinancialSummary.total_contributions)}
-                      </strong>
+                      </p>
                     </div>
 
-                    <div className="position-row">
-                      <span>Contribution balance</span>
-                      <strong>
+                    <div className="finpos-stat-card finpos-stat-card--positive">
+                      <p className="finpos-stat-label">
+                        Your contribution balance
+                      </p>
+                      <p className="finpos-stat-amount">
                         {formatPKR(myFinancialSummary.contribution_balance)}
-                      </strong>
+                      </p>
                     </div>
 
-                    <div className="position-row">
-                      <span>Committee asset share</span>
-                      <strong>
+                    <div className="finpos-stat-card finpos-stat-card--neutral">
+                      <p className="finpos-stat-label">
+                        Your share of committee assets
+                      </p>
+                      <p className="finpos-stat-amount">
                         {formatPKR(myFinancialSummary.asset_share)}
-                      </strong>
+                      </p>
                     </div>
 
-                    <div className="position-row">
-                      <span>Goods value</span>
-                      <strong>
+                    <div className="finpos-stat-card finpos-stat-card--neutral">
+                      <p className="finpos-stat-label">
+                        Value of your purchased goods
+                      </p>
+                      <p className="finpos-stat-amount">
                         {formatPKR(myFinancialSummary.goods_value)}
-                      </strong>
+                      </p>
                     </div>
 
-                    <div className="position-row">
-                      <span>Ordinary dues</span>
-                      <strong>
+                    <div className="finpos-stat-card finpos-stat-card--warning">
+                      <p className="finpos-stat-label">
+                        Ordinary dues you owe
+                      </p>
+                      <p className="finpos-stat-amount">
                         {formatPKR(myFinancialSummary.ordinary_dues)}
-                      </strong>
+                      </p>
                     </div>
 
-                    <div className="position-row">
-                      <span>Qarz-e-Hasana</span>
-                      <strong>
+                    <div className="finpos-stat-card finpos-stat-card--warning">
+                      <p className="finpos-stat-label">
+                        Qarz-e-Hasana (loan) you owe
+                      </p>
+                      <p className="finpos-stat-amount">
                         {formatPKR(myFinancialSummary.qarz_e_hasana_dues)}
-                      </strong>
+                      </p>
                     </div>
+                  </div>
 
-                    <div className="position-row">
-                      <span>Total outstanding dues</span>
-                      <strong>
-                        {formatPKR(myFinancialSummary.outstanding_dues)}
-                      </strong>
-                    </div>
+                  <div className="finpos-section">
+                    <p className="finpos-section-title">
+                      Total you currently owe:{' '}
+                      {formatPKR(myFinancialSummary.outstanding_dues)}
+                    </p>
+                  </div>
 
-                    <div className="position-row">
-                      <span>Gross current value</span>
-                      <strong>
-                        {formatPKR(myFinancialSummary.current_gross_value)}
-                      </strong>
-                    </div>
-
-                    <div className="position-row">
-                      <span>Final current value</span>
-                      <strong>
-                        {formatPKR(myFinancialSummary.current_final_value)}
-                      </strong>
-                    </div>
-                  </section>
-
-                  <section className="information-card">
-                    <p className="eyebrow">ACCOUNT HISTORY</p>
-                    <h3>Your statement</h3>
+                  <div className="finpos-section">
+                    <p className="finpos-section-title">Your history</p>
 
                     {myStatement.length === 0 ? (
-                      <p className="form-help">
+                      <p className="finpos-empty">
                         No financial transactions recorded yet.
                       </p>
                     ) : (
                       <div>
                         {myStatement.map((row, index) => (
                           <div
-                            className="position-row"
+                            className="finpos-history-row"
                             key={`${row.date}-${index}`}
                           >
                             <div>
@@ -6182,85 +6185,107 @@ async function handleCreateCommittee(event: FormEvent) {
                               </small>
                             </div>
 
-                            <strong>{formatPKR(row.amount)}</strong>
+                            <span className="finpos-history-amount">
+                              {formatPKR(row.amount)}
+                            </span>
                           </div>
                         ))}
                       </div>
                     )}
-                  </section>
+                  </div>
 
                   {myFinancialSummary.death_support && (
-                    <section className="information-card">
-                      <p className="eyebrow">DEATH SUPPORT</p>
-                      <h3>Support record</h3>
+                    <div className="finpos-section">
+                      <p className="finpos-section-title">
+                        Death support record
+                      </p>
 
-                      <div className="position-row">
-                        <span>Beneficiary</span>
-                        <strong>
+                      <div className="finpos-history-row">
+                        <div>
+                          <strong>Beneficiary</strong>
+                        </div>
+                        <span className="finpos-history-amount">
                           {myFinancialSummary.death_support.beneficiary_name}
-                        </strong>
+                        </span>
                       </div>
 
-                      <div className="position-row">
-                        <span>Amount</span>
-                        <strong>
+                      <div className="finpos-history-row">
+                        <div>
+                          <strong>Amount</strong>
+                        </div>
+                        <span className="finpos-history-amount">
                           {formatPKR(myFinancialSummary.death_support.amount)}
-                        </strong>
+                        </span>
                       </div>
 
-                      <div className="position-row">
-                        <span>Support date</span>
-                        <strong>
+                      <div className="finpos-history-row">
+                        <div>
+                          <strong>Support date</strong>
+                        </div>
+                        <span className="finpos-history-amount">
                           {myFinancialSummary.death_support.support_date}
-                        </strong>
+                        </span>
                       </div>
-                    </section>
+                    </div>
                   )}
 
                   {myFinancialSummary.settlement && (
-                    <section className="information-card">
-                      <p className="eyebrow">SETTLEMENT</p>
-                      <h3>Settlement record</h3>
+                    <div className="finpos-section">
+                      <p className="finpos-section-title">
+                        Settlement record
+                      </p>
 
-                      <div className="position-row">
-                        <span>Settlement date</span>
-                        <strong>
+                      <div className="finpos-history-row">
+                        <div>
+                          <strong>Settlement date</strong>
+                        </div>
+                        <span className="finpos-history-amount">
                           {myFinancialSummary.settlement.settlement_date}
-                        </strong>
+                        </span>
                       </div>
 
-                      <div className="position-row">
-                        <span>Gross amount</span>
-                        <strong>
+                      <div className="finpos-history-row">
+                        <div>
+                          <strong>Gross amount</strong>
+                        </div>
+                        <span className="finpos-history-amount">
                           {formatPKR(
                             myFinancialSummary.settlement.gross_amount,
                           )}
-                        </strong>
+                        </span>
                       </div>
 
-                      <div className="position-row">
-                        <span>Outstanding amounts</span>
-                        <strong>
+                      <div className="finpos-history-row">
+                        <div>
+                          <strong>Outstanding amounts</strong>
+                        </div>
+                        <span className="finpos-history-amount">
                           {formatPKR(
                             myFinancialSummary.settlement.outstanding_dues,
                           )}
-                        </strong>
+                        </span>
                       </div>
 
-                      <div className="position-row">
-                        <span>Final amount</span>
-                        <strong>
+                      <div className="finpos-history-row">
+                        <div>
+                          <strong>Final amount</strong>
+                        </div>
+                        <span className="finpos-history-amount">
                           {formatPKR(
                             myFinancialSummary.settlement.final_amount,
                           )}
-                        </strong>
+                        </span>
                       </div>
 
-                      <div className="position-row">
-                        <span>Status</span>
-                        <strong>{myFinancialSummary.settlement.status}</strong>
+                      <div className="finpos-history-row">
+                        <div>
+                          <strong>Status</strong>
+                        </div>
+                        <span className="finpos-history-amount">
+                          {myFinancialSummary.settlement.status}
+                        </span>
                       </div>
-                    </section>
+                    </div>
                   )}
                 </>
               )}
