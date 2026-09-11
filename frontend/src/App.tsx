@@ -6376,8 +6376,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   <p className="eyebrow">YOUR ACCOUNT</p>
                   <h1>My Dues</h1>
                   <p className="page-subtitle">
-                    Your recorded dues and current outstanding balance
-                    within this committee.
+                    What you currently owe, and your full due history.
                   </p>
                 </div>
               </div>
@@ -6399,54 +6398,86 @@ async function handleCreateCommittee(event: FormEvent) {
                 )}
 
               {myOutstandingDues && (
-                <section className="information-card">
-                  <p className="eyebrow">CURRENT STANDING</p>
-                  <h3>Outstanding dues</h3>
-
-                  <div className="position-row">
-                    <span>Total outstanding</span>
-                    <strong>
-                      {formatPKR(myOutstandingDues.outstanding_dues)}
-                    </strong>
-                  </div>
-                </section>
+                <div
+                  className={`mydues-hero ${
+                    myOutstandingDues.outstanding_dues > 0
+                      ? 'mydues-hero--owing'
+                      : 'mydues-hero--clear'
+                  }`}
+                >
+                  <p className="mydues-hero-label">
+                    {myOutstandingDues.outstanding_dues > 0
+                      ? 'You currently owe'
+                      : "You're all caught up"}
+                  </p>
+                  <p className="mydues-hero-amount">
+                    {formatPKR(myOutstandingDues.outstanding_dues)}
+                  </p>
+                  <p className="mydues-hero-note">
+                    {myOutstandingDues.outstanding_dues > 0
+                      ? 'This is the total across all your unpaid and partially paid dues.'
+                      : 'You have no outstanding dues at this time.'}
+                  </p>
+                </div>
               )}
 
-              <section className="information-card">
-                <p className="eyebrow">HISTORY</p>
-                <h3>Due records</h3>
+              <div className="finpos-section">
+                <p className="finpos-section-title">Due history</p>
 
                 {!myDuesLoading &&
                 !myDuesError &&
                 myDues.length === 0 ? (
-                  <p className="form-help">
+                  <p className="finpos-empty">
                     No dues have been recorded yet.
                   </p>
                 ) : (
                   <div>
-                    {myDues.map((due) => (
-                      <div className="position-row" key={due.id}>
-                        <div>
-                          <strong>{due.description}</strong>
-                          <small>
-                            {due.due_date}
-                            {due.reference ? ` · ${due.reference}` : ''}
-                          </small>
-                        </div>
+                    {myDues.map((due) => {
+                      const status =
+                        due.paid_amount >= due.amount
+                          ? 'paid'
+                          : due.paid_amount > 0
+                            ? 'partial'
+                            : 'unpaid'
 
-                        <div>
-                          <strong>{formatPKR(due.amount)}</strong>
-                          <small>
-                            {' '}
-                            (paid {formatPKR(due.paid_amount)}, owed{' '}
-                            {formatPKR(due.outstanding_amount)})
-                          </small>
+                      const statusLabel =
+                        status === 'paid'
+                          ? 'Paid'
+                          : status === 'partial'
+                            ? 'Partial'
+                            : 'Unpaid'
+
+                      return (
+                        <div className="mydues-due-row" key={due.id}>
+                          <div className="mydues-due-info">
+                            <strong>{due.description}</strong>
+                            <small>
+                              {due.due_date}
+                              {due.reference ? ` · ${due.reference}` : ''}
+                            </small>
+                          </div>
+
+                          <div className="mydues-due-amounts">
+                            <span
+                              className={`mydues-status-badge mydues-status-badge--${status}`}
+                            >
+                              {statusLabel}
+                            </span>
+                            <span className="mydues-due-total">
+                              {formatPKR(due.amount)}
+                            </span>
+                            {due.outstanding_amount > 0 && (
+                              <small>
+                                {formatPKR(due.outstanding_amount)} owed
+                              </small>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
-              </section>
+              </div>
             </section>
           ) : activePage === 'My Goods' ? (
             <section className="module-page">
