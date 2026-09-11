@@ -6486,7 +6486,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   <p className="eyebrow">YOUR ACCOUNT</p>
                   <h1>My Goods</h1>
                   <p className="page-subtitle">
-                    Your recorded purchases through this committee and
+                    Items you've purchased through this committee and
                     their current value.
                   </p>
                 </div>
@@ -6509,59 +6509,77 @@ async function handleCreateCommittee(event: FormEvent) {
                 )}
 
               {myGoodsTotal && (
-                <section className="information-card">
-                  <p className="eyebrow">CURRENT VALUE</p>
-                  <h3>Total goods value</h3>
-
-                  <div className="position-row">
-                    <span>All recorded goods</span>
-                    <strong>
-                      {formatPKR(myGoodsTotal.total_goods_value)}
-                    </strong>
-                  </div>
-                </section>
+                <div className="finpos-hero">
+                  <p className="finpos-hero-label">
+                    Total value of your goods
+                  </p>
+                  <p className="finpos-hero-amount">
+                    {formatPKR(myGoodsTotal.total_goods_value)}
+                  </p>
+                  <p className="finpos-hero-note">
+                    This is the current value of everything you've
+                    purchased through this committee.
+                  </p>
+                </div>
               )}
 
-              <section className="information-card">
-                <p className="eyebrow">HISTORY</p>
-                <h3>Goods records</h3>
+              <div className="finpos-section">
+                <p className="finpos-section-title">Goods history</p>
 
                 {!myGoodsLoading &&
                 !myGoodsError &&
                 myGoods.length === 0 ? (
-                  <p className="form-help">
+                  <p className="finpos-empty">
                     No goods have been recorded yet.
                   </p>
                 ) : (
                   <div>
-                    {myGoods.map((good) => (
-                      <div className="position-row" key={good.id}>
-                        <div>
-                          <strong>{good.name}</strong>
-                          <small>
-                            Purchased {good.purchase_date}
-                            {good.description
-                              ? ` · ${good.description}`
-                              : ''}
-                            {!good.is_active ? ' · Inactive' : ''}
-                          </small>
-                        </div>
+                    {myGoods.map((good) => {
+                      const delta = good.current_value - good.purchase_price
 
-                        <div>
-                          <strong>
-                            {formatPKR(good.current_value)}
-                          </strong>
-                          <small>
-                            {' '}
-                            (purchased at{' '}
-                            {formatPKR(good.purchase_price)})
-                          </small>
+                      return (
+                        <div className="mygoods-item-row" key={good.id}>
+                          <div className="mygoods-item-info">
+                            <strong>{good.name}</strong>
+                            <small>
+                              Purchased {good.purchase_date}
+                              {good.description
+                                ? ` · ${good.description}`
+                                : ''}
+                            </small>
+                            {!good.is_active && (
+                              <span className="mygoods-inactive-badge">
+                                Inactive
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mygoods-item-amounts">
+                            <span className="mygoods-item-value">
+                              {formatPKR(good.current_value)}
+                            </span>
+                            <small>
+                              purchased at {formatPKR(good.purchase_price)}
+                            </small>
+                            {delta !== 0 && (
+                              <span
+                                className={`mygoods-item-delta ${
+                                  delta > 0
+                                    ? 'mygoods-item-delta--up'
+                                    : 'mygoods-item-delta--down'
+                                }`}
+                              >
+                                {delta > 0 ? '+' : ''}
+                                {formatPKR(delta)} since purchase
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
-              </section>
+              </div>
             </section>
           ) : activePage === 'My Death Support' ? (
             <section className="module-page">
