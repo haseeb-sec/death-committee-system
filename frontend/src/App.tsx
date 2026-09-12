@@ -6695,52 +6695,56 @@ async function handleCreateCommittee(event: FormEvent) {
                 )}
 
               {mySettlementPreview && (
-                <section className="information-card">
-                  <p className="eyebrow">SETTLEMENT PREVIEW</p>
-                  <h3>If settled today</h3>
-
-                  <div className="position-row">
-                    <span>Contribution balance</span>
-                    <strong>
-                      {formatPKR(mySettlementPreview.contribution_balance)}
-                    </strong>
-                  </div>
-
-                  <div className="position-row">
-                    <span>Committee asset share</span>
-                    <strong>
-                      {formatPKR(mySettlementPreview.asset_share)}
-                    </strong>
-                  </div>
-
-                  <div className="position-row">
-                    <span>Goods value</span>
-                    <strong>
-                      {formatPKR(mySettlementPreview.goods_value)}
-                    </strong>
-                  </div>
-
-                  <div className="position-row">
-                    <span>Outstanding dues</span>
-                    <strong>
-                      {formatPKR(mySettlementPreview.outstanding_dues)}
-                    </strong>
-                  </div>
-
-                  <div className="position-row">
-                    <span>Gross amount</span>
-                    <strong>
-                      {formatPKR(mySettlementPreview.gross_amount)}
-                    </strong>
-                  </div>
-
-                  <div className="position-row">
-                    <span>Final settlement amount</span>
-                    <strong>
+                <>
+                  <div className="finpos-hero">
+                    <p className="finpos-hero-label">
+                      If you were settled today, you would receive
+                    </p>
+                    <p className="finpos-hero-amount">
                       {formatPKR(mySettlementPreview.final_amount)}
-                    </strong>
+                    </p>
+                    <p className="finpos-hero-note">
+                      This is a live preview, not a final record - it
+                      changes as your contributions, dues, and shares
+                      change. Gross amount before dues:{' '}
+                      {formatPKR(mySettlementPreview.gross_amount)}.
+                    </p>
                   </div>
-                </section>
+
+                  <div className="finpos-grid">
+                    <div className="finpos-stat-card finpos-stat-card--positive">
+                      <p className="finpos-stat-label">
+                        Contribution balance
+                      </p>
+                      <p className="finpos-stat-amount">
+                        {formatPKR(mySettlementPreview.contribution_balance)}
+                      </p>
+                    </div>
+
+                    <div className="finpos-stat-card finpos-stat-card--neutral">
+                      <p className="finpos-stat-label">
+                        Committee asset share
+                      </p>
+                      <p className="finpos-stat-amount">
+                        {formatPKR(mySettlementPreview.asset_share)}
+                      </p>
+                    </div>
+
+                    <div className="finpos-stat-card finpos-stat-card--neutral">
+                      <p className="finpos-stat-label">Goods value</p>
+                      <p className="finpos-stat-amount">
+                        {formatPKR(mySettlementPreview.goods_value)}
+                      </p>
+                    </div>
+
+                    <div className="finpos-stat-card finpos-stat-card--warning">
+                      <p className="finpos-stat-label">Outstanding dues</p>
+                      <p className="finpos-stat-amount">
+                        {formatPKR(mySettlementPreview.outstanding_dues)}
+                      </p>
+                    </div>
+                  </div>
+                </>
               )}
             </section>
           ) : activePage !== 'Dashboard' ? (
