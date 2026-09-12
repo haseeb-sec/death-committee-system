@@ -6616,31 +6616,35 @@ async function handleCreateCommittee(event: FormEvent) {
                 !myDeathSupportError &&
                 myDeathSupportInfo &&
                 !myDeathSupportInfo.death_support && (
-                  <p className="form-help">
-                    No death support has been recorded for you.
-                  </p>
+                  <div className="mydeathsupport-empty">
+                    <p>
+                      No death support has been recorded for you at this
+                      time.
+                    </p>
+                  </div>
                 )}
 
               {myDeathSupportInfo?.death_support && (
-                <section className="information-card">
-                  <p className="eyebrow">SUPPORT RECORD</p>
-                  <h3>Recorded death support</h3>
+                <div className="mydeathsupport-card">
+                  <p className="mydeathsupport-title">
+                    Recorded death support
+                  </p>
 
-                  <div className="position-row">
+                  <div className="mydeathsupport-row">
                     <span>Beneficiary</span>
                     <strong>
                       {myDeathSupportInfo.death_support.beneficiary_name}
                     </strong>
                   </div>
 
-                  <div className="position-row">
+                  <div className="mydeathsupport-row">
                     <span>Amount</span>
                     <strong>
                       {formatPKR(myDeathSupportInfo.death_support.amount)}
                     </strong>
                   </div>
 
-                  <div className="position-row">
+                  <div className="mydeathsupport-row">
                     <span>Support date</span>
                     <strong>
                       {myDeathSupportInfo.death_support.support_date}
@@ -6648,14 +6652,14 @@ async function handleCreateCommittee(event: FormEvent) {
                   </div>
 
                   {myDeathSupportInfo.death_support.reference && (
-                    <div className="position-row">
+                    <div className="mydeathsupport-row">
                       <span>Reference</span>
                       <strong>
                         {myDeathSupportInfo.death_support.reference}
                       </strong>
                     </div>
                   )}
-                </section>
+                </div>
               )}
             </section>
           ) : activePage === 'My Settlement' ? (
