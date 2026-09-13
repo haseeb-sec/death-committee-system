@@ -56,3 +56,27 @@ export async function createMember(
 
   return response.json()
 }
+
+export async function leaveMember(
+  memberId: number,
+  leavingDate: string,
+  token: string,
+): Promise<Member> {
+  const response = await fetch(`${API_BASE}/members/${memberId}/leave`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      leaving_date: leavingDate,
+    }),
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(formatApiError(data?.detail, 'Unable to leave member'))
+  }
+
+  return response.json()
+}

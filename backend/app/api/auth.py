@@ -24,7 +24,7 @@ def login(
     if not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_access_token(user.id, user.role)
+    token = create_access_token(user.id, user.role, user.token_version)
 
     record_audit(
         db,
@@ -52,6 +52,7 @@ def get_current_user(
     try:
         payload = decode_access_token(token)
         user_id = int(payload["sub"])
+        token_version = int(payload["ver"])
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
@@ -60,4 +61,18 @@ def get_current_user(
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or inactive")
 
+    if token_version != user.token_version:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
     return user
+
+
+@router.post("/logout")
+def logout(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    current_user.token_version += 1
+    db.commit()
+
+    return {"message": "Logged out successfully"}

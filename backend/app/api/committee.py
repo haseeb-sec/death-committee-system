@@ -59,7 +59,7 @@ def create_committee_api(
             committee_id=committee.id,
             granted_by_user_id=current_user.id,
             is_active=True,
-            is_admin=False,
+            is_admin=True,
         )
         db.add(access)
 
@@ -241,40 +241,50 @@ def list_committee_administrators_api(
     Super Admin may inspect any active committee.
     Committee Admin may inspect the committee they administer.
     """
-    committee = db.get(Committee, committee_id)
+    try:
+        committee = db.get(Committee, committee_id)
 
-    if committee is None:
-        raise HTTPException(status_code=404, detail="Committee not found")
+        if committee is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Committee not found",
+            )
 
-    # Super Admin has global committee visibility.
-    if current_user.role != UserRole.SUPER_ADMIN.value:
-        require_committee_admin_access(
-            db,
-            user=current_user,
-            committee_id=committee_id,
-        )
+        # Super Admin has global committee visibility.
+        if current_user.role != UserRole.SUPER_ADMIN.value:
+            require_committee_admin_access(
+                db,
+                user=current_user,
+                committee_id=committee_id,
+            )
 
-    rows = db.execute(
-        select(UserCommitteeAccess, User)
-        .join(User, User.id == UserCommitteeAccess.user_id)
-        .where(
-            UserCommitteeAccess.committee_id == committee_id,
-            UserCommitteeAccess.is_active.is_(True),
-            UserCommitteeAccess.is_admin.is_(True),
-        )
-        .order_by(User.username.asc())
-    ).all()
+        rows = db.execute(
+            select(UserCommitteeAccess, User)
+            .join(User, User.id == UserCommitteeAccess.user_id)
+            .where(
+                UserCommitteeAccess.committee_id == committee_id,
+                UserCommitteeAccess.is_active.is_(True),
+                UserCommitteeAccess.is_admin.is_(True),
+            )
+            .order_by(User.username.asc())
+        ).all()
 
-    return [
-        {
-            "user_id": access.user_id,
-            "username": user.username,
-            "role": user.role,
-            "is_active": access.is_active,
-            "is_admin": access.is_admin,
-        }
-        for access, user in rows
-    ]
+        return [
+            {
+                "user_id": access.user_id,
+                "username": user.username,
+                "role": user.role,
+                "is_active": access.is_active,
+                "is_admin": access.is_admin,
+            }
+            for access, user in rows
+        ]
+
+    except AccountingError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
 
 @router.get(
     "",

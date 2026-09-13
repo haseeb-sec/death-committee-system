@@ -326,6 +326,7 @@ def test_deactivated_user_cannot_use_existing_token(db):
     token = create_access_token(
         user.id,
         user.role,
+        user.token_version,
     )
 
     user.is_active = False
