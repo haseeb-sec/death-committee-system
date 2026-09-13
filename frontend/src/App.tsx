@@ -22,7 +22,7 @@ import type {
   MemberFinancialSummary,
 } from './types'
 
-import { login, resetPassword, issuePasswordReset, changeMyPassword } from './api/auth'
+import { login, logout as logoutApi, resetPassword, issuePasswordReset, changeMyPassword } from './api/auth'
 import {
   getCommittees,
   closeCommittee,
@@ -30,7 +30,7 @@ import {
   getCommitteeSummary,
   getMyCommitteeAccess,
 } from './api/committee'
-import { getMembers, createMember } from './api/member'
+import { getMembers, createMember, leaveMember } from './api/member'
 import {
   createContributionRate,
   createContribution,
@@ -2061,6 +2061,42 @@ async function handleCreateCommittee(event: FormEvent) {
     }
   }
 
+  async function handleLeaveMember(memberId: number) {
+    if (!canWrite) {
+      setError('You do not have permission to modify committee members')
+      return
+    }
+
+    if (!token) {
+      setError('You are not authenticated')
+      return
+    }
+
+    const leavingDate = new Date().toISOString().slice(0, 10)
+
+    setError('')
+    setLoading(true)
+
+    try {
+      await leaveMember(memberId, leavingDate, token)
+
+      const refreshedMembers = await getMembers(Number(committeeId), token)
+      setMembers(
+        refreshedMembers.filter(
+          (member) => member.committee_id === Number(committeeId),
+        ),
+      )
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to leave member',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleCreateMember(event: FormEvent) {
     event.preventDefault()
 
@@ -2514,7 +2550,17 @@ async function handleCreateCommittee(event: FormEvent) {
     }
   }
 
-  function logout() {
+  async function logout() {
+    const currentToken = localStorage.getItem('death_committee_token')
+
+    if (currentToken) {
+      try {
+        await logoutApi(currentToken)
+      } catch {
+        // Clear the local session even if the server logout request fails.
+      }
+    }
+
     localStorage.removeItem('death_committee_token')
     setAuthenticatedUser(null)
     setSummary(null)
@@ -3167,15 +3213,26 @@ async function handleCreateCommittee(event: FormEvent) {
                           </span>
                         </div>
 
-                        <span
-                          className={
-                            member.is_active
-                              ? 'active-badge'
-                              : 'status-badge'
-                          }
-                        >
-                          {member.is_active ? 'Active' : 'Inactive'}
-                        </span>
+                        <div>
+                          <span
+                            className={
+                              member.is_active
+                                ? 'active-badge'
+                                : 'status-badge'
+                            }
+                          >
+                            {member.is_active ? 'Active' : 'Inactive'}
+                          </span>
+
+                          {canWrite && member.is_active && (
+                            <button
+                              type="button"
+                              onClick={() => void handleLeaveMember(member.id)}
+                            >
+                              Leave
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

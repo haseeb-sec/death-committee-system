@@ -21,6 +21,22 @@ export async function login(username: string, password: string) {
   return response.json()
 }
 
+export async function logout(token: string) {
+  const response = await fetch(`${API_BASE}/auth/logout`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(formatApiError(data?.detail, 'Unable to log out'))
+  }
+
+  return response.json()
+}
+
 export async function resetPassword(token: string, newPassword: string) {
   const response = await fetch(`${API_BASE}/users/password-reset`, {
     method: 'POST',

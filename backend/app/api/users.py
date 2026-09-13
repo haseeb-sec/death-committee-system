@@ -489,6 +489,23 @@ def deactivate_user_committee_access(
             detail="Committee access is already inactive",
         )
 
+    if access.is_admin:
+        active_admin_count = (
+            db.query(UserCommitteeAccess)
+            .filter(
+                UserCommitteeAccess.committee_id == committee_id,
+                UserCommitteeAccess.is_active.is_(True),
+                UserCommitteeAccess.is_admin.is_(True),
+            )
+            .count()
+        )
+
+        if active_admin_count <= 1:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot deactivate the last active Committee Admin.",
+            )
+
     access.is_active = False
 
     record_audit(
