@@ -9,6 +9,7 @@ from app.schemas.settlement import (
     SettlementResponse,
 )
 from app.services.accounting import AccountingError
+from app.services.exceptions import AuthorizationError
 from app.services.member_settlement import (
     get_member_settlement,
     pay_member_settlement,
@@ -40,6 +41,11 @@ def preview_member_settlement(
             user=current_user,
             member_id=member_id,
         )
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -91,6 +97,11 @@ def create_member_settlement(
             user=current_user,
             committee_id=member.committee_id,
         )
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -170,6 +181,11 @@ def pay_member_settlement_api(
                 user=current_user,
                 committee_id=member.committee_id,
             )
+        except AuthorizationError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
         except AccountingError as exc:
             raise HTTPException(
                 status_code=404,

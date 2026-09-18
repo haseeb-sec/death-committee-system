@@ -1696,3 +1696,95 @@ def test_admin_cannot_deactivate_committee_access(db):
 
     finally:
         app.dependency_overrides.clear()
+
+
+def test_member_cannot_access_another_member_in_same_committee(db):
+    admin = make_user(
+        db,
+        "same_committee_admin",
+        "admin-password",
+        UserRole.COMMITTEE_ADMIN.value,
+    )
+
+    committee = create_committee(
+        db,
+        name="Same Committee Horizontal IDOR",
+    )
+    db.commit()
+
+    from app.models import UserCommitteeAccess
+
+    db.add(
+        UserCommitteeAccess(
+            user_id=admin.id,
+            committee_id=committee.id,
+            granted_by_user_id=admin.id,
+            is_active=True,
+            is_admin=True,
+        )
+    )
+    db.commit()
+
+    member_a = add_member(
+        db,
+        committee_id=committee.id,
+        username="same_committee_member_a",
+        password="member-a-password",
+        name="Member A",
+        joined_on=date(2026, 1, 1),
+    )
+
+    member_b = add_member(
+        db,
+        committee_id=committee.id,
+        username="same_committee_member_b",
+        password="member-b-password",
+        name="Member B",
+        joined_on=date(2026, 1, 1),
+    )
+    db.commit()
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        response = login(
+            client,
+            "same_committee_member_a",
+            "member-a-password",
+        )
+
+        assert response.status_code == 200
+
+        token = response.json()["access_token"]
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+        }
+
+        endpoints = [
+            f"/members/{member_b.id}/financial-summary",
+            f"/members/{member_b.id}/statement",
+            f"/members/{member_b.id}/asset-breakdown",
+            f"/members/{member_b.id}/goods",
+            f"/members/{member_b.id}/goods/total",
+            f"/members/{member_b.id}/dues",
+            f"/members/{member_b.id}/dues/outstanding",
+            f"/members/{member_b.id}/death-support",
+            f"/members/{member_b.id}/death-support/status",
+            f"/members/{member_b.id}/settlement",
+        ]
+
+        for endpoint in endpoints:
+            response = client.get(
+                endpoint,
+                headers=headers,
+            )
+            assert response.status_code == 404, (
+                f"Member A accessed Member B through {endpoint}: "
+                f"HTTP {response.status_code}"
+            )
+
+    finally:
+        app.dependency_overrides.clear()

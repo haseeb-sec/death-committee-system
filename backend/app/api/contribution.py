@@ -16,6 +16,7 @@ from app.api.dependencies import get_db
 from app.api.permissions import require_authenticated
 from app.models import ContributionRate, Member
 from app.services.accounting import AccountingError
+from app.services.exceptions import AuthorizationError
 from app.services.contribution import (
     get_member_contribution_total,
     get_member_contributions,
@@ -97,6 +98,13 @@ def create_contribution_rate(
             "effective_from": rate.effective_from,
         }
 
+    except AuthorizationError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except Exception as exc:
         db.rollback()
         raise HTTPException(
@@ -128,6 +136,12 @@ def create_contribution(
             user=current_user,
             committee_id=member.committee_id,
         )
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -200,6 +214,12 @@ def list_member_contributions(
             for entry in entries
         ]
 
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -233,6 +253,12 @@ def member_contribution_total(
             "total_contributed": total,
         }
 
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -264,6 +290,12 @@ def committee_monthly_contribution_status(
             year=year,
             month=month,
         )
+
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
 
     except AccountingError as exc:
         raise HTTPException(

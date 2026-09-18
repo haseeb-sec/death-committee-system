@@ -12,6 +12,7 @@ from app.schemas.member import (
     MemberStatementResponse,
 )
 from app.services.accounting import AccountingError
+from app.services.exceptions import AuthorizationError
 from app.models import Member, User, UserRole
 from app.services.member import add_member, leave_member, list_members
 from app.services.member_financial import (
@@ -226,6 +227,11 @@ def member_financial_summary(
             db,
             member_id=member_id,
         )
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -253,6 +259,11 @@ def member_statement(
             db,
             member_id=member_id,
         )
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -280,6 +291,11 @@ def member_asset_breakdown(
             db,
             member_id=member_id,
         )
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,

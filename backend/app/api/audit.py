@@ -8,6 +8,7 @@ from app.api.permissions import require_admin
 from app.models import User, UserRole
 from app.schemas.audit import AuditLogResponse
 from app.services.accounting import AccountingError
+from app.services.exceptions import AuthorizationError
 from app.services.access_control import require_committee_admin_access
 from app.services.audit import get_audit_logs
 
@@ -66,6 +67,11 @@ def list_audit_logs(
                 committee_id=committee_id,
             )
 
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,

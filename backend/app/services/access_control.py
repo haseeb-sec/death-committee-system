@@ -11,6 +11,7 @@ from app.models import (
     UserRole,
 )
 from app.services.accounting import AccountingError
+from app.services.exceptions import AuthorizationError
 
 
 def user_can_access_committee(
@@ -65,7 +66,7 @@ def require_committee_access(
         user=user,
         committee_id=committee_id,
     ):
-        raise AccountingError(
+        raise AuthorizationError(
             f"Access denied to committee: {committee_id}"
         )
 
@@ -101,7 +102,7 @@ def require_committee_admin_access(
         return committee
 
     if user.role != UserRole.COMMITTEE_ADMIN.value:
-        raise AccountingError(
+        raise AuthorizationError(
             f"Administrative access denied to committee: {committee_id}"
         )
 
@@ -117,7 +118,7 @@ def require_committee_admin_access(
     )
 
     if access is None:
-        raise AccountingError(
+        raise AuthorizationError(
             f"Administrative access denied to committee: {committee_id}"
         )
 
@@ -165,7 +166,7 @@ def require_member_access(
     ):
         return member
 
-    raise AccountingError("Access denied to member record.")
+    raise AuthorizationError("Access denied to member record.")
 
 def require_member_good_access(
     db: Session,
@@ -281,14 +282,14 @@ def grant_committee_access(
     if granted_by_user.role == UserRole.SUPER_ADMIN.value:
 
         if target_user.role == UserRole.SUPER_ADMIN.value:
-            raise AccountingError(
+            raise AuthorizationError(
                 "Super Admin already has global committee access."
             )
 
         if is_admin and (
             target_user.role != UserRole.COMMITTEE_ADMIN.value
         ):
-            raise AccountingError(
+            raise AuthorizationError(
                 "Only committee_admin users can be assigned "
                 "as committee administrators."
             )
@@ -300,7 +301,7 @@ def grant_committee_access(
     elif granted_by_user.role == UserRole.COMMITTEE_ADMIN.value:
 
         if is_admin:
-            raise AccountingError(
+            raise AuthorizationError(
                 "Only Super Admin can assign committee administrator privileges."
             )
 
@@ -316,17 +317,17 @@ def grant_committee_access(
         )
 
         if admin_access is None:
-            raise AccountingError(
+            raise AuthorizationError(
                 "Committee administrator access required."
             )
 
         if target_user.role != UserRole.MEMBER.value:
-            raise AccountingError(
+            raise AuthorizationError(
                 "Committee Admin can grant ordinary member access only."
             )
 
     else:
-        raise AccountingError(
+        raise AuthorizationError(
             "Only Super Admin or Committee Admin can grant committee access."
         )
 

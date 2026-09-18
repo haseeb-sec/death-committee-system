@@ -12,6 +12,7 @@ from app.schemas.member_good import (
 from app.api.dependencies import get_db
 from app.api.permissions import require_authenticated
 from app.services.accounting import AccountingError
+from app.services.exceptions import AuthorizationError
 from app.services.member_good import (
     add_member_good,
     get_member_goods,
@@ -141,6 +142,12 @@ def list_member_goods(
             for good in goods
         ]
 
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -173,6 +180,12 @@ def member_goods_total(
             "member_id": member_id,
             "total_goods_value": total,
         }
+
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
 
     except AccountingError as exc:
         raise HTTPException(
@@ -239,6 +252,12 @@ def good_valuations(
             for valuation in valuations
         ]
 
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -263,6 +282,11 @@ def update_good_value(
                 user=current_user,
                 good_id=good_id,
             )
+        except AuthorizationError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
         except AccountingError as exc:
             raise HTTPException(
                 status_code=404,

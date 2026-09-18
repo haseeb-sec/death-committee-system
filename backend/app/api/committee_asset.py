@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_db
 from app.api.permissions import require_authenticated
 from app.services.accounting import AccountingError
+from app.services.exceptions import AuthorizationError
 from app.services.committee_asset import (
     add_committee_asset,
     get_asset_valuations,
@@ -44,6 +45,12 @@ def create_committee_asset(
             user=current_user,
             committee_id=committee_id,
         )
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -123,6 +130,12 @@ def update_committee_asset_value(
             user=current_user,
             asset_id=asset_id,
         )
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -202,6 +215,12 @@ def committee_asset_valuations(
             for valuation in valuations
         ]
 
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -231,6 +250,12 @@ def committee_asset_participation(
         )
 
         return participation
+
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
 
     except AccountingError as exc:
         raise HTTPException(

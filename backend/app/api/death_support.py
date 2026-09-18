@@ -11,6 +11,7 @@ from app.api.dependencies import get_db
 from app.models import Member
 from app.api.permissions import require_authenticated
 from app.services.accounting import AccountingError
+from app.services.exceptions import AuthorizationError
 from app.services.death_support import (
     get_member_death_support,
     record_death_support,
@@ -62,6 +63,12 @@ def create_death_support(
             user=current_user,
             committee_id=member.committee_id,
         )
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -127,6 +134,12 @@ def get_death_support(
 
         return serialize_death_support(support)
 
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -149,7 +162,18 @@ def get_death_support_status(
             user=current_user,
             member_id=member_id,
         )
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+    except AccountingError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
 
+    try:
         support = get_member_death_support(
             db,
             member_id=member_id,

@@ -13,6 +13,7 @@ from app.api.dependencies import get_db
 from app.api.auth import get_current_user
 from app.api.permissions import require_authenticated, require_super_admin
 from app.services.accounting import AccountingError
+from app.services.exceptions import AuthorizationError
 from app.services.committee import (
     create_committee,
     close_committee,
@@ -159,6 +160,13 @@ def assign_committee_admin_api(
             "is_admin": access.is_admin,
         }
 
+    except AuthorizationError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         db.rollback()
         raise HTTPException(
@@ -217,6 +225,13 @@ def revoke_committee_admin_api(
             "is_active": access.is_active,
             "is_admin": False,
         }
+
+    except AuthorizationError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
 
     except AccountingError as exc:
         db.rollback()
@@ -280,6 +295,12 @@ def list_committee_administrators_api(
             for access, user in rows
         ]
 
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=403,
@@ -340,6 +361,13 @@ def close_committee_api(
             "is_active": committee.is_active,
         }
 
+    except AuthorizationError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         db.rollback()
         raise HTTPException(
@@ -368,6 +396,12 @@ def committee_summary(
             db,
             committee_id=committee_id,
         )
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -395,6 +429,12 @@ def committee_financial_position(
             db,
             committee_id=committee_id,
         )
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,

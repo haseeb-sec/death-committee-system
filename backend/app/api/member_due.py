@@ -12,6 +12,7 @@ from app.schemas.member_due import (
 from app.api.dependencies import get_db
 from app.api.permissions import require_authenticated
 from app.services.accounting import AccountingError
+from app.services.exceptions import AuthorizationError
 from app.services.member_due import (
     add_member_due,
     get_member_dues,
@@ -51,6 +52,11 @@ def create_member_due(
             user=current_user,
             committee_id=member.committee_id,
         )
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -143,6 +149,12 @@ def list_member_dues(
             for due in dues
         ]
 
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -176,6 +188,12 @@ def member_outstanding_dues(
             "outstanding_dues": outstanding,
         }
 
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
     except AccountingError as exc:
         raise HTTPException(
             status_code=404,
@@ -206,6 +224,12 @@ def pay_member_due_api(
                 user=current_user,
                 committee_id=due.committee_id,
             )
+        except AuthorizationError as exc:
+            db.rollback()
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
         except AccountingError as exc:
             db.rollback()
             raise HTTPException(
