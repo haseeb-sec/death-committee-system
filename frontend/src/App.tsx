@@ -78,8 +78,9 @@ import {
   deactivateUser,
 } from './api/user'
 
-import { decodeJwtPayload, getTimeGreeting, formatPKR, getNavigationLabel } from './utils'
+import { decodeJwtPayload, getTimeGreeting, formatPKR } from './utils'
 import { useLanguage, loginTranslations, appTranslations } from './i18n'
+import AppShell from './components/AppShell'
 
 
 function App() {
@@ -2775,153 +2776,18 @@ async function handleCreateCommittee(event: FormEvent) {
 
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <div className="product-logo product-logo--sidebar" aria-label="Death Committee System">
-            <svg
-              viewBox="0 0 40 40"
-              role="img"
-              aria-hidden="true"
-            >
-              <path
-                d="M8 28.5 20 21l12 7.5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M8 21.5 20 14l12 7.5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M8 14.5 20 7l12 7.5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <circle cx="20" cy="7" r="2.2" fill="currentColor" />
-              <circle cx="8" cy="28.5" r="2.2" fill="currentColor" />
-              <circle cx="32" cy="28.5" r="2.2" fill="currentColor" />
-            </svg>
-          </div>
-
-          <div className="brand-text">
-            <strong>{appT.appName}</strong>
-            <span>{appT.systemName}</span>
-          </div>
-        </div>
-
-        <nav>
-          {(isSuperAdmin
-              ? [
-                  'Dashboard',
-                  'Committees',
-                  'Users',
-                  'Members',
-                  'Contributions',
-                  'Death Support',
-                  'Dues',
-                  'Goods',
-                  'Assets',
-                  'Settlements',
-                ]
-              : isSelectedCommitteeAdmin
-                ? [
-                    'Dashboard',
-                    'Members',
-                    'Contributions',
-                    'Death Support',
-                    'Dues',
-                    'Goods',
-                    'Assets',
-                    'Settlements',
-                  ]
-                : [
-                    'Dashboard',
-                    'My Contributions',
-                    'My Death Support',
-                    'My Dues',
-                    'My Goods',
-                    'My Financial Position',
-                    'My Settlement',
-                  ]
-            ).map((page) => (
-            <button
-              key={page}
-              className={`nav-item ${activePage === page ? 'active' : ''}`}
-              onClick={() => {
-                if (page === 'Users' && userRole !== 'super_admin') return
-                setActivePage(page)
-              }}
-            >
-              {appT.navigation[page] ?? getNavigationLabel(page)}
-            </button>
-          ))}
-        </nav>
-
-      </aside>
-
-      <main className="main-content">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">{appT.appName.toUpperCase()} {appT.systemName.toUpperCase()}</p>
-            <h2>{appT.navigation[activePage] ?? getNavigationLabel(activePage)}</h2>
-          </div>
-
-          <div className="topbar-account">
-            <div
-              className="app-language-switcher"
-              aria-label={appT.languageLabel}
-            >
-              <button
-                type="button"
-                className={language === 'en' ? 'active' : ''}
-                onClick={() => setLanguage('en')}
-                aria-pressed={language === 'en'}
-              >
-                {appT.languageEnglish}
-              </button>
-              <button
-                type="button"
-                className={language === 'ur' ? 'active' : ''}
-                onClick={() => setLanguage('ur')}
-                aria-pressed={language === 'ur'}
-              >
-                {appT.languageUrdu}
-              </button>
-            </div>
-
-            <div className="topbar-account-copy">
-              <strong>{username}</strong>
-              <span>
-                {userRole === 'super_admin'
-                  ? appT.roles.superAdmin
-                  : userRole === 'committee_admin'
-                    ? appT.roles.committeeAdmin
-                    : appT.roles.member}
-              </span>
-            </div>
-
-            <button
-              type="button"
-              className="topbar-signout"
-              onClick={logout}
-            >
-              {appT.signOut}
-            </button>
-          </div>
-        </header>
-
-        <section className="content">
+    <AppShell
+      activePage={activePage}
+      setActivePage={setActivePage}
+      isSuperAdmin={isSuperAdmin}
+      isSelectedCommitteeAdmin={isSelectedCommitteeAdmin}
+      userRole={userRole}
+      username={username}
+      language={language}
+      setLanguage={setLanguage}
+      logout={logout}
+      appT={appT}
+    >
           {activePage === 'Users' && userRole !== 'super_admin' ? (
             <section className="module-placeholder">
               <div className="module-placeholder-icon">DC</div>
@@ -7011,9 +6877,7 @@ async function handleCreateCommittee(event: FormEvent) {
           )}
           </>
           )}
-        </section>
-      </main>
-    </div>
+    </AppShell>
   )
 }
 
