@@ -83,6 +83,7 @@ import { decodeJwtPayload, getTimeGreeting, formatPKR } from './utils'
 import { useLanguage, loginTranslations, appTranslations } from './i18n'
 import AppShell from './components/AppShell'
 import AssetsPage from './components/AssetsPage'
+import GoodsPage from './components/GoodsPage'
 
 
 function App() {
@@ -3930,13 +3931,13 @@ async function handleCreateCommittee(event: FormEvent) {
             </section>
           ) : activePage === 'Users' ? (
               <UsersPage
+              error={error}
               username={username}
               setUsername={setUsername}
               issuedResetToken={issuedResetToken}
               issuedResetExpiry={issuedResetExpiry}
               appT={appT}
-              error={error}
-              passwordChangeMessage={passwordChangeMessage}
+                passwordChangeMessage={passwordChangeMessage}
               canWrite={canWrite}
               handleChangePassword={handleChangePassword}
               currentPassword={currentPassword}
@@ -3979,9 +3980,9 @@ async function handleCreateCommittee(event: FormEvent) {
               />
 ) : activePage === 'Assets' ? (
             <AssetsPage
-              appT={appT}
               error={error}
-              canWrite={canWrite}
+              appT={appT}
+                canWrite={canWrite}
               loading={loading}
               assetName={assetName}
               setAssetName={setAssetName}
@@ -4013,344 +4014,41 @@ async function handleCreateCommittee(event: FormEvent) {
               committeeId={committeeId}
             />
 ) : activePage === 'Goods' ? (
-            <section className="module-content">
-
-              <div className="page-heading">
-                <div>
-                  <p className="eyebrow">{appT.goodsEyebrow}</p>
-                  <h1>{appT.goodsPageTitle}</h1>
-                  <p>{appT.goodsDescription}</p>
-                </div>
-              </div>
-
-              {canWrite && (
-              <section className="information-card goods-create-card">
-                <div>
-                  <p className="eyebrow">{appT.newGood}</p>
-                  <h3>{appT.addMemberGood}</h3>
-                  <p className="form-help">{appT.addMemberGoodDescription}</p>
-                </div>
-
-                <form
-                  className="committee-create-form"
-                  onSubmit={handleCreateMemberGood}
-                >
-                  <div className="rate-form-grid">
-                    <label>
-                      {appT.memberId}
-                      <input
-                        type="number"
-                        min="1"
-                        value={goodsMemberId}
-                        onChange={(event) =>
-                          setGoodsMemberId(event.target.value)
-                        }
-                        required
-                      />
-                    </label>
-
-                    <label>
-                      {appT.goodName}
-                      <input
-                        type="text"
-                        value={goodName}
-                        onChange={(event) =>
-                          setGoodName(event.target.value)
-                        }
-                        placeholder={appT.goodNamePlaceholder}
-                        required
-                      />
-                    </label>
-
-                    <label>
-                      {appT.purchaseDate}
-                      <input
-                        type="date"
-                        value={goodPurchaseDate}
-                        onChange={(event) =>
-                          setGoodPurchaseDate(event.target.value)
-                        }
-                        required
-                      />
-                    </label>
-
-                    <label>
-                      {appT.purchasePrice}
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={goodPurchasePrice}
-                        onChange={(event) =>
-                          setGoodPurchasePrice(event.target.value)
-                        }
-                        required
-                      />
-                    </label>
-                  </div>
-
-                  <label>
-                    {appT.description}
-                    <textarea
-                      value={goodDescription}
-                      onChange={(event) =>
-                        setGoodDescription(event.target.value)
-                      }
-                      placeholder={appT.optionalDescription}
-                      rows={3}
-                    />
-                  </label>
-
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.recording : appT.recordGood}
-                  </button>
-                </form>
-              </section>              )}
-
-
-              {createdMemberGood && (
-                <section className="committee-banner">
-                  <div>
-                    <p className="eyebrow">{appT.recorded}</p>
-                    <h3>
-                      {createdMemberGood.name ?? appT.memberGoodCreated}
-                    </h3>
-
-                    <p className="created-id">
-                      {appT.goodId}: {createdMemberGood.id}
-                      {' · '}
-                      {appT.memberId}: {createdMemberGood.member_id ??
-                        goodsMemberId}
-                    </p>
-
-                    <p className="created-id">
-                      `${appT.purchasePrice}:`{' '}
-                      {formatPKR(
-                        createdMemberGood.purchase_price ??
-                          Number(goodPurchasePrice),
-                      )}
-                    </p>
-                  </div>
-
-                  <span className="active-badge">{appT.recorded}</span>
-                </section>
-              )}
-
-              <section className="information-card goods-list-card">
-                <div>
-                  <p className="eyebrow">{appT.goods}</p>
-                  <h3>{appT.viewMemberGoods}</h3>
-                </div>
-
-                <form
-                  className="committee-create-form"
-                  onSubmit={(event) => {
-                    event.preventDefault()
-                    void handleLoadMemberGoods()
-                  }}
-                >
-                  <label>
-                    Member ID
-                    <input
-                      type="number"
-                      min="1"
-                      value={goodsListMemberId}
-                      onChange={(event) =>
-                        setGoodsListMemberId(event.target.value)
-                      }
-                      required
-                    />
-                  </label>
-
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.loadingMembers : appT.loadGoods}
-                  </button>
-                </form>
-              </section>
-
-              {memberGoods.length > 0 && (
-                <section className="information-card">
-                  <p className="eyebrow">MEMBER GOODS</p>
-                  <h3>{appT.recordedGoods}</h3>
-
-                  {memberGoods.map((good) => (
-                    <div
-                      className="position-row"
-                      key={good.id}
-                    >
-                      <div>
-                        <strong>
-                          {good.name ?? appT.unnamedGood}
-                        </strong>
-                        <small>
-                          {appT.goodId}: {good.id}
-                          {' · '}
-                          {appT.purchaseDate}: {good.purchase_date}
-                        </small>
-                      </div>
-
-                      <strong>
-                        {formatPKR(
-                          good.current_value ??
-                            good.value ??
-                            good.purchase_price ??
-                            0,
-                        )}
-                      </strong>
-                    </div>
-                  ))}
-                </section>
-              )}
-
-              <section className="information-card goods-total-card">
-                <div>
-                  <p className="eyebrow">{appT.totalValue}</p>
-                  <h3>{appT.memberGoodsTotal}</h3>
-                </div>
-
-                <form
-                  className="committee-create-form"
-                  onSubmit={(event) => {
-                    event.preventDefault()
-                    void handleLoadMemberGoodsTotal()
-                  }}
-                >
-                  <label>
-                    Member ID
-                    <input
-                      type="number"
-                      min="1"
-                      value={goodsTotalMemberId}
-                      onChange={(event) =>
-                        setGoodsTotalMemberId(event.target.value)
-                      }
-                      required
-                    />
-                  </label>
-
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.loadingMembers : appT.loadTotal}
-                  </button>
-                </form>
-              </section>
-
-              {memberGoodsTotal && (
-                <section className="committee-banner">
-                  <div>
-                    <p className="eyebrow">{appT.total}</p>
-                    <h3>
-                      {formatPKR(
-                        memberGoodsTotal.total_value ??
-                          memberGoodsTotal.total ??
-                          memberGoodsTotal.value ??
-                          0,
-                      )}
-                    </h3>
-
-                    <p className="created-id">
-                      {appT.memberId}:{' '}
-                      {memberGoodsTotal.member_id ??
-                        goodsTotalMemberId}
-                    </p>
-                  </div>
-
-                  <span className="active-badge">{appT.calculated}</span>
-                </section>
-              )}
-
-              {canWrite && (
-              <section className="information-card goods-valuation-card">
-                <div>
-                  <p className="eyebrow">{appT.currentValue}</p>
-                  <h3>{appT.updateGoodValuation}</h3>
-                  <p className="form-help">{appT.updateGoodValuationDescription}</p>
-                </div>
-
-                <form
-                  className="committee-create-form"
-                  onSubmit={handleUpdateMemberGoodValue}
-                >
-                  <div className="rate-form-grid">
-                    <label>
-                      {appT.goodId}
-                      <input
-                        type="number"
-                        min="1"
-                        value={goodValueId}
-                        onChange={(event) =>
-                          setGoodValueId(event.target.value)
-                        }
-                        required
-                      />
-                    </label>
-
-                    <label>
-                      {appT.valuationDate}
-                      <input
-                        type="date"
-                        value={goodValuationDate}
-                        onChange={(event) =>
-                          setGoodValuationDate(event.target.value)
-                        }
-                        required
-                      />
-                    </label>
-
-                    <label>
-                      {appT.newValue}
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={goodNewValue}
-                        onChange={(event) =>
-                          setGoodNewValue(event.target.value)
-                        }
-                        required
-                      />
-                    </label>
-                  </div>
-
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.updating : appT.updateGoodValue}
-                  </button>
-                </form>
-              </section>              )}
-
-
-              {updatedMemberGoodValue && (
-                <section className="committee-banner">
-                  <div>
-                    <p className="eyebrow">{appT.valuationUpdated}</p>
-                    <h3>{appT.goodValueUpdated}</h3>
-
-                    <p className="created-id">
-                      {appT.goodId}:{' '}
-                      {updatedMemberGoodValue.good_id ??
-                        updatedMemberGoodValue.id ??
-                        goodValueId}
-                      {' · '}
-                      {appT.valuationDate}:{' '}
-                      {updatedMemberGoodValue.valuation_date ??
-                        goodValuationDate}
-                    </p>
-
-                    <p className="created-id">
-                      {appT.currentValue}:{' '}
-                      {formatPKR(
-                        updatedMemberGoodValue.value ??
-                          updatedMemberGoodValue.new_value ??
-                          Number(goodNewValue),
-                      )}
-                    </p>
-                  </div>
-
-                  <span className="active-badge">{appT.valuationUpdated}</span>
-                </section>
-              )}
-
-            </section>
-          ) : activePage === 'Dues' ? (
+          <GoodsPage
+            appT={appT}
+            canWrite={canWrite}
+            loading={loading}
+            goodsMemberId={goodsMemberId}
+            setGoodsMemberId={setGoodsMemberId}
+            goodName={goodName}
+            setGoodName={setGoodName}
+            goodPurchaseDate={goodPurchaseDate}
+            setGoodPurchaseDate={setGoodPurchaseDate}
+            goodPurchasePrice={goodPurchasePrice}
+            setGoodPurchasePrice={setGoodPurchasePrice}
+            goodDescription={goodDescription}
+            setGoodDescription={setGoodDescription}
+            createdMemberGood={createdMemberGood}
+            goodsListMemberId={goodsListMemberId}
+            setGoodsListMemberId={setGoodsListMemberId}
+            memberGoods={memberGoods}
+            goodsTotalMemberId={goodsTotalMemberId}
+            setGoodsTotalMemberId={setGoodsTotalMemberId}
+            memberGoodsTotal={memberGoodsTotal}
+            goodValueId={goodValueId}
+            setGoodValueId={setGoodValueId}
+            goodValuationDate={goodValuationDate}
+            setGoodValuationDate={setGoodValuationDate}
+            goodNewValue={goodNewValue}
+            setGoodNewValue={setGoodNewValue}
+            updatedMemberGoodValue={updatedMemberGoodValue}
+            handleCreateMemberGood={handleCreateMemberGood}
+            handleLoadMemberGoods={handleLoadMemberGoods}
+            handleLoadMemberGoodsTotal={handleLoadMemberGoodsTotal}
+            handleUpdateMemberGoodValue={handleUpdateMemberGoodValue}
+            formatPKR={formatPKR}
+          />
+) : activePage === 'Dues' ? (
             <section className="module-page dues-module">
               <div className="page-heading">
                 <div>
