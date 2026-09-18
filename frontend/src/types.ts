@@ -59,6 +59,7 @@ export type CreatedMember = {
 
 export type Member = {
   id: number
+  user_id: number
   committee_id: number
   name: string
   joined_on: string
@@ -155,6 +156,7 @@ export type SettlementPreview = {
 }
 
 export type AuthenticatedUser = {
+  userId: number
   username: string
   systemRole: string
   token: string

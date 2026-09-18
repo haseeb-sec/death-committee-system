@@ -79,13 +79,14 @@ import {
 } from './api/user'
 
 import { decodeJwtPayload, getTimeGreeting, formatPKR, getNavigationLabel } from './utils'
-import { useLanguage, loginTranslations } from './i18n'
+import { useLanguage, loginTranslations, appTranslations } from './i18n'
 
 
 function App() {
 
   const [language, setLanguage] = useLanguage()
   const t = loginTranslations[language]
+  const appT = appTranslations[language]
 
   // ----------------------------------------------------------
   // FINAL RBAC SYSTEM-USER PERMISSION
@@ -100,6 +101,7 @@ function App() {
   const [authenticatedUser, setAuthenticatedUser] =
     useState<AuthenticatedUser | null>(() => {
       const storedToken = localStorage.getItem('death_committee_token')
+      const storedUsername = localStorage.getItem('death_committee_username')
 
       if (!storedToken) return null
 
@@ -107,6 +109,7 @@ function App() {
 
       if (!payload) {
         localStorage.removeItem('death_committee_token')
+        localStorage.removeItem('death_committee_username')
         return null
       }
 
@@ -115,11 +118,13 @@ function App() {
         payload.exp * 1000 < Date.now()
       ) {
         localStorage.removeItem('death_committee_token')
+        localStorage.removeItem('death_committee_username')
         return null
       }
 
       return {
-        username: '',
+        userId: Number(payload.sub),
+        username: storedUsername ?? '',
         systemRole: payload.role ?? '',
         token: storedToken,
       }
@@ -395,10 +400,19 @@ function App() {
 
         setCommittees(data)
 
-        if (data.length > 0) {
-          setCommitteeId(String(data[0].id ?? ''))
-        } else {
-          setCommitteeId('')
+        setCommitteeId((currentId) => {
+          const currentStillAccessible = data.some(
+            (committee) => String(committee.id ?? '') === currentId,
+          )
+
+          if (currentStillAccessible) {
+            return currentId
+          }
+
+          return data.length > 0 ? String(data[0].id ?? '') : ''
+        })
+
+        if (data.length === 0) {
           setSummary(null)
         }
       } catch (err) {
@@ -408,7 +422,7 @@ function App() {
         setError(
           err instanceof Error
             ? err.message
-            : 'Unable to load accessible committees',
+            : appT.errors.loadAccessibleCommittees,
         )
       }
     }
@@ -418,7 +432,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [token, activePage])
+  }, [token])
 
   useEffect(() => {
     if (!token || !committeeId) {
@@ -463,7 +477,7 @@ function App() {
         setError(
           err instanceof Error
             ? err.message
-            : 'Unable to load committee members',
+            : appT.errors.loadCommitteeMembers,
         )
       } finally {
         if (!cancelled) {
@@ -486,7 +500,7 @@ function App() {
         setError(
           err instanceof Error
             ? err.message
-            : "Unable to load committee summary",
+            : appT.errors.loadCommitteeSummary,
         )
       }
     }
@@ -640,7 +654,7 @@ function App() {
         setMyFinancialSummaryError(
           err instanceof Error
             ? err.message
-            : 'Unable to load your financial position',
+            : appT.errors.loadFinancialPosition,
         )
       } finally {
         if (!cancelled) {
@@ -692,7 +706,7 @@ function App() {
         setMyContributionsError(
           err instanceof Error
             ? err.message
-            : 'Unable to load your contribution history',
+            : appT.errors.loadContributionHistory,
         )
       } finally {
         if (!cancelled) {
@@ -744,7 +758,7 @@ function App() {
         setMyDuesError(
           err instanceof Error
             ? err.message
-            : 'Unable to load your dues',
+            : appT.errors.loadDues,
         )
       } finally {
         if (!cancelled) {
@@ -796,7 +810,7 @@ function App() {
         setMyGoodsError(
           err instanceof Error
             ? err.message
-            : 'Unable to load your goods',
+            : appT.errors.loadGoods,
         )
       } finally {
         if (!cancelled) {
@@ -839,7 +853,7 @@ function App() {
         setMyDeathSupportError(
           err instanceof Error
             ? err.message
-            : 'Unable to load your death support record',
+            : appT.errors.loadDeathSupport,
         )
       } finally {
         if (!cancelled) {
@@ -882,7 +896,7 @@ function App() {
         setMySettlementError(
           err instanceof Error
             ? err.message
-            : 'Unable to load your settlement preview',
+            : appT.errors.loadSettlementPreview,
         )
       } finally {
         if (!cancelled) {
@@ -925,7 +939,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to issue recovery token',
+          : appT.errors.issueRecoveryToken,
       )
     } finally {
       setLoading(false)
@@ -973,14 +987,14 @@ function App() {
       )
 
       setPasswordChangeMessage(
-        data.message ?? 'Password changed successfully',
+        data.message ?? appT.errors.passwordChanged,
       )
       setCurrentPassword('')
       setNewPassword('')
       setConfirmNewPassword('')
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Unable to change password',
+        err instanceof Error ? err.message : appT.errors.changePassword,
       )
     } finally {
       setLoading(false)
@@ -994,7 +1008,7 @@ function App() {
     setRecoveryMessage('')
 
     if (!recoveryToken.trim()) {
-      setError('Recovery token is required')
+      setError(appT.errors.recoveryTokenRequired)
       return
     }
 
@@ -1017,7 +1031,7 @@ function App() {
       )
 
       setRecoveryMessage(
-        data.message ?? 'Password reset successfully',
+        data.message ?? appT.errors.passwordReset,
       )
       setRecoveryToken('')
       setRecoveryNewPassword('')
@@ -1026,7 +1040,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to reset password',
+          : appT.errors.resetPassword,
       )
     } finally {
       setLoading(false)
@@ -1042,44 +1056,20 @@ function App() {
       const data = await login(username, password)
 
       localStorage.setItem('death_committee_token', data.access_token)
+      localStorage.setItem('death_committee_username', username)
 
       setAuthenticatedUser({
+        userId: Number(data.user_id),
         username,
         systemRole: data.role ?? '',
         token: data.access_token,
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? err.message : appT.errors.loginFailed)
     } finally {
       setLoading(false)
     }
   }
-
-  async function handleLoadCommittee() {
-    if (!token) return
-
-    const id = Number(committeeId)
-
-    if (!Number.isInteger(id) || id <= 0) {
-      setError('Enter a valid committee ID')
-      return
-    }
-
-    setError('')
-    setLoading(true)
-
-    try {
-      const data = await getCommitteeSummary(id, token)
-      setSummary(data)
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Unable to load committee',
-      )
-    } finally {
-      setLoading(false)
-    }
-  }
-
 
   async function handleCreateCommitteeAsset(event: FormEvent) {
     event.preventDefault()
@@ -1138,7 +1128,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to create committee asset',
+          : appT.errors.createCommitteeAsset,
       )
     } finally {
       setLoading(false)
@@ -1173,7 +1163,7 @@ function App() {
 
     if (!Number.isInteger(newValue) || newValue < 0) {
       setError(
-        'New value must be a whole number greater than or equal to 0',
+        appT.invalidWholeNumber,
       )
       return
     }
@@ -1197,7 +1187,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to update committee asset value',
+          : appT.errors.updateCommitteeAssetValue,
       )
     } finally {
       setLoading(false)
@@ -1227,7 +1217,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to load asset valuations',
+          : appT.errors.loadAssetValuations,
       )
     } finally {
       setLoading(false)
@@ -1257,7 +1247,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to load asset participation',
+          : appT.errors.loadAssetParticipation,
       )
     } finally {
       setLoading(false)
@@ -1322,7 +1312,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to create member good',
+          : appT.errors.createMemberGood,
       )
     } finally {
       setLoading(false)
@@ -1352,7 +1342,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to load member goods',
+          : appT.errors.loadMemberGoods,
       )
     } finally {
       setLoading(false)
@@ -1382,7 +1372,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to load member goods total',
+          : appT.errors.loadMemberGoodsTotal,
       )
     } finally {
       setLoading(false)
@@ -1417,7 +1407,7 @@ function App() {
 
     if (!Number.isInteger(newValue) || newValue < 0) {
       setError(
-        'New value must be a whole number greater than or equal to 0',
+        appT.invalidWholeNumber,
       )
       return
     }
@@ -1439,7 +1429,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to update member good value',
+          : appT.errors.updateMemberGoodValue,
       )
     } finally {
       setLoading(false)
@@ -1496,7 +1486,7 @@ function App() {
       setDueReference('')
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Unable to create member due',
+        err instanceof Error ? err.message : appT.errors.createMemberDue,
       )
     } finally {
       setLoading(false)
@@ -1524,7 +1514,7 @@ function App() {
       setMemberDues(data)
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Unable to load member dues',
+        err instanceof Error ? err.message : appT.errors.loadMemberDues,
       )
     } finally {
       setLoading(false)
@@ -1554,7 +1544,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to load outstanding dues',
+          : appT.errors.loadOutstandingDues,
       )
     } finally {
       setLoading(false)
@@ -1596,7 +1586,7 @@ function App() {
       setDuePaymentAmount('')
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Unable to pay member due',
+        err instanceof Error ? err.message : appT.errors.payMemberDue,
       )
     } finally {
       setLoading(false)
@@ -1630,7 +1620,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to load member settlement preview',
+          : appT.errors.loadMemberSettlementPreview,
       )
     } finally {
       setLoading(false)
@@ -1679,7 +1669,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to create member settlement',
+          : appT.errors.createMemberSettlement,
       )
     } finally {
       setLoading(false)
@@ -1717,7 +1707,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to pay member settlement',
+          : appT.errors.payMemberSettlement,
       )
     } finally {
       setLoading(false)
@@ -1726,7 +1716,7 @@ function App() {
 
 async function handleCloseCommittee(committeeId: number) {
     if (userRole !== 'super_admin') {
-      setError('Only Super Administrators can close committees')
+      setError(appT.onlySuperAdminCloseCommittees)
       return
     }
 
@@ -1747,7 +1737,7 @@ async function handleCloseCommittee(committeeId: number) {
     if (committee.is_active === false) {
       setCommitteeLifecycleStatus((current) => ({
         ...current,
-        [String(committeeId)]: 'Already closed',
+        [String(committeeId)]: appT.errors.alreadyClosed,
       }))
       return
     }
@@ -1764,7 +1754,7 @@ async function handleCloseCommittee(committeeId: number) {
 
     setCommitteeLifecycleStatus((current) => ({
       ...current,
-      [String(committeeId)]: 'Closing...',
+      [String(committeeId)]: appT.errors.closing,
     }))
 
     try {
@@ -1780,7 +1770,7 @@ async function handleCloseCommittee(committeeId: number) {
 
       setCommitteeLifecycleStatus((current) => ({
         ...current,
-        [String(committeeId)]: 'Closed',
+        [String(committeeId)]: appT.errors.closed,
       }))
 
       if (Number(committeeId) === Number(committeeId)) {
@@ -1795,7 +1785,7 @@ async function handleCloseCommittee(committeeId: number) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to close committee',
+          : appT.errors.closeCommittee,
       )
     }
   }
@@ -1824,7 +1814,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setCommitteeName('')
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Unable to create committee',
+        err instanceof Error ? err.message : appT.errors.createCommittee,
       )
     } finally {
       setLoading(false)
@@ -1878,7 +1868,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to create contribution rate',
+          : appT.errors.createContributionRate,
       )
     } finally {
       setLoading(false)
@@ -1926,7 +1916,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to record contribution',
+          : appT.errors.recordContribution,
       )
     } finally {
       setLoading(false)
@@ -1961,7 +1951,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to load member financial summary',
+          : appT.errors.loadMemberFinancialSummary,
       )
     } finally {
       setLoading(false)
@@ -2024,7 +2014,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to record death support',
+          : appT.errors.recordDeathSupport,
       )
     } finally {
       setLoading(false)
@@ -2054,7 +2044,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to load death support status',
+          : appT.errors.loadDeathSupportStatus,
       )
     } finally {
       setLoading(false)
@@ -2090,7 +2080,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to leave member',
+          : appT.errors.leaveMember,
       )
     } finally {
       setLoading(false)
@@ -2165,7 +2155,7 @@ async function handleCreateCommittee(event: FormEvent) {
       )
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Unable to create member',
+        err instanceof Error ? err.message : appT.errors.createMember,
       )
     } finally {
       setLoading(false)
@@ -2186,7 +2176,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to load committee permissions',
+          : appT.errors.loadCommitteePermissions,
       )
     }
   }
@@ -2216,7 +2206,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setUsers(data)
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Unable to load users',
+        err instanceof Error ? err.message : appT.errors.loadUsers,
       )
     } finally {
       setUsersLoading(false)
@@ -2227,7 +2217,7 @@ async function handleCreateCommittee(event: FormEvent) {
     event.preventDefault()
 
     if (userRole !== 'super_admin') {
-      setError('Only Super Administrators can assign users to committees')
+      setError(appT.onlySuperAdminAssignUsers)
       return
     }
 
@@ -2272,7 +2262,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to assign user to committee',
+          : appT.errors.assignUserToCommittee,
       )
     } finally {
       setLoading(false)
@@ -2299,7 +2289,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to load committee administrators',
+          : appT.errors.loadCommitteeAdministrators,
       )
     } finally {
       setCommitteeAdministratorsLoading(null)
@@ -2331,7 +2321,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to load committee assignments',
+          : appT.errors.loadCommitteeAssignments,
       )
     } finally {
       setAssignmentOverviewLoading(null)
@@ -2366,7 +2356,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to load committee access',
+          : appT.errors.loadCommitteeAccess,
       )
       setCommitteeAccessStatus({})
     } finally {
@@ -2376,7 +2366,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
   async function handleGrantCommitteeAccess(userId: number) {
     if (userRole !== 'super_admin') {
-      setError('Only Super Administrators can manage committee access')
+      setError(appT.onlySuperAdminManageAccess)
       return
     }
 
@@ -2407,7 +2397,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to grant committee access',
+          : appT.errors.grantCommitteeAccess,
       )
     } finally {
       setCommitteeAccessLoading(false)
@@ -2416,7 +2406,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
   async function handleDeactivateCommitteeAccess(userId: number) {
     if (userRole !== 'super_admin') {
-      setError('Only Super Administrators can manage committee access')
+      setError(appT.onlySuperAdminManageAccess)
       return
     }
 
@@ -2447,7 +2437,7 @@ async function handleCreateCommittee(event: FormEvent) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to revoke committee access',
+          : appT.errors.revokeCommitteeAccess,
       )
     } finally {
       setCommitteeAccessLoading(false)
@@ -2457,7 +2447,7 @@ async function handleCreateCommittee(event: FormEvent) {
   async function handleCreateUser(event: FormEvent) {
     if (!canManageSystemUsers) {
       setError(
-        'Only Super Administrators can manage system user accounts.',
+        appT.ui.onlySuperAdminManageUsers,
       )
       return
     }
@@ -2489,7 +2479,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
     if (!canManageSystemUsers && userCreateRole !== 'member') {
       setError(
-        'Only Super Administrators can create system-level administrator accounts.',
+        appT.ui.onlySuperAdminCreateAdmins,
       )
       return
     }
@@ -2516,7 +2506,7 @@ async function handleCreateCommittee(event: FormEvent) {
       await handleLoadUsers()
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Unable to create user',
+        err instanceof Error ? err.message : appT.errors.createUser,
       )
     } finally {
       setLoading(false)
@@ -2543,7 +2533,7 @@ async function handleCreateCommittee(event: FormEvent) {
       await handleLoadUsers()
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Unable to deactivate user',
+        err instanceof Error ? err.message : appT.errors.deactivateUser,
       )
     } finally {
       setUsersLoading(false)
@@ -2592,7 +2582,41 @@ async function handleCreateCommittee(event: FormEvent) {
         </div>
 
         <div className="login-brand-block">
-          <div className="login-brand-mark">DC</div>
+          <div className="product-logo product-logo--login" aria-label="Death Committee System">
+                <svg
+                  viewBox="0 0 40 40"
+                  role="img"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M8 28.5 20 21l12 7.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M8 21.5 20 14l12 7.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M8 14.5 20 7l12 7.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="20" cy="7" r="2.2" fill="currentColor" />
+                  <circle cx="8" cy="28.5" r="2.2" fill="currentColor" />
+                  <circle cx="32" cy="28.5" r="2.2" fill="currentColor" />
+                </svg>
+              </div>
           <h1 className="login-brand-name">{t.appName}</h1>
           <p className="login-brand-tagline">{t.tagline}</p>
         </div>
@@ -2754,10 +2778,45 @@ async function handleCreateCommittee(event: FormEvent) {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <div className="brand-mark small">DC</div>
-          <div>
-            <strong>Death Committee</strong>
-            <span>System</span>
+          <div className="product-logo product-logo--sidebar" aria-label="Death Committee System">
+            <svg
+              viewBox="0 0 40 40"
+              role="img"
+              aria-hidden="true"
+            >
+              <path
+                d="M8 28.5 20 21l12 7.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M8 21.5 20 14l12 7.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M8 14.5 20 7l12 7.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="20" cy="7" r="2.2" fill="currentColor" />
+              <circle cx="8" cy="28.5" r="2.2" fill="currentColor" />
+              <circle cx="32" cy="28.5" r="2.2" fill="currentColor" />
+            </svg>
+          </div>
+
+          <div className="brand-text">
+            <strong>{appT.appName}</strong>
+            <span>{appT.systemName}</span>
           </div>
         </div>
 
@@ -2804,26 +2863,61 @@ async function handleCreateCommittee(event: FormEvent) {
                 setActivePage(page)
               }}
             >
-              {getNavigationLabel(page)}
+              {appT.navigation[page] ?? getNavigationLabel(page)}
             </button>
           ))}
         </nav>
 
-        <button className="logout-button" onClick={logout}>
-          Sign out
-        </button>
       </aside>
 
       <main className="main-content">
         <header className="topbar">
           <div>
-            <p className="eyebrow">DEATH COMMITTEE SYSTEM</p>
-            <h2>{activePage}</h2>
+            <p className="eyebrow">{appT.appName.toUpperCase()} {appT.systemName.toUpperCase()}</p>
+            <h2>{appT.navigation[activePage] ?? getNavigationLabel(activePage)}</h2>
           </div>
 
-          <div className="status-pill">
-            <span />
-            {userRole || 'Authenticated'}
+          <div className="topbar-account">
+            <div
+              className="app-language-switcher"
+              aria-label={appT.languageLabel}
+            >
+              <button
+                type="button"
+                className={language === 'en' ? 'active' : ''}
+                onClick={() => setLanguage('en')}
+                aria-pressed={language === 'en'}
+              >
+                {appT.languageEnglish}
+              </button>
+              <button
+                type="button"
+                className={language === 'ur' ? 'active' : ''}
+                onClick={() => setLanguage('ur')}
+                aria-pressed={language === 'ur'}
+              >
+                {appT.languageUrdu}
+              </button>
+            </div>
+
+            <div className="topbar-account-copy">
+              <strong>{username}</strong>
+              <span>
+                {userRole === 'super_admin'
+                  ? appT.roles.superAdmin
+                  : userRole === 'committee_admin'
+                    ? appT.roles.committeeAdmin
+                    : appT.roles.member}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className="topbar-signout"
+              onClick={logout}
+            >
+              {appT.signOut}
+            </button>
           </div>
         </header>
 
@@ -2832,19 +2926,19 @@ async function handleCreateCommittee(event: FormEvent) {
             <section className="module-placeholder">
               <div className="module-placeholder-icon">DC</div>
               <p className="eyebrow">ACCESS</p>
-              <h1>Access restricted</h1>
+              <h1>{appT.ui.accessRestricted}</h1>
               <p>
-                User management is available only to Super Administrators.
+                {appT.ui.onlySuperAdminManageUsers}
               </p>
             </section>
           ) : activePage === 'Committees' ? (
             <section className="committee-module">
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">MANAGEMENT</p>
-                  <h1>Committees</h1>
+                  <p className="eyebrow">{appT.committeesManagement}</p>
+                  <h1>{appT.navigation.Committees}</h1>
                   <p>
-                    Create and manage mutual support committees.
+                    {appT.committeesDescription}
                   </p>
                 </div>
               </div>
@@ -2854,10 +2948,10 @@ async function handleCreateCommittee(event: FormEvent) {
               {canWrite && (
                 <section className="information-card">
                   <div>
-                    <p className="eyebrow">NEW COMMITTEE</p>
-                    <h3>Create a committee</h3>
+                    <p className="eyebrow">{appT.newCommittee}</p>
+                    <h3>{appT.createCommitteeHeading}</h3>
                   <p className="form-help">
-                    Enter the name of the committee you want to register.
+                    {appT.createCommitteeDescription}
                   </p>
                 </div>
 
@@ -2866,19 +2960,19 @@ async function handleCreateCommittee(event: FormEvent) {
                   onSubmit={handleCreateCommittee}
                 >
                   <label>
-                    Committee name
+                    {appT.committeeName}
                     <input
                       value={committeeName}
                       onChange={(event) =>
                         setCommitteeName(event.target.value)
                       }
-                      placeholder="e.g. Swabi Mutual Support Committee"
+                      placeholder={appT.committeeNamePlaceholder}
                       required
                     />
                   </label>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Creating...' : 'Create Committee'}
+                    {loading ? appT.creating : appT.createCommittee}
                   </button>
                 </form>
                 </section>
@@ -2887,8 +2981,8 @@ async function handleCreateCommittee(event: FormEvent) {
               {committees.length > 0 && (
                 <section className="information-card">
                   <div>
-                    <p className="eyebrow">COMMITTEE MANAGEMENT</p>
-                    <h3>Committee administrators</h3>
+                    <p className="eyebrow">{appT.committeeManagement}</p>
+                    <h3>{appT.committeeAdministrators}</h3>
                     <p className="form-help">
                       Review which users administer each committee. Committee
                       administration is granted through committee access and
@@ -2915,12 +3009,12 @@ async function handleCreateCommittee(event: FormEvent) {
                             </strong>
 
                             <span>
-                              Committee ID: {committee.id}
+                              {appT.committeeId}: {committee.id}
                             </span>
                             <div className="committee-access-actions">
                               <strong>
                                 {committee.is_active === false
-                                  ? 'Closed'
+                                  ? appT.errors.closed
                                   : 'Active'}
                               </strong>
 
@@ -2942,25 +3036,24 @@ async function handleCreateCommittee(event: FormEvent) {
                                     disabled={
                                       committeeLifecycleStatus[
                                         String(committee.id)
-                                      ] === 'Closing...'
+                                      ] === appT.closing
                                     }
                                   >
                                     {committeeLifecycleStatus[
                                       String(committee.id)
-                                    ] === 'Closing...'
-                                      ? 'Closing...'
-                                      : 'Close Committee'}
+                                    ] === appT.closing
+                                      ? appT.closing
+                                      : appT.closeCommittee}
                                   </button>
                                 )}
                             </div>
 
                             <div className="form-help">
-                              <strong>Committee Administrators</strong>
+                              <strong>{appT.committeeAdministrators}</strong>
 
                               {administrators.length === 0 ? (
                                 <span>
-                                  No active Committee Administrator is
-                                  assigned.
+                                  {appT.noActiveCommitteeAdministrator}
                                 </span>
                               ) : (
                                 administrators.map(
@@ -2968,9 +3061,9 @@ async function handleCreateCommittee(event: FormEvent) {
                                     <span key={admin.user_id}>
                                       • {admin.username} ·{' '}
                                       {admin.role === 'committee_admin'
-                                        ? 'Committee Administrator'
+                                        ? appT.roles.committeeAdmin
                                         : admin.role} ·{' '}
-                                      {admin.is_active ? 'Active' : 'Inactive'}
+                                      {admin.is_active ? appT.active : appT.closed}
                                     </span>
                                   ),
                                 )
@@ -2995,7 +3088,7 @@ async function handleCreateCommittee(event: FormEvent) {
                               {committeeAdministratorsLoading ===
                               committeeKey
                                 ? 'Loading...'
-                                : 'View Administrators'}
+                                : appT.ui.viewAdministrators}
                             </button>
 
                             {canWrite && (
@@ -3007,7 +3100,7 @@ async function handleCreateCommittee(event: FormEvent) {
                                   setActivePage('Users')
                                 }}
                               >
-                                Manage Access
+                                {appT.manageAccess}
                               </button>
                             )}
                           </div>
@@ -3021,21 +3114,21 @@ async function handleCreateCommittee(event: FormEvent) {
               {createdCommittee && (
                 <section className="committee-banner">
                   <div>
-                    <p className="eyebrow">CREATED</p>
+                    <p className="eyebrow">{appT.created}</p>
                     <h3>
                       {createdCommittee.name ??
                         createdCommittee.committee_name ??
-                        'Committee created'}
+                        appT.committeeCreated}
                     </h3>
 
                     {createdCommittee.id && (
                       <p className="created-id">
-                        Committee ID: {createdCommittee.id}
+                        {appT.committeeId}: {createdCommittee.id}
                       </p>
                     )}
                   </div>
 
-                  <span className="active-badge">Created</span>
+                  <span className="active-badge">{appT.created}</span>
                 </section>
               )}
             </section>
@@ -3043,10 +3136,10 @@ async function handleCreateCommittee(event: FormEvent) {
             <>
               <section className="page-heading">
                 <div>
-                  <p className="eyebrow">MEMBERS</p>
-                  <h1>Members</h1>
+                  <p className="eyebrow">{appT.membersManagement}</p>
+                  <h1>{appT.membersManagement}</h1>
                   <p>
-                    Register members and associate them with a committee.
+                    {appT.membersDescription}
                   </p>
                 </div>
               </section>
@@ -3056,10 +3149,10 @@ async function handleCreateCommittee(event: FormEvent) {
               {canWrite && (
                 <section className="information-card">
                   <div>
-                    <p className="eyebrow">NEW MEMBER</p>
-                    <h3>Add Member</h3>
+                    <p className="eyebrow">{appT.newMember}</p>
+                    <h3>{appT.addMember}</h3>
                   <p className="form-help">
-                    Enter the committee, member name, and joining date.
+                    {appT.memberCreateDescription}
                   </p>
                 </div>
 
@@ -3096,7 +3189,7 @@ async function handleCreateCommittee(event: FormEvent) {
                         onChange={(event) =>
                           setMemberName(event.target.value)
                         }
-                        placeholder="e.g. Muhammad Ahmad"
+                        placeholder={appT.fullNamePlaceholder}
                         required
                       />
                     </label>
@@ -3108,7 +3201,7 @@ async function handleCreateCommittee(event: FormEvent) {
                         onChange={(event) =>
                           setMemberUsername(event.target.value)
                         }
-                        placeholder="Login username for this member"
+                        placeholder={appT.usernamePlaceholder}
                         required
                       />
                     </label>
@@ -3121,7 +3214,7 @@ async function handleCreateCommittee(event: FormEvent) {
                         onChange={(event) =>
                           setMemberPassword(event.target.value)
                         }
-                        placeholder="Initial login password"
+                        placeholder={appT.passwordPlaceholder}
                         required
                       />
                     </label>
@@ -3140,7 +3233,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   </div>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Creating...' : 'Create Member'}
+                    {loading ? appT.creating : appT.createMember}
                   </button>
                 </form>
                 </section>
@@ -3149,33 +3242,33 @@ async function handleCreateCommittee(event: FormEvent) {
               {createdMember && (
                 <section className="committee-banner">
                   <div>
-                    <p className="eyebrow">CREATED</p>
+                    <p className="eyebrow">{appT.created}</p>
                     <h3>
-                      {createdMember.name ?? 'Member created'}
+                      {createdMember.name ?? appT.memberCreated}
                     </h3>
 
                     <p className="created-id">
-                      Committee ID:{' '}
+                      {appT.committeeId}:{' '}
                       {createdMember.committee_id ?? committeeId}
                       {' · '}
-                      Joining date:{' '}
+                      {appT.joiningDate}:{' '}
                       {createdMember.joined_on ?? memberJoinedOn}
                     </p>
 
                     {createdMember.id !== undefined && (
                       <p className="created-id">
-                        Member ID: {createdMember.id}
+                        {appT.memberId}: {createdMember.id}
                       </p>
                     )}
                   </div>
 
-                  <span className="active-badge">Created</span>
+                  <span className="active-badge">{appT.created}</span>
                 </section>
               )}
 
               <section className="information-card">
                 <div>
-                  <p className="eyebrow">COMMITTEE MEMBERS</p>
+                  <p className="eyebrow">{appT.committeeMembers}</p>
                   <h3>
                     {committees.find(
                       (committee) =>
@@ -3185,18 +3278,18 @@ async function handleCreateCommittee(event: FormEvent) {
                         (committee) =>
                           String(committee.id) === committeeId,
                       )?.committee_name ??
-                      'Selected committee'}
+                      appT.ui.selectedCommittee}
                   </h3>
                   <p className="form-help">
-                    Members currently registered in this committee.
+                    {appT.membersRegisteredDescription}
                   </p>
                 </div>
 
                 {membersLoading ? (
-                  <p className="form-help">Loading members...</p>
+                  <p className="form-help">{appT.loadingMembers}</p>
                 ) : members.length === 0 ? (
                   <p className="form-help">
-                    No members are currently registered in this committee.
+                    {appT.noMembersRegistered}
                   </p>
                 ) : (
                   <div className="committee-list">
@@ -3208,7 +3301,7 @@ async function handleCreateCommittee(event: FormEvent) {
                         <div>
                           <strong>{member.name}</strong>
                           <span>
-                            Member ID: {member.id} · Joined:{' '}
+                            {appT.memberId}: {member.id} · {appT.joined}:{' '}
                             {member.joined_on}
                           </span>
                         </div>
@@ -3221,7 +3314,7 @@ async function handleCreateCommittee(event: FormEvent) {
                                 : 'status-badge'
                             }
                           >
-                            {member.is_active ? 'Active' : 'Inactive'}
+                            {member.is_active ? appT.active : appT.inactive}
                           </span>
 
                           {canWrite && member.is_active && (
@@ -3241,10 +3334,10 @@ async function handleCreateCommittee(event: FormEvent) {
 
               <section className="information-card">
                 <div>
-                  <p className="eyebrow">FINANCIAL SUMMARY</p>
-                  <h3>Member financial position</h3>
+                  <p className="eyebrow">{appT.financialSummary}</p>
+                  <h3>{appT.memberFinancialPosition}</h3>
                   <p className="form-help">
-                    Load the current financial position of a member.
+                    {appT.loadMemberFinancialPosition}
                   </p>
                 </div>
 
@@ -3269,10 +3362,10 @@ async function handleCreateCommittee(event: FormEvent) {
                     >
                       <option value="">
                         {membersLoading
-                          ? 'Loading members...'
+                          ? '{appT.loadingMembers}'
                           : members.length === 0
-                            ? 'No members available'
-                            : 'Select a member'}
+                            ? appT.noMembersAvailable
+                            : appT.selectMember}
                       </option>
 
                       {members.map((member) => (
@@ -3287,7 +3380,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   </label>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Loading...' : 'Load Summary'}
+                    {loading ? appT.loadingMembers : appT.loadSummary}
                   </button>
                 </form>
               </section>
@@ -3296,18 +3389,18 @@ async function handleCreateCommittee(event: FormEvent) {
                 <>
                   <section className="committee-banner">
                     <div>
-                      <p className="eyebrow">MEMBER</p>
+                      <p className="eyebrow">{appT.roles.member}</p>
                       <h3>{memberFinancialSummary.member_name}</h3>
 
                       <p className="created-id">
-                        Member ID: {memberFinancialSummary.member_id}
+                        {appT.memberId}: {memberFinancialSummary.member_id}
                         {' · '}
-                        Joining date: {memberFinancialSummary.joined_on}
+                        {appT.joiningDate}: {memberFinancialSummary.joined_on}
                       </p>
 
                       {memberFinancialSummary.left_on && (
                         <p className="created-id">
-                          Left on: {memberFinancialSummary.left_on}
+                          {appT.leftOn}: {memberFinancialSummary.left_on}
                         </p>
                       )}
                     </div>
@@ -3320,17 +3413,16 @@ async function handleCreateCommittee(event: FormEvent) {
                       }
                     >
                       {memberFinancialSummary.is_active
-                        ? 'Active'
-                        : 'Inactive'}
+                        ? appT.active
+                        : appT.inactive}
                     </span>
                   </section>
 
-                  <section className="information-card">
-                    <p className="eyebrow">CURRENT POSITION</p>
-                    <h3>Financial breakdown</h3>
+                  <section className="finpos-section">
+                    <p className="finpos-section-title">{appT.currentPosition}</p>
 
-                    <div className="position-row">
-                      <span>Total contributions</span>
+                    <div className="finpos-history-row">
+                      <span>{appT.totalContributions}</span>
                       <strong>
                         {formatPKR(
                           memberFinancialSummary.total_contributions,
@@ -3338,8 +3430,8 @@ async function handleCreateCommittee(event: FormEvent) {
                       </strong>
                     </div>
 
-                    <div className="position-row">
-                      <span>Contribution balance</span>
+                    <div className="finpos-history-row">
+                      <span>{appT.contributionBalance}</span>
                       <strong>
                         {formatPKR(
                           memberFinancialSummary.contribution_balance,
@@ -3347,22 +3439,22 @@ async function handleCreateCommittee(event: FormEvent) {
                       </strong>
                     </div>
 
-                    <div className="position-row">
-                      <span>Committee asset share</span>
+                    <div className="finpos-history-row">
+                      <span>{appT.committeeAssetShare}</span>
                       <strong>
                         {formatPKR(memberFinancialSummary.asset_share)}
                       </strong>
                     </div>
 
-                    <div className="position-row">
-                      <span>Goods value</span>
+                    <div className="finpos-history-row">
+                      <span>{appT.goodsValue}</span>
                       <strong>
                         {formatPKR(memberFinancialSummary.goods_value)}
                       </strong>
                     </div>
 
-                    <div className="position-row">
-                      <span>Ordinary dues</span>
+                    <div className="finpos-history-row">
+                      <span>{appT.ordinaryDues}</span>
                       <strong>
                         {formatPKR(
                           memberFinancialSummary.ordinary_dues,
@@ -3370,8 +3462,8 @@ async function handleCreateCommittee(event: FormEvent) {
                       </strong>
                     </div>
 
-                    <div className="position-row">
-                      <span>Qarz-e-Hasana</span>
+                    <div className="finpos-history-row">
+                      <span>{appT.qarzEHasana}</span>
                       <strong>
                         {formatPKR(
                           memberFinancialSummary.qarz_e_hasana_dues,
@@ -3379,8 +3471,8 @@ async function handleCreateCommittee(event: FormEvent) {
                       </strong>
                     </div>
 
-                    <div className="position-row">
-                      <span>Total outstanding dues</span>
+                    <div className="finpos-history-row">
+                      <span>{appT.totalOutstandingDues}</span>
                       <strong>
                         {formatPKR(
                           memberFinancialSummary.outstanding_dues,
@@ -3388,8 +3480,8 @@ async function handleCreateCommittee(event: FormEvent) {
                       </strong>
                     </div>
 
-                    <div className="position-row">
-                      <span>Gross current value</span>
+                    <div className="finpos-history-row">
+                      <span>{appT.grossCurrentValue}</span>
                       <strong>
                         {formatPKR(
                           memberFinancialSummary.current_gross_value,
@@ -3397,8 +3489,8 @@ async function handleCreateCommittee(event: FormEvent) {
                       </strong>
                     </div>
 
-                    <div className="position-row">
-                      <span>Final current value</span>
+                    <div className="finpos-history-row">
+                      <span>{appT.finalCurrentValue}</span>
                       <strong>
                         {formatPKR(
                           memberFinancialSummary.current_final_value,
@@ -3408,12 +3500,12 @@ async function handleCreateCommittee(event: FormEvent) {
                   </section>
 
                   <section className="information-card">
-                    <p className="eyebrow">ACCOUNT HISTORY</p>
-                    <h3>Member statement</h3>
+                    <p className="eyebrow">{appT.accountHistory}</p>
+                    <h3>{appT.memberStatement}</h3>
 
                     {memberStatement.length === 0 ? (
                       <p className="form-help">
-                        No financial transactions recorded yet.
+                        {appT.noFinancialTransactions}
                       </p>
                     ) : (
                       <div>
@@ -3443,11 +3535,11 @@ async function handleCreateCommittee(event: FormEvent) {
 
                   {memberFinancialSummary.death_support && (
                     <section className="information-card">
-                      <p className="eyebrow">DEATH SUPPORT</p>
-                      <h3>Support record</h3>
+                      <p className="eyebrow">{appT.deathSupport}</p>
+                      <h3>{appT.supportRecord}</h3>
 
                       <div className="position-row">
-                        <span>Beneficiary</span>
+                        <span>{appT.beneficiary}</span>
                         <strong>
                           {memberFinancialSummary.death_support
                             .beneficiary_name}
@@ -3455,7 +3547,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       </div>
 
                       <div className="position-row">
-                        <span>Amount</span>
+                        <span>{appT.amount}</span>
                         <strong>
                           {formatPKR(
                             memberFinancialSummary.death_support.amount,
@@ -3464,7 +3556,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       </div>
 
                       <div className="position-row">
-                        <span>Support date</span>
+                        <span>{appT.supportDate}</span>
                         <strong>
                           {memberFinancialSummary.death_support
                             .support_date}
@@ -3475,11 +3567,11 @@ async function handleCreateCommittee(event: FormEvent) {
 
                   {memberFinancialSummary.settlement && (
                     <section className="information-card">
-                      <p className="eyebrow">SETTLEMENT</p>
-                      <h3>Settlement record</h3>
+                      <p className="eyebrow">{appT.settlement}</p>
+                      <h3>{appT.settlementRecord}</h3>
 
                       <div className="position-row">
-                        <span>Settlement date</span>
+                        <span>{appT.settlementDate}</span>
                         <strong>
                           {memberFinancialSummary.settlement
                             .settlement_date}
@@ -3487,7 +3579,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       </div>
 
                       <div className="position-row">
-                        <span>Gross amount</span>
+                        <span>{appT.grossAmount}</span>
                         <strong>
                           {formatPKR(
                             memberFinancialSummary.settlement
@@ -3497,7 +3589,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       </div>
 
                       <div className="position-row">
-                        <span>Outstanding amounts</span>
+                        <span>{appT.outstandingAmounts}</span>
                         <strong>
                           {formatPKR(
                             memberFinancialSummary.settlement
@@ -3507,7 +3599,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       </div>
 
                       <div className="position-row">
-                        <span>Final amount</span>
+                        <span>{appT.finalAmount}</span>
                         <strong>
                           {formatPKR(
                             memberFinancialSummary.settlement
@@ -3517,7 +3609,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       </div>
 
                       <div className="position-row">
-                        <span>Status</span>
+                        <span>{appT.status}</span>
                         <strong>
                           {memberFinancialSummary.settlement.status}
                         </strong>
@@ -3531,11 +3623,10 @@ async function handleCreateCommittee(event: FormEvent) {
             <>
               <section className="page-heading">
                 <div>
-                  <p className="eyebrow">CONTRIBUTIONS</p>
-                  <h1>Current contribution amounts</h1>
+                  <p className="eyebrow">{appT.contributionsEyebrow}</p>
+                  <h1>{appT.currentContributionAmounts}</h1>
                   <p>
-                    Define the amount members are required to contribute
-                    from a specific effective date.
+                    {appT.contributionsDescription}
                   </p>
                 </div>
               </section>
@@ -3545,11 +3636,10 @@ async function handleCreateCommittee(event: FormEvent) {
               {canWrite && (
                 <section className="information-card">
                   <div>
-                    <p className="eyebrow">RECORD CONTRIBUTION</p>
-                    <h3>Record member contribution</h3>
+                    <p className="eyebrow">{appT.recordContribution}</p>
+                    <h3>{appT.recordMemberContribution}</h3>
                   <p className="form-help">
-                    The applicable contribution rate is selected automatically
-                    from the contribution date.
+                    {appT.contributionRateAutoSelected}
                   </p>
                 </div>
 
@@ -3559,7 +3649,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 >
                   <div className="rate-form-grid">
                     <label>
-                      Member
+                      {appT.member}
                       <select
                         value={contributionMemberId}
                         onChange={(event) =>
@@ -3570,10 +3660,10 @@ async function handleCreateCommittee(event: FormEvent) {
                       >
                         <option value="">
                           {membersLoading
-                            ? 'Loading members...'
+                            ? appT.loadingMembers
                             : members.length === 0
-                              ? 'No members available'
-                              : 'Select a member'}
+                              ? appT.noMembersAvailable
+                              : appT.selectMember}
                         </option>
 
                         {members.map((member) => (
@@ -3588,7 +3678,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Payment date
+                      {appT.paymentDate}
                       <input
                         type="date"
                         value={contributionDate}
@@ -3600,19 +3690,19 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Reference
+                      {appT.reference}
                       <input
                         value={contributionReference}
                         onChange={(event) =>
                           setContributionReference(event.target.value)
                         }
-                        placeholder="e.g. August contribution"
+                        placeholder={appT.referencePlaceholder}
                       />
                     </label>
                   </div>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Recording...' : 'Record Contribution'}
+                    {loading ? appT.recording : appT.recordContributionButton}
                   </button>
                 </form>
                 </section>
@@ -3621,41 +3711,40 @@ async function handleCreateCommittee(event: FormEvent) {
               {createdContribution && (
                 <section className="committee-banner">
                   <div>
-                    <p className="eyebrow">RECORDED</p>
-                    <h3>Contribution recorded</h3>
+                    <p className="eyebrow">{appT.recorded}</p>
+                    <h3>{appT.contributionRecorded}</h3>
 
                     <p className="created-id">
-                      Member ID: {createdContribution.member_id}
+                      {appT.member} ID: {createdContribution.member_id}
                       {' · '}
-                      Date: {createdContribution.contribution_date}
+                      {appT.date}: {createdContribution.contribution_date}
                     </p>
 
                     {createdContribution.reference && (
                       <p className="created-id">
-                        Reference: {createdContribution.reference}
+                        {appT.reference}: {createdContribution.reference}
                       </p>
                     )}
 
                     {createdContribution.journal_entry_id !== undefined && (
                       <p className="created-id">
-                        Journal entry ID:{' '}
+                        {appT.journalEntryId}:{' '}
                         {createdContribution.journal_entry_id}
                       </p>
                     )}
                   </div>
 
-                  <span className="active-badge">Recorded</span>
+                  <span className="active-badge">{appT.recorded}</span>
                 </section>
               )}
 
               {canWrite && (
                 <section className="information-card contribution-rate-card">
                   <div>
-                    <p className="eyebrow">NEW RATE</p>
-                    <h3>Create contribution rate</h3>
+                    <p className="eyebrow">{appT.newRate}</p>
+                    <h3>{appT.createContributionRateHeading}</h3>
                   <p className="form-help">
-                    Set the contribution amount and the date from which
-                    this rate becomes effective.
+                    {appT.createContributionRateDescription}
                   </p>
                 </div>
 
@@ -3665,7 +3754,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 >
                   <div className="rate-form-grid">
                     <label>
-                      Contribution amount
+                      {appT.contributionAmount}
                       <input
                         type="number"
                         min="1"
@@ -3674,13 +3763,13 @@ async function handleCreateCommittee(event: FormEvent) {
                         onChange={(event) =>
                           setContributionAmount(event.target.value)
                         }
-                        placeholder="e.g. 500"
+                        placeholder={appT.contributionAmountPlaceholder}
                         required
                       />
                     </label>
 
                     <label>
-                      Effective from
+                      {appT.effectiveFrom}
                       <input
                         type="date"
                         value={effectiveFrom}
@@ -3694,8 +3783,8 @@ async function handleCreateCommittee(event: FormEvent) {
 
                   <button type="submit" disabled={loading}>
                     {loading
-                      ? 'Creating...'
-                      : 'Create Current contribution amount'}
+                      ? appT.creating
+                      : appT.createCurrentContributionAmount}
                   </button>
                 </form>
                 </section>
@@ -3704,13 +3793,13 @@ async function handleCreateCommittee(event: FormEvent) {
               {createdContributionRate && (
                 <section className="committee-banner contribution-rate-result">
                   <div>
-                    <p className="eyebrow">CREATED</p>
+                    <p className="eyebrow">{appT.created}</p>
                     <h3>
                       {createdContributionRate.amount !== undefined
                         ? `Rs. ${createdContributionRate.amount.toLocaleString(
                             'en-PK',
                           )}`
-                        : 'Current contribution amount created'}
+                        : appT.currentContributionAmountCreated}
                     </h3>
 
                     <p className="created-id">
@@ -3718,19 +3807,19 @@ async function handleCreateCommittee(event: FormEvent) {
                       {createdContributionRate.committee_id ??
                         committeeId}
                       {' · '}
-                      Effective from:{' '}
+                      {appT.effectiveFrom}:{' '}
                       {createdContributionRate.effective_from ??
                         effectiveFrom}
                     </p>
 
                     {createdContributionRate.id !== undefined && (
                       <p className="created-id">
-                        Rate ID: {createdContributionRate.id}
+                        {appT.rateId}: {createdContributionRate.id}
                       </p>
                     )}
                   </div>
 
-                  <span className="active-badge">Created</span>
+                  <span className="active-badge">{appT.created}</span>
                 </section>
               )}
             </>
@@ -3738,11 +3827,10 @@ async function handleCreateCommittee(event: FormEvent) {
             <section className="death-support-module">
               <section className="page-heading">
                 <div>
-                  <p className="eyebrow">DEATH SUPPORT</p>
-                  <h1>Death Support</h1>
+                  <p className="eyebrow">{appT.deathSupportEyebrow}</p>
+                  <h1>{appT.deathSupportPageTitle}</h1>
                   <p>
-                    Record death-support payments for members and preserve
-                    the member-funded and Qarz-e-Hasana portions separately.
+                    {appT.deathSupportDescription}
                   </p>
                 </div>
               </section>
@@ -3752,11 +3840,10 @@ async function handleCreateCommittee(event: FormEvent) {
               {canWrite && (
                 <section className="information-card death-support-record-card">
                   <div>
-                    <p className="eyebrow">RECORD SUPPORT</p>
-                    <h3>Record Death Support</h3>
+                    <p className="eyebrow">{appT.recordSupport}</p>
+                    <h3>{appT.recordDeathSupportHeading}</h3>
                   <p className="form-help">
-                    Select the affected member, enter the beneficiary and
-                    support amount, and record the payment date.
+                    {appT.recordDeathSupportDescription}
                   </p>
                 </div>
 
@@ -3766,7 +3853,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 >
                   <div className="rate-form-grid">
                     <label>
-                      Member
+                      {appT.member}
                       <select
                         value={deathSupportMemberId}
                         onChange={(event) =>
@@ -3774,7 +3861,7 @@ async function handleCreateCommittee(event: FormEvent) {
                         }
                         required
                       >
-                        <option value="">Select a member</option>
+                        <option value="">{appT.selectMember}</option>
                         {members.map((member) => (
                           <option key={member.id} value={member.id}>
                             {member.name} · ID {member.id}
@@ -3784,19 +3871,19 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Beneficiary name
+                      {appT.beneficiaryName}
                       <input
                         value={deathSupportBeneficiaryName}
                         onChange={(event) =>
                           setDeathSupportBeneficiaryName(event.target.value)
                         }
-                        placeholder="e.g. Muhammad Ali"
+                        placeholder={appT.beneficiaryNamePlaceholder}
                         required
                       />
                     </label>
 
                     <label>
-                      Support amount
+                      {appT.supportAmount}
                       <input
                         type="number"
                         min="1"
@@ -3805,13 +3892,13 @@ async function handleCreateCommittee(event: FormEvent) {
                         onChange={(event) =>
                           setDeathSupportAmount(event.target.value)
                         }
-                        placeholder="e.g. 50000"
+                        placeholder={appT.supportAmountPlaceholder}
                         required
                       />
                     </label>
 
                     <label>
-                      Support date
+                      {appT.supportDate}
                       <input
                         type="date"
                         value={deathSupportDate}
@@ -3824,18 +3911,18 @@ async function handleCreateCommittee(event: FormEvent) {
                   </div>
 
                   <label>
-                    Reference
+                    {appT.optionalReference}
                     <input
                       value={deathSupportReference}
                       onChange={(event) =>
                         setDeathSupportReference(event.target.value)
                       }
-                      placeholder="Optional reference"
+                      placeholder={appT.optionalReferencePlaceholder}
                     />
                   </label>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Recording...' : 'Record Death Support'}
+                    {loading ? appT.recording : appT.recordDeathSupportButton}
                   </button>
                 </form>
                 </section>
@@ -3844,61 +3931,60 @@ async function handleCreateCommittee(event: FormEvent) {
               {createdDeathSupport && (
                 <section className="committee-banner contribution-rate-result">
                   <div>
-                    <p className="eyebrow">RECORDED</p>
+                    <p className="eyebrow">{appT.recorded}</p>
                     <h3>
                       {createdDeathSupport.amount !== undefined
                         ? `Rs. ${createdDeathSupport.amount.toLocaleString(
                             'en-PK',
                           )}`
-                        : 'Death support recorded'}
+                        : appT.deathSupportRecorded}
                     </h3>
 
                     <p className="created-id">
-                      Member ID:{' '}
+                      {appT.member} ID:{' '}
                       {createdDeathSupport.member_id ??
                         deathSupportMemberId}
                       {' · '}
-                      Beneficiary:{' '}
+                      {appT.beneficiaryName}:{' '}
                       {createdDeathSupport.beneficiary_name ??
                         deathSupportBeneficiaryName}
                     </p>
 
                     <p className="created-id">
-                      Member funded:{' '}
+                      {appT.memberFunded}:{' '}
                       {formatPKR(
                         createdDeathSupport.member_funded_amount ?? 0,
                       )}
                       {' · '}
-                      Qarz-e-Hasana:{' '}
+                      {appT.qarzEHasana}:{' '}
                       {formatPKR(
                         createdDeathSupport.qarz_e_hasana_amount ?? 0,
                       )}
                     </p>
 
                     <p className="created-id">
-                      Support date:{' '}
+                      {appT.supportDate}:{' '}
                       {createdDeathSupport.support_date ??
                         deathSupportDate}
                     </p>
 
                     {createdDeathSupport.reference && (
                       <p className="created-id">
-                        Reference: {createdDeathSupport.reference}
+                        {appT.reference}: {createdDeathSupport.reference}
                       </p>
                     )}
                   </div>
 
-                  <span className="active-badge">Recorded</span>
+                  <span className="active-badge">{appT.recorded}</span>
                 </section>
               )}
 
               <section className="information-card death-support-status-card">
                 <div>
-                  <p className="eyebrow">SUPPORT STATUS</p>
-                  <h3>Check member support status</h3>
+                  <p className="eyebrow">{appT.supportStatus}</p>
+                  <h3>{appT.checkMemberSupportStatus}</h3>
                   <p className="form-help">
-                    Review whether death support has already been recorded
-                    for a member in this committee.
+                    {appT.checkMemberSupportStatusDescription}
                   </p>
                 </div>
 
@@ -3919,7 +4005,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       }}
                       required
                     >
-                      <option value="">Select a member</option>
+                      <option value="">{appT.selectMember}</option>
                       {members.map((member) => (
                         <option key={member.id} value={member.id}>
                           {member.name} · ID {member.id}
@@ -3929,7 +4015,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   </label>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Checking...' : 'Check Support Status'}
+                    {loading ? appT.checking : appT.checkSupportStatus}
                   </button>
                 </form>
               </section>
@@ -3937,11 +4023,11 @@ async function handleCreateCommittee(event: FormEvent) {
               {deathSupportStatus && (
                 <section className="committee-banner contribution-rate-result">
                   <div>
-                    <p className="eyebrow">STATUS</p>
+                    <p className="eyebrow">{appT.status}</p>
                     <h3>
                       {deathSupportStatus.death_support_recorded
-                        ? 'Death support recorded'
-                        : 'No death support recorded'}
+                        ? appT.deathSupportRecorded
+                        : appT.noDeathSupportRecorded}
                     </h3>
 
                     <p className="created-id">
@@ -3951,9 +4037,9 @@ async function handleCreateCommittee(event: FormEvent) {
                     {deathSupportStatus.death_support_recorded && (
                       <>
                         <p className="created-id">
-                          Support ID: {deathSupportStatus.support_id ?? '—'}
+                          {appT.supportId}: {deathSupportStatus.support_id ?? '—'}
                           {' · '}
-                          Amount: {formatPKR(deathSupportStatus.amount)}
+                          {appT.supportAmount}: {formatPKR(deathSupportStatus.amount)}
                         </p>
 
                         <p className="created-id">
@@ -3966,8 +4052,8 @@ async function handleCreateCommittee(event: FormEvent) {
 
                   <span className="active-badge">
                     {deathSupportStatus.death_support_recorded
-                      ? 'Recorded'
-                      : 'Not Recorded'}
+                      ? appT.recorded
+                      : appT.notRecorded}
                   </span>
                 </section>
               )}
@@ -3976,15 +4062,15 @@ async function handleCreateCommittee(event: FormEvent) {
               <section className="module-page">
                 <div className="page-heading">
                   <div>
-                    <p className="eyebrow">ACCESS MANAGEMENT</p>
-                    <h1>Users</h1>
+                    <p className="eyebrow">{appT.usersAccessManagement}</p>
+                    <h1>{appT.usersAccessManagement}</h1>
                     <p className="page-subtitle">
-                      Manage platform accounts, committee access, and account security from one place.
+                      {appT.usersDescription}
                     </p>
                   </div>
                   <div className="page-heading-meta">
                     <span className="active-badge">
-                      {users.length} {users.length === 1 ? 'User' : 'Users'}
+                      {users.length} {users.length === 1 ? appT.usersAccountCountUser : appT.usersAccountCountUsers}
                     </span>
                   </div>
                 </div>
@@ -4000,10 +4086,10 @@ async function handleCreateCommittee(event: FormEvent) {
                 <section className="information-card users-access-panel">
                   <div className="section-heading-row">
                     <div>
-                      <p className="eyebrow">ACCOUNT SECURITY</p>
-                      <h3>Change your password</h3>
+                      <p className="eyebrow">{appT.usersAccountSecurity}</p>
+                      <h3>{appT.usersChangePassword}</h3>
                       <p className="form-help">
-                        Update the password for the currently signed-in administrator account.
+                        {appT.usersChangePasswordDescription}
                       </p>
                     </div>
                   </div>
@@ -4018,7 +4104,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   >
                     <div className="rate-form-grid">
                       <label>
-                        Current password
+                        {appT.usersCurrentPassword}
                         <input
                           type="password"
                           value={currentPassword}
@@ -4031,7 +4117,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       </label>
 
                       <label>
-                        New password
+                        {appT.usersNewPassword}
                         <input
                           type="password"
                           value={newPassword}
@@ -4044,7 +4130,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       </label>
 
                       <label>
-                        Confirm new password
+                        {appT.usersConfirmNewPassword}
                         <input
                           type="password"
                           value={confirmNewPassword}
@@ -4058,7 +4144,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </div>
 
                     <button type="submit" disabled={loading}>
-                      {loading ? 'Changing...' : 'Change Password'}
+                      {loading ? appT.ui.changing : appT.ui.changePasswordAction}
                     </button>
                   </form>
                 </section>
@@ -4066,10 +4152,10 @@ async function handleCreateCommittee(event: FormEvent) {
                 <section className="information-card users-access-panel">
                   <div className="section-heading-row">
                     <div>
-                      <p className="eyebrow">ADD USER</p>
-                      <h3>Create a user account</h3>
+                      <p className="eyebrow">{appT.usersAddUser}</p>
+                      <h3>{appT.usersCreateUserAccount}</h3>
                       <p className="form-help">
-                        Create the login account first. Committee membership and administrator access can then be assigned separately.
+                        {appT.usersCreateUserDescription}
                       </p>
                     </div>
                   </div>
@@ -4084,14 +4170,14 @@ async function handleCreateCommittee(event: FormEvent) {
                   >
                     <div className="rate-form-grid">
                       <label>
-                        Username
+                        {appT.usersUsername}
                         <input
                           type="text"
-                          value={userUsername}
+                          value={username}
                           onChange={(event) =>
-                            setUserUsername(event.target.value)
+                            setUsername(event.target.value)
                           }
-                          placeholder="e.g. committee-admin"
+                          placeholder={appT.usersUsernamePlaceholder}
                           required
                         />
                       </label>
@@ -4104,20 +4190,20 @@ async function handleCreateCommittee(event: FormEvent) {
                           onChange={(event) =>
                             setUserPassword(event.target.value)
                           }
-                          placeholder="Enter a secure password"
+                          placeholder={appT.usersPasswordPlaceholder}
                           required
                         />
                       </label>
 
                       <label>
-                        Platform role
+                        {appT.usersPlatformRole}
                         <select
                           value={userCreateRole}
                           onChange={(event) =>
                             setUserCreateRole(event.target.value)
                           }
                         >
-                          <option value="member">Committee Member</option>
+                          <option value="member">{appT.usersCommitteeMember}</option>
                           <option value="committee_admin">
                             Committee Admin
                           </option>
@@ -4129,7 +4215,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </div>
 
                     <button type="submit" disabled={loading}>
-                      {loading ? 'Creating...' : 'Create User'}
+                      {loading ? appT.creating : 'Create User'}
                     </button>
                   </form>
                 </section>
@@ -4137,8 +4223,8 @@ async function handleCreateCommittee(event: FormEvent) {
                 {issuedResetToken && (
                   <section className="committee-banner">
                     <div>
-                      <p className="eyebrow">PASSWORD RECOVERY</p>
-                      <h3>Recovery token issued</h3>
+                      <p className="eyebrow">{appT.usersPasswordRecovery}</p>
+                      <h3>{appT.usersRecoveryTokenIssued}</h3>
                       <p className="created-id">
                         Provide this token securely to the user. It expires in{' '}
                         {issuedResetExpiry ?? 15} minutes.
@@ -4166,12 +4252,12 @@ async function handleCreateCommittee(event: FormEvent) {
                 {createdUser && (
                   <section className="committee-banner">
                     <div>
-                      <p className="eyebrow">USER UPDATED</p>
-                      <h3>{createdUser.username ?? 'User account'}</h3>
+                      <p className="eyebrow">{appT.usersUserUpdated}</p>
+                      <h3>{createdUser.username ?? appT.ui.userAccount}</h3>
                       <p className="created-id">
-                        User ID: {createdUser.id ?? '—'}
+                        {appT.usersUserId}: {createdUser.id ?? '—'}
                         {' · '}
-                        Role: {createdUser.role ?? '—'}
+                        {appT.usersRole}: {createdUser.role ?? '—'}
                       </p>
                     </div>
 
@@ -4186,10 +4272,10 @@ async function handleCreateCommittee(event: FormEvent) {
                 <section className="information-card users-access-panel">
                   <div className="section-heading-row">
                     <div>
-                      <p className="eyebrow">COMMITTEE ACCESS</p>
-                      <h3>Assign a user to a committee</h3>
+                      <p className="eyebrow">{appT.usersCommitteeAccess}</p>
+                      <h3>{appT.usersAssignUserToCommittee}</h3>
                       <p className="form-help">
-                        Choose the application user, committee, and committee-level role.
+                        {appT.usersAssignUserDescription}
                       </p>
                     </div>
                   </div>
@@ -4218,7 +4304,7 @@ async function handleCreateCommittee(event: FormEvent) {
                           }
                           required
                         >
-                          <option value="">Select a user</option>
+                          <option value="">{appT.usersSelectUser}</option>
 
                           {users
                             .filter((user) => user.role !== 'super_admin')
@@ -4240,7 +4326,7 @@ async function handleCreateCommittee(event: FormEvent) {
                         </div>
 
                         <div className="users-access-step-help">
-                          Access is isolated per committee.
+                          {appT.usersSelectCommitteeDescription}
                         </div>
 
                         <select
@@ -4251,7 +4337,7 @@ async function handleCreateCommittee(event: FormEvent) {
                           }
                           required
                         >
-                          <option value="">Select a committee</option>
+                          <option value="">{appT.usersSelectCommittee}</option>
 
                           {committees.map((committee) => (
                             <option
@@ -4272,11 +4358,11 @@ async function handleCreateCommittee(event: FormEvent) {
 
                       <div className="users-access-step-content">
                         <div className="users-access-step-title">
-                          Choose committee role
+                          {appT.usersChooseCommitteeRole}
                         </div>
 
                         <div className="users-access-step-help">
-                          Administrator access applies only to the selected committee.
+                          {appT.usersChooseCommitteeRoleDescription}
                         </div>
 
                         <div className="access-level-options">
@@ -4295,7 +4381,7 @@ async function handleCreateCommittee(event: FormEvent) {
                             />
 
                             <span>
-                              <strong>Committee Member</strong>
+                              <strong>{appT.ui.committeeMember}</strong>
                               <small>
                                 Member-level permissions
                               </small>
@@ -4318,7 +4404,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                             <span>
                               <strong>
-                                Committee Administrator
+                                {appT.ui.committeeAdministrator}
                               </strong>
                               <small>
                                 Manage the assigned committee
@@ -4332,7 +4418,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     <div className="users-access-confirmation">
                       <div>
                         <span className="users-access-confirmation-label">
-                          ASSIGNMENT
+                          {appT.usersAssignment}
                         </span>
 
                         <strong>
@@ -4341,8 +4427,8 @@ async function handleCreateCommittee(event: FormEvent) {
                                 (user) =>
                                   Number(user.id) ===
                                   Number(assignmentUserId),
-                              )?.username ?? 'Selected user'
-                            : 'No user selected'}
+                              )?.username ?? appT.ui.selectedUser
+                            : appT.ui.noUserSelected}
                         </strong>
 
                         <span>
@@ -4351,12 +4437,12 @@ async function handleCreateCommittee(event: FormEvent) {
                                 (committee) =>
                                   Number(committee.id) ===
                                   Number(assignmentCommitteeId),
-                              )?.name ?? 'Selected committee'
-                            : 'No committee selected'}
+                              )?.name ?? appT.ui.selectedCommittee
+                            : appT.ui.noCommitteeSelected}
                           {' · '}
                           {assignmentIsAdmin
-                            ? 'Committee Administrator'
-                            : 'Committee Member'}
+                            ? appT.ui.committeeAdministrator
+                            : appT.ui.committeeMember}
                         </span>
                       </div>
 
@@ -4370,8 +4456,8 @@ async function handleCreateCommittee(event: FormEvent) {
                         }
                       >
                         {loading
-                          ? 'Assigning...'
-                          : 'Assign to Committee'}
+                          ? appT.ui.assigning
+                          : appT.ui.assignToCommittee}
                       </button>
                     </div>
                   </form>
@@ -4380,10 +4466,10 @@ async function handleCreateCommittee(event: FormEvent) {
                 <section className="information-card users-accounts-panel">
                   <div className="section-heading-row users-accounts-heading">
                     <div>
-                      <p className="eyebrow">USER ACCOUNTS</p>
-                      <h3>Accounts & committee access</h3>
+                      <p className="eyebrow">{appT.usersAccounts}</p>
+                      <h3>{appT.usersAccountsAndAccess}</h3>
                       <p className="form-help">
-                        Review account status, recovery controls, and committee assignments.
+                        {appT.usersAccountsDescription}
                       </p>
                     </div>
 
@@ -4395,7 +4481,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     >
                       {usersLoading
                         ? 'Loading...'
-                        : 'Refresh User List'}
+                        : appT.ui.refreshUserList}
                     </button>
                   </div>
 
@@ -4420,10 +4506,10 @@ async function handleCreateCommittee(event: FormEvent) {
                           userCommitteeAssignments[String(user.id)]
 
                         const roleLabel = isSuperAdmin
-                          ? 'Super Administrator'
+                          ? appT.ui.superAdministrator
                           : user.role === 'committee_admin'
-                            ? 'Committee Administrator'
-                            : 'Committee Member'
+                            ? appT.ui.committeeAdministrator
+                            : appT.ui.committeeMember
 
                         const roleClass = isSuperAdmin
                           ? 'system'
@@ -4451,7 +4537,7 @@ async function handleCreateCommittee(event: FormEvent) {
                                 <div className="user-account-name-row">
                                   <strong>
                                     {user.username ??
-                                      'Unknown user'}
+                                      appT.ui.unknownUser}
                                   </strong>
 
                                   <span
@@ -4474,7 +4560,7 @@ async function handleCreateCommittee(event: FormEvent) {
                                 </div>
 
                                 <small>
-                                  User ID: {user.id ?? '—'}
+                                  {appT.usersUserId}: {user.id ?? '—'}
                                 </small>
                               </div>
 
@@ -4494,7 +4580,7 @@ async function handleCreateCommittee(event: FormEvent) {
                                           : undefined
                                       }
                                     >
-                                      Issue Recovery Token
+                                      {appT.usersIssueRecoveryToken}
                                     </button>
 
                                     <button
@@ -4521,13 +4607,13 @@ async function handleCreateCommittee(event: FormEvent) {
                               <div className="user-account-access-header">
                                 <div>
                                   <p className="eyebrow">
-                                    COMMITTEE ACCESS
+                                    {appT.usersCommitteeAccess}
                                   </p>
 
                                   <strong>
                                     {isSuperAdmin
-                                      ? 'Global platform authority'
-                                      : 'Assigned committees'}
+                                      ? '{appT.usersGlobalPlatformAuthority}'
+                                      : '{appT.usersAssignedCommittees}'}
                                   </strong>
                                 </div>
 
@@ -4548,7 +4634,7 @@ async function handleCreateCommittee(event: FormEvent) {
                                     {assignmentOverviewLoading ===
                                     Number(user.id)
                                       ? 'Loading...'
-                                      : 'View Access'}
+                                      : appT.ui.viewAccess}
                                   </button>
                                 )}
                               </div>
@@ -4556,10 +4642,10 @@ async function handleCreateCommittee(event: FormEvent) {
                               {isSuperAdmin ? (
                                 <div className="user-access-global-note">
                                   <strong>
-                                    System administrator
+                                    {appT.usersSystemAdministrator}
                                   </strong>
                                   <span>
-                                    No ordinary committee assignment is required.
+                                    {appT.usersNoOrdinaryAssignment}
                                   </span>
                                 </div>
                               ) : assignments ? (
@@ -4580,8 +4666,8 @@ async function handleCreateCommittee(event: FormEvent) {
 
                                             <span>
                                               {assignment.is_admin
-                                                ? 'Committee Administrator'
-                                                : 'Committee Member'}
+                                                ? appT.ui.committeeAdministrator
+                                                : appT.ui.committeeMember}
                                             </span>
                                           </div>
 
@@ -4603,20 +4689,20 @@ async function handleCreateCommittee(event: FormEvent) {
                                 ) : (
                                   <div className="user-access-empty">
                                     <strong>
-                                      No committee assignments
+                                      {appT.usersNoCommitteeAssignments}
                                     </strong>
                                     <span>
-                                      This account has not been assigned to a committee yet.
+                                      {appT.usersNotAssignedYet}
                                     </span>
                                   </div>
                                 )
                               ) : (
                                 <div className="user-access-empty">
                                   <strong>
-                                    Access not loaded
+                                    {appT.usersAccessNotLoaded}
                                   </strong>
                                   <span>
-                                    Select View Access to load this user's committee assignments.
+                                    {appT.usersSelectViewAccess}
                                   </span>
                                 </div>
                               )}
@@ -4624,19 +4710,19 @@ async function handleCreateCommittee(event: FormEvent) {
                               {!isSuperAdmin && (
                                 <div className="user-account-current-access">
                                   <span>
-                                    Current selected committee:{' '}
+                                    {appT.usersCurrentSelectedCommittee}{' '}
                                     {committees.find(
                                       (committee) =>
                                         Number(committee.id) ===
                                         Number(committeeId),
                                     )?.name ??
-                                      'No committee selected'}
+                                      appT.ui.noCommitteeSelected}
                                     {' · '}
                                     {accessActive
                                       ? 'Access active'
                                       : accessInactive
                                         ? 'Access inactive'
-                                        : 'Not checked'}
+                                        : appT.ui.notChecked}
                                   </span>
 
                                   <div>
@@ -4656,7 +4742,7 @@ async function handleCreateCommittee(event: FormEvent) {
                                       {committeeAccessLoading &&
                                       isCurrentAccessUser
                                         ? 'Checking...'
-                                        : 'Check Access'}
+                                        : '{appT.usersCheckAccess}'}
                                     </button>
 
                                     <button
@@ -4675,7 +4761,7 @@ async function handleCreateCommittee(event: FormEvent) {
                                           : undefined
                                       }
                                     >
-                                      Grant Access
+                                      {appT.usersGrantAccess}
                                     </button>
 
                                     {accessActive && (
@@ -4694,7 +4780,7 @@ async function handleCreateCommittee(event: FormEvent) {
                                             : undefined
                                         }
                                       >
-                                        Revoke Access
+                                        {appT.usersRevokeAccess}
                                       </button>
                                     )}
                                   </div>
@@ -4707,9 +4793,9 @@ async function handleCreateCommittee(event: FormEvent) {
                     </div>
                   ) : (
                     <div className="user-access-empty">
-                      <strong>No users loaded</strong>
+                      <strong>{appT.usersNoUsersLoaded}</strong>
                       <span>
-                        Select Refresh User List to retrieve the current accounts.
+                        {appT.usersRefreshToRetrieve}
                       </span>
                     </div>
                   )}
@@ -4719,11 +4805,10 @@ async function handleCreateCommittee(event: FormEvent) {
             <section className="assets-module">
               <section className="page-heading">
                 <div>
-                  <p className="eyebrow">ASSETS</p>
-                  <h1>Committee Assets</h1>
+                  <p className="eyebrow">{appT.assetsEyebrow}</p>
+                  <h1>{appT.assetsPageTitle}</h1>
                   <p>
-                    Register committee-owned assets and track their current
-                    valuations.
+                    {appT.assetsDescription}
                   </p>
                 </div>
               </section>
@@ -4733,11 +4818,10 @@ async function handleCreateCommittee(event: FormEvent) {
               {canWrite && (
               <section className="information-card asset-create-card">
                 <div>
-                  <p className="eyebrow">NEW ASSET</p>
-                  <h3>Create committee asset</h3>
+                  <p className="eyebrow">{appT.newAsset}</p>
+                  <h3>{appT.createCommitteeAsset}</h3>
                   <p className="form-help">
-                    Enter the committee, asset details, purchase date, and
-                    purchase value.
+                    {appT.createCommitteeAssetDescription}
                   </p>
                 </div>
 
@@ -4747,19 +4831,19 @@ async function handleCreateCommittee(event: FormEvent) {
                 >
                   <div className="rate-form-grid">
                     <label>
-                      Asset name
+                      {appT.assetName}
                       <input
                         value={assetName}
                         onChange={(event) =>
                           setAssetName(event.target.value)
                         }
-                        placeholder="e.g. Committee Refrigerator"
+                        placeholder={appT.assetNamePlaceholder}
                         required
                       />
                     </label>
 
                     <label>
-                      Purchase date
+                      {appT.purchaseDate}
                       <input
                         type="date"
                         value={assetPurchaseDate}
@@ -4771,7 +4855,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Purchase value
+                      {appT.purchaseValue}
                       <input
                         type="number"
                         min="1"
@@ -4780,25 +4864,25 @@ async function handleCreateCommittee(event: FormEvent) {
                         onChange={(event) =>
                           setAssetPurchaseValue(event.target.value)
                         }
-                        placeholder="e.g. 50000"
+                        placeholder={appT.purchaseValuePlaceholder}
                         required
                       />
                     </label>
                   </div>
 
                   <label>
-                    Description
+                    {appT.description}
                     <input
                       value={assetDescription}
                       onChange={(event) =>
                         setAssetDescription(event.target.value)
                       }
-                      placeholder="Optional description"
+                      placeholder={appT.optionalDescription}
                     />
                   </label>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Creating...' : 'Create Asset'}
+                    {loading ? appT.creating : appT.createAsset}
                   </button>
                 </form>
               </section>              )}
@@ -4807,13 +4891,13 @@ async function handleCreateCommittee(event: FormEvent) {
               {createdCommitteeAsset && (
                 <section className="committee-banner">
                   <div>
-                    <p className="eyebrow">CREATED</p>
+                    <p className="eyebrow">{appT.created}</p>
                     <h3>
-                      {createdCommitteeAsset.name ?? 'Asset created'}
+                      {createdCommitteeAsset.name ?? appT.assetCreated}
                     </h3>
 
                     <p className="created-id">
-                      Asset ID: {createdCommitteeAsset.id}
+                      {appT.assetId}: {createdCommitteeAsset.id}
                       {' · '}
                       Committee ID:{' '}
                       {createdCommitteeAsset.committee_id ??
@@ -4821,11 +4905,11 @@ async function handleCreateCommittee(event: FormEvent) {
                     </p>
 
                     <p className="created-id">
-                      Purchase date:{' '}
+                      {appT.purchaseDate}:{' '}
                       {createdCommitteeAsset.purchase_date ??
                         assetPurchaseDate}
                       {' · '}
-                      Purchase value:{' '}
+                      {appT.purchaseValue}:{' '}
                       {formatPKR(
                         createdCommitteeAsset.purchase_value ??
                           Number(assetPurchaseValue),
@@ -4833,18 +4917,17 @@ async function handleCreateCommittee(event: FormEvent) {
                     </p>
                   </div>
 
-                  <span className="active-badge">Created</span>
+                  <span className="active-badge">{appT.created}</span>
                 </section>
               )}
 
               {canWrite && (
               <section className="information-card asset-valuation-card">
                 <div>
-                  <p className="eyebrow">CURRENT VALUE</p>
-                  <h3>Update asset valuation</h3>
+                  <p className="eyebrow">{appT.currentValue}</p>
+                  <h3>{appT.updateAssetValuation}</h3>
                   <p className="form-help">
-                    Record a new valuation. Previous valuations remain
-                    available as historical records.
+                    {appT.updateAssetValuationDescription}
                   </p>
                 </div>
 
@@ -4867,7 +4950,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Valuation date
+                      {appT.valuationDate}
                       <input
                         type="date"
                         value={assetValuationDate}
@@ -4879,7 +4962,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      New value
+                      {appT.newValue}
                       <input
                         type="number"
                         min="0"
@@ -4894,7 +4977,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   </div>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Updating...' : 'Update Value'}
+                    {loading ? appT.updating : appT.updateValue}
                   </button>
                 </form>
               </section>              )}
@@ -4903,21 +4986,21 @@ async function handleCreateCommittee(event: FormEvent) {
               {updatedCommitteeAssetValue && (
                 <section className="committee-banner">
                   <div>
-                    <p className="eyebrow">VALUATION UPDATED</p>
-                    <h3>Current asset value updated</h3>
+                    <p className="eyebrow">{appT.valuationUpdated}</p>
+                    <h3>{appT.currentAssetValueUpdated}</h3>
 
                     <p className="created-id">
-                      Asset ID:{' '}
+                      {appT.assetId}:{' '}
                       {updatedCommitteeAssetValue.asset_id ??
                         assetValueAssetId}
                       {' · '}
-                      Valuation date:{' '}
+                      {appT.valuationDate}:{' '}
                       {updatedCommitteeAssetValue.valuation_date ??
                         assetValuationDate}
                     </p>
 
                     <p className="created-id">
-                      Current value:{' '}
+                      {appT.currentValueLabel}:{' '}
                       {formatPKR(
                         updatedCommitteeAssetValue.value ??
                           updatedCommitteeAssetValue.new_value ??
@@ -4926,14 +5009,14 @@ async function handleCreateCommittee(event: FormEvent) {
                     </p>
                   </div>
 
-                  <span className="active-badge">Updated</span>
+                  <span className="active-badge">{appT.valuationUpdated}</span>
                 </section>
               )}
 
               <section className="information-card asset-history-card">
                 <div>
-                  <p className="eyebrow">ASSET HISTORY</p>
-                  <h3>View asset valuations</h3>
+                  <p className="eyebrow">{appT.assetHistory}</p>
+                  <h3>{appT.viewAssetValuations}</h3>
                 </div>
 
                 <form
@@ -4957,15 +5040,15 @@ async function handleCreateCommittee(event: FormEvent) {
                   </label>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Loading...' : 'Load Valuations'}
+                    {loading ? appT.loadingMembers : appT.loadValuations}
                   </button>
                 </form>
               </section>
 
               {assetValuations.length > 0 && (
                 <section className="information-card">
-                  <p className="eyebrow">VALUATIONS</p>
-                  <h3>Valuation history</h3>
+                  <p className="eyebrow">{appT.valuations}</p>
+                  <h3>{appT.valuationHistory}</h3>
 
                   {assetValuations.map((valuation) => (
                     <div
@@ -4977,7 +5060,7 @@ async function handleCreateCommittee(event: FormEvent) {
                           {valuation.valuation_date}
                         </strong>
                         <small>
-                          Valuation ID: {valuation.id}
+                          {appT.valuationId}: {valuation.id}
                         </small>
                       </div>
 
@@ -4991,8 +5074,8 @@ async function handleCreateCommittee(event: FormEvent) {
 
               <section className="information-card asset-participation-card">
                 <div>
-                  <p className="eyebrow">PARTICIPATION</p>
-                  <h3>View asset participation</h3>
+                  <p className="eyebrow">{appT.participation}</p>
+                  <h3>{appT.viewAssetParticipation}</h3>
                 </div>
 
                 <form
@@ -5016,15 +5099,15 @@ async function handleCreateCommittee(event: FormEvent) {
                   </label>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Loading...' : 'Load Participation'}
+                    {loading ? appT.loadingMembers : appT.loadParticipation}
                   </button>
                 </form>
               </section>
 
               {assetParticipation.length > 0 && (
                 <section className="information-card">
-                  <p className="eyebrow">OWNERSHIP</p>
-                  <h3>Member participation</h3>
+                  <p className="eyebrow">{appT.ownership}</p>
+                  <h3>{appT.memberParticipation}</h3>
 
                   {assetParticipation.map((row) => (
                     <div
@@ -5033,12 +5116,12 @@ async function handleCreateCommittee(event: FormEvent) {
                     >
                       <div>
                         <strong>
-                          Member ID: {row.member_id}
+                          {appT.memberId}: {row.member_id}
                         </strong>
                         <small>
-                          Ownership units: {row.ownership_units}
+                          {appT.ownershipUnits}: {row.ownership_units}
                           {' · '}
-                          Total units: {row.total_units}
+                          {appT.totalUnits}: {row.total_units}
                         </small>
                       </div>
 
@@ -5062,23 +5145,18 @@ async function handleCreateCommittee(event: FormEvent) {
 
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">MEMBER GOODS</p>
-                  <h1>Member Goods</h1>
-                  <p>
-                    Record goods purchased using a member's accumulated
-                    committee value and track their current refundable value.
-                  </p>
+                  <p className="eyebrow">{appT.goodsEyebrow}</p>
+                  <h1>{appT.goodsPageTitle}</h1>
+                  <p>{appT.goodsDescription}</p>
                 </div>
               </div>
 
               {canWrite && (
               <section className="information-card goods-create-card">
                 <div>
-                  <p className="eyebrow">NEW GOOD</p>
-                  <h3>Add Member good</h3>
-                  <p className="form-help">
-                    Record a good against a member account.
-                  </p>
+                  <p className="eyebrow">{appT.newGood}</p>
+                  <h3>{appT.addMemberGood}</h3>
+                  <p className="form-help">{appT.addMemberGoodDescription}</p>
                 </div>
 
                 <form
@@ -5087,7 +5165,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 >
                   <div className="rate-form-grid">
                     <label>
-                      Member ID
+                      {appT.memberId}
                       <input
                         type="number"
                         min="1"
@@ -5100,20 +5178,20 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Good name
+                      {appT.goodName}
                       <input
                         type="text"
                         value={goodName}
                         onChange={(event) =>
                           setGoodName(event.target.value)
                         }
-                        placeholder="e.g. Refrigerator"
+                        placeholder={appT.goodNamePlaceholder}
                         required
                       />
                     </label>
 
                     <label>
-                      Purchase date
+                      {appT.purchaseDate}
                       <input
                         type="date"
                         value={goodPurchaseDate}
@@ -5125,7 +5203,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Purchase price
+                      {appT.purchasePrice}
                       <input
                         type="number"
                         min="1"
@@ -5140,19 +5218,19 @@ async function handleCreateCommittee(event: FormEvent) {
                   </div>
 
                   <label>
-                    Description
+                    {appT.description}
                     <textarea
                       value={goodDescription}
                       onChange={(event) =>
                         setGoodDescription(event.target.value)
                       }
-                      placeholder="Optional description"
+                      placeholder={appT.optionalDescription}
                       rows={3}
                     />
                   </label>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Recording...' : 'Record Good'}
+                    {loading ? appT.recording : appT.recordGood}
                   </button>
                 </form>
               </section>              )}
@@ -5161,20 +5239,20 @@ async function handleCreateCommittee(event: FormEvent) {
               {createdMemberGood && (
                 <section className="committee-banner">
                   <div>
-                    <p className="eyebrow">RECORDED</p>
+                    <p className="eyebrow">{appT.recorded}</p>
                     <h3>
-                      {createdMemberGood.name ?? 'Member good created'}
+                      {createdMemberGood.name ?? appT.memberGoodCreated}
                     </h3>
 
                     <p className="created-id">
-                      Good ID: {createdMemberGood.id}
+                      {appT.goodId}: {createdMemberGood.id}
                       {' · '}
-                      Member ID: {createdMemberGood.member_id ??
+                      {appT.memberId}: {createdMemberGood.member_id ??
                         goodsMemberId}
                     </p>
 
                     <p className="created-id">
-                      Purchase price:{' '}
+                      `${appT.purchasePrice}:`{' '}
                       {formatPKR(
                         createdMemberGood.purchase_price ??
                           Number(goodPurchasePrice),
@@ -5182,14 +5260,14 @@ async function handleCreateCommittee(event: FormEvent) {
                     </p>
                   </div>
 
-                  <span className="active-badge">Recorded</span>
+                  <span className="active-badge">{appT.recorded}</span>
                 </section>
               )}
 
               <section className="information-card goods-list-card">
                 <div>
-                  <p className="eyebrow">GOODS</p>
-                  <h3>View member goods</h3>
+                  <p className="eyebrow">{appT.goods}</p>
+                  <h3>{appT.viewMemberGoods}</h3>
                 </div>
 
                 <form
@@ -5213,7 +5291,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   </label>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Loading...' : 'Load Goods'}
+                    {loading ? appT.loadingMembers : appT.loadGoods}
                   </button>
                 </form>
               </section>
@@ -5221,7 +5299,7 @@ async function handleCreateCommittee(event: FormEvent) {
               {memberGoods.length > 0 && (
                 <section className="information-card">
                   <p className="eyebrow">MEMBER GOODS</p>
-                  <h3>Recorded goods</h3>
+                  <h3>{appT.recordedGoods}</h3>
 
                   {memberGoods.map((good) => (
                     <div
@@ -5230,12 +5308,12 @@ async function handleCreateCommittee(event: FormEvent) {
                     >
                       <div>
                         <strong>
-                          {good.name ?? 'Unnamed good'}
+                          {good.name ?? appT.unnamedGood}
                         </strong>
                         <small>
-                          Good ID: {good.id}
+                          {appT.goodId}: {good.id}
                           {' · '}
-                          Purchase date: {good.purchase_date}
+                          {appT.purchaseDate}: {good.purchase_date}
                         </small>
                       </div>
 
@@ -5254,8 +5332,8 @@ async function handleCreateCommittee(event: FormEvent) {
 
               <section className="information-card goods-total-card">
                 <div>
-                  <p className="eyebrow">TOTAL VALUE</p>
-                  <h3>Member goods total</h3>
+                  <p className="eyebrow">{appT.totalValue}</p>
+                  <h3>{appT.memberGoodsTotal}</h3>
                 </div>
 
                 <form
@@ -5279,7 +5357,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   </label>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Loading...' : 'Load Total'}
+                    {loading ? appT.loadingMembers : appT.loadTotal}
                   </button>
                 </form>
               </section>
@@ -5287,7 +5365,7 @@ async function handleCreateCommittee(event: FormEvent) {
               {memberGoodsTotal && (
                 <section className="committee-banner">
                   <div>
-                    <p className="eyebrow">TOTAL</p>
+                    <p className="eyebrow">{appT.total}</p>
                     <h3>
                       {formatPKR(
                         memberGoodsTotal.total_value ??
@@ -5298,24 +5376,22 @@ async function handleCreateCommittee(event: FormEvent) {
                     </h3>
 
                     <p className="created-id">
-                      Member ID:{' '}
+                      {appT.memberId}:{' '}
                       {memberGoodsTotal.member_id ??
                         goodsTotalMemberId}
                     </p>
                   </div>
 
-                  <span className="active-badge">Calculated</span>
+                  <span className="active-badge">{appT.calculated}</span>
                 </section>
               )}
 
               {canWrite && (
               <section className="information-card goods-valuation-card">
                 <div>
-                  <p className="eyebrow">CURRENT VALUE</p>
-                  <h3>Update good valuation</h3>
-                  <p className="form-help">
-                    Record a new value while preserving the valuation history.
-                  </p>
+                  <p className="eyebrow">{appT.currentValue}</p>
+                  <h3>{appT.updateGoodValuation}</h3>
+                  <p className="form-help">{appT.updateGoodValuationDescription}</p>
                 </div>
 
                 <form
@@ -5324,7 +5400,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 >
                   <div className="rate-form-grid">
                     <label>
-                      Good ID
+                      {appT.goodId}
                       <input
                         type="number"
                         min="1"
@@ -5337,7 +5413,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Valuation date
+                      {appT.valuationDate}
                       <input
                         type="date"
                         value={goodValuationDate}
@@ -5349,7 +5425,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      New value
+                      {appT.newValue}
                       <input
                         type="number"
                         min="0"
@@ -5364,7 +5440,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   </div>
 
                   <button type="submit" disabled={loading}>
-                    {loading ? 'Updating...' : 'Update Good Value'}
+                    {loading ? appT.updating : appT.updateGoodValue}
                   </button>
                 </form>
               </section>              )}
@@ -5373,22 +5449,22 @@ async function handleCreateCommittee(event: FormEvent) {
               {updatedMemberGoodValue && (
                 <section className="committee-banner">
                   <div>
-                    <p className="eyebrow">VALUATION UPDATED</p>
-                    <h3>Good value updated</h3>
+                    <p className="eyebrow">{appT.valuationUpdated}</p>
+                    <h3>{appT.goodValueUpdated}</h3>
 
                     <p className="created-id">
-                      Good ID:{' '}
+                      {appT.goodId}:{' '}
                       {updatedMemberGoodValue.good_id ??
                         updatedMemberGoodValue.id ??
                         goodValueId}
                       {' · '}
-                      Valuation date:{' '}
+                      {appT.valuationDate}:{' '}
                       {updatedMemberGoodValue.valuation_date ??
                         goodValuationDate}
                     </p>
 
                     <p className="created-id">
-                      Current value:{' '}
+                      {appT.currentValue}:{' '}
                       {formatPKR(
                         updatedMemberGoodValue.value ??
                           updatedMemberGoodValue.new_value ??
@@ -5397,7 +5473,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </p>
                   </div>
 
-                  <span className="active-badge">Updated</span>
+                  <span className="active-badge">{appT.valuationUpdated}</span>
                 </section>
               )}
 
@@ -5407,7 +5483,7 @@ async function handleCreateCommittee(event: FormEvent) {
               <div className="page-heading">
                 <div>
                   <p className="eyebrow">FINANCIAL MANAGEMENT</p>
-                  <h1>Outstanding Dues</h1>
+                  <h1>{appT.navigation.Dues}</h1>
                   <p className="page-subtitle">
                     Record member obligations, review outstanding balances,
                     and apply payments with a clear financial trail.
@@ -5427,14 +5503,13 @@ async function handleCreateCommittee(event: FormEvent) {
                 <section className="information-card dues-create-card">
                   <div className="section-heading-row">
                     <div>
-                      <p className="eyebrow">RECORD OBLIGATION</p>
-                      <h3>Create a member due</h3>
+                      <p className="eyebrow">{appT.recordObligation}</p>
+                      <h3>{appT.createMemberDue}</h3>
                       <p className="form-help">
-                        Record an amount owed by a committee member with its
-                        due date and supporting reference.
+                        {appT.createMemberDueDescription}
                       </p>
                     </div>
-                    <span className="active-badge">New Due</span>
+                    <span className="active-badge">{appT.newDue}</span>
                   </div>
 
                   <form
@@ -5443,7 +5518,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   >
                     <div className="rate-form-grid">
                       <label>
-                        Member
+                        {appT.member}
                         <select
                           value={dueMemberId}
                           onChange={(event) =>
@@ -5453,10 +5528,10 @@ async function handleCreateCommittee(event: FormEvent) {
                         >
                           <option value="">
                             {membersLoading
-                              ? 'Loading members...'
+                              ? '{appT.loadingMembers}'
                               : members.length === 0
-                                ? 'No members available'
-                                : 'Select a member'}
+                                ? '{appT.noMembersAvailable}'
+                                : '{appT.selectMember}'}
                           </option>
 
                           {members.map((member) => (
@@ -5468,7 +5543,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       </label>
 
                       <label>
-                        Amount
+                        {appT.amount}
                         <input
                           type="number"
                           min="1"
@@ -5477,13 +5552,13 @@ async function handleCreateCommittee(event: FormEvent) {
                           onChange={(event) =>
                             setDueAmount(event.target.value)
                           }
-                          placeholder="e.g. 5000"
+                          placeholder={appT.amountPlaceholder}
                           required
                         />
                       </label>
 
                       <label>
-                        Due date
+                        {appT.dueDate}
                         <input
                           type="date"
                           value={dueDate}
@@ -5495,26 +5570,26 @@ async function handleCreateCommittee(event: FormEvent) {
                       </label>
 
                       <label>
-                        Reference
+                        {appT.reference}
                         <input
                           type="text"
                           value={dueReference}
                           onChange={(event) =>
                             setDueReference(event.target.value)
                           }
-                          placeholder="Optional reference"
+                          placeholder={appT.optionalReference}
                         />
                       </label>
                     </div>
 
                     <label>
-                      Description
+                      {appT.description}
                       <textarea
                         value={dueDescription}
                         onChange={(event) =>
                           setDueDescription(event.target.value)
                         }
-                        placeholder="Reason or description for this due"
+                        placeholder={appT.dueDescriptionPlaceholder}
                         rows={3}
                         required
                       />
@@ -5522,7 +5597,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                     <div className="form-actions">
                       <button type="submit" disabled={loading}>
-                        {loading ? 'Recording...' : 'Record Due'}
+                        {loading ? appT.recording : appT.recordDue}
                       </button>
                     </div>
                   </form>
@@ -5532,20 +5607,20 @@ async function handleCreateCommittee(event: FormEvent) {
               {createdMemberDue && (
                 <section className="committee-banner">
                   <div>
-                    <p className="eyebrow">DUE RECORDED</p>
-                    <h3>Member due recorded successfully</h3>
+                    <p className="eyebrow">{appT.dueRecorded}</p>
+                    <h3>{appT.memberDueRecordedSuccessfully}</h3>
                     <p className="created-id">
-                      Due ID: {createdMemberDue.id}
+                      {appT.dueId}: {createdMemberDue.id}
                       {' · '}
-                      Member ID: {createdMemberDue.member_id ?? dueMemberId}
+                      {appT.memberId}: {createdMemberDue.member_id ?? dueMemberId}
                     </p>
                     <p className="created-id">
-                      Amount:{' '}
+                      {appT.amount}:{' '}
                       {formatPKR(
                         createdMemberDue.amount ?? Number(dueAmount),
                       )}
                       {' · '}
-                      Outstanding:{' '}
+                      {appT.outstanding}:{' '}
                       {formatPKR(
                         createdMemberDue.outstanding_amount ??
                           createdMemberDue.amount ??
@@ -5554,17 +5629,17 @@ async function handleCreateCommittee(event: FormEvent) {
                     </p>
                   </div>
 
-                  <span className="active-badge">Recorded</span>
+                  <span className="active-badge">{appT.recorded}</span>
                 </section>
               )}
 
               <section className="information-card dues-lookup-card">
                 <div className="section-heading-row">
                   <div>
-                    <p className="eyebrow">DUE HISTORY</p>
-                    <h3>Review member dues</h3>
+                    <p className="eyebrow">{appT.dueHistory}</p>
+                    <h3>{appT.reviewMemberDues}</h3>
                     <p className="form-help">
-                      Select a member to inspect their recorded dues and
+                      {appT.selectMember} to inspect their recorded dues and
                       payment status.
                     </p>
                   </div>
@@ -5587,7 +5662,7 @@ async function handleCreateCommittee(event: FormEvent) {
                         }
                         required
                       >
-                        <option value="">Select a member</option>
+                        <option value="">{appT.selectMember}</option>
                         {members.map((member) => (
                           <option key={member.id} value={member.id}>
                             {member.name} · ID {member.id}
@@ -5598,7 +5673,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                     <div className="form-actions form-actions-end">
                       <button type="submit" disabled={loading}>
-                        {loading ? 'Loading...' : 'Load Due History'}
+                        {loading ? appT.loadingMembers : appT.loadDueHistory}
                       </button>
                     </div>
                   </div>
@@ -5613,12 +5688,12 @@ async function handleCreateCommittee(event: FormEvent) {
                       >
                         <div className="due-record-main">
                           <div>
-                            <p className="eyebrow">DUE #{due.id ?? '—'}</p>
+                            <p className="eyebrow">{appT.dueNumber} #{due.id ?? '—'}</p>
                             <strong>
-                              {due.description ?? 'Member obligation'}
+                              {due.description ?? appT.memberObligation}
                             </strong>
                             <span>
-                              Due date: {due.due_date ?? '—'}
+                              {appT.dueDate}: {due.due_date ?? '—'}
                               {due.reference
                                 ? ` · Ref: ${due.reference}`
                                 : ''}
@@ -5627,14 +5702,14 @@ async function handleCreateCommittee(event: FormEvent) {
 
                           <div className="due-record-amounts">
                             <div>
-                              <small>Total</small>
+                              <small>{appT.total}</small>
                               <strong>
                                 {formatPKR(Number(due.amount ?? 0))}
                               </strong>
                             </div>
 
                             <div>
-                              <small>Outstanding</small>
+                              <small>{appT.outstanding}</small>
                               <strong>
                                 {formatPKR(
                                   Number(
@@ -5677,10 +5752,9 @@ async function handleCreateCommittee(event: FormEvent) {
                   </div>
                 ) : duesListMemberId ? (
                   <div className="information-empty-state">
-                    <strong>No dues found</strong>
+                    <strong>{appT.noDuesFound}</strong>
                     <span>
-                      This member currently has no recorded dues in the loaded
-                      history.
+                      {appT.noRecordedDues}
                     </span>
                   </div>
                 ) : null}
@@ -5689,11 +5763,10 @@ async function handleCreateCommittee(event: FormEvent) {
               <section className="information-card dues-outstanding-card">
                 <div className="section-heading-row">
                   <div>
-                    <p className="eyebrow">OUTSTANDING BALANCE</p>
-                    <h3>Check what a member currently owes</h3>
+                    <p className="eyebrow">{appT.outstandingBalance}</p>
+                    <h3>{appT.checkWhatMemberOwes}</h3>
                     <p className="form-help">
-                      View the current outstanding amount before recording a
-                      payment.
+                      {appT.checkOutstandingDescription}
                     </p>
                   </div>
                 </div>
@@ -5715,7 +5788,7 @@ async function handleCreateCommittee(event: FormEvent) {
                         }
                         required
                       >
-                        <option value="">Select a member</option>
+                        <option value="">{appT.selectMember}</option>
                         {members.map((member) => (
                           <option key={member.id} value={member.id}>
                             {member.name} · ID {member.id}
@@ -5726,7 +5799,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                     <div className="form-actions form-actions-end">
                       <button type="submit" disabled={loading}>
-                        {loading ? 'Checking...' : 'Check Outstanding'}
+                        {loading ? appT.checking : appT.checkOutstanding}
                       </button>
                     </div>
                   </div>
@@ -5735,7 +5808,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 {memberOutstandingDues && (
                   <div className="dues-balance-panel">
                     <div>
-                      <span>Member</span>
+                      <span>{appT.member}</span>
                       <strong>
                         {memberOutstandingDues.member_name ??
                           memberOutstandingDues.member_id ??
@@ -5744,7 +5817,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </div>
 
                     <div>
-                      <span>Outstanding</span>
+                      <span>{appT.outstanding}</span>
                       <strong className="dues-balance-value">
                         {formatPKR(
                           Number(
@@ -5761,12 +5834,10 @@ async function handleCreateCommittee(event: FormEvent) {
                 <section className="information-card dues-payment-card">
                   <div className="section-heading-row">
                     <div>
-                      <p className="eyebrow">PAYMENT</p>
-                      <h3>Apply a due payment</h3>
+                      <p className="eyebrow">{appT.payment}</p>
+                      <h3>{appT.applyDuePayment}</h3>
                       <p className="form-help">
-                        Apply a payment against an existing due. Payments are
-                        recorded against the selected due rather than changing
-                        the original obligation.
+                        {appT.applyDuePaymentDescription}
                       </p>
                     </div>
                   </div>
@@ -5777,7 +5848,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   >
                     <div className="rate-form-grid">
                       <label>
-                        Due ID
+                        {appT.dueId}
                         <input
                           type="number"
                           min="1"
@@ -5786,13 +5857,13 @@ async function handleCreateCommittee(event: FormEvent) {
                           onChange={(event) =>
                             setDuePaymentId(event.target.value)
                           }
-                          placeholder="e.g. 12"
+                          placeholder={appT.dueId}
                           required
                         />
                       </label>
 
                       <label>
-                        Payment amount
+                        {appT.paymentAmount}
                         <input
                           type="number"
                           min="1"
@@ -5801,7 +5872,7 @@ async function handleCreateCommittee(event: FormEvent) {
                           onChange={(event) =>
                             setDuePaymentAmount(event.target.value)
                           }
-                          placeholder="e.g. 2000"
+                          placeholder={appT.amountPlaceholder}
                           required
                         />
                       </label>
@@ -5809,7 +5880,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                     <div className="form-actions">
                       <button type="submit" disabled={loading}>
-                        {loading ? 'Applying...' : 'Apply Payment'}
+                        {loading ? appT.updating : appT.applyPayment}
                       </button>
                     </div>
                   </form>
@@ -5817,13 +5888,13 @@ async function handleCreateCommittee(event: FormEvent) {
                   {paidMemberDue && (
                     <div className="committee-banner dues-payment-result">
                       <div>
-                        <p className="eyebrow">PAYMENT RECORDED</p>
-                        <h3>Due payment applied</h3>
+                        <p className="eyebrow">{appT.paymentRecorded}</p>
+                        <h3>{appT.duePaymentApplied}</h3>
                         <p className="created-id">
-                          Due ID: {paidMemberDue.id ?? duePaymentId}
+                          {appT.dueId}: {paidMemberDue.id ?? duePaymentId}
                         </p>
                         <p className="created-id">
-                          Outstanding:{' '}
+                          {appT.outstanding}:{' '}
                           {formatPKR(
                             Number(
                               paidMemberDue.outstanding_amount ??
@@ -5834,7 +5905,7 @@ async function handleCreateCommittee(event: FormEvent) {
                         </p>
                       </div>
 
-                      <span className="active-badge">Updated</span>
+                      <span className="active-badge">{appT.updated}</span>
                     </div>
                   )}
                 </section>
@@ -5844,8 +5915,8 @@ async function handleCreateCommittee(event: FormEvent) {
             <section className="module-page">
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">MEMBER FINANCIAL CLOSURE</p>
-                  <h1>Settlements</h1>
+                  <p className="eyebrow">{appT.settlement}</p>
+                  <h1>{appT.settlement}</h1>
                   <p className="page-subtitle">
                     Review a member's complete refundable position, create the
                     settlement, and record the final payment.
@@ -5859,15 +5930,15 @@ async function handleCreateCommittee(event: FormEvent) {
                         (committee) =>
                           String(committee.id) === String(committeeId),
                       )?.name ??
-                      'Current Committee'}
+                      appT.ui.selectedCommittee}
                   </span>
                 </div>
               </div>
 
               <section className="information-card">
                 <div>
-                  <p className="eyebrow">SETTLEMENT REVIEW</p>
-                  <h3>Select member</h3>
+                  <p className="eyebrow">{appT.settlementReview}</p>
+                  <h3>{appT.selectMemberForSettlement}</h3>
                   <p className="form-help">
                     The settlement is calculated from this member's financial
                     position within the currently selected committee.
@@ -5890,10 +5961,10 @@ async function handleCreateCommittee(event: FormEvent) {
                       >
                         <option value="">
                           {membersLoading
-                            ? 'Loading members...'
+                            ? appT.loadingMembersEllipsis
                             : members.length === 0
-                              ? 'No members available'
-                              : 'Select a member'}
+                              ? appT.noMembersAvailableShort
+                              : appT.selectMemberShort}
                         </option>
                         {members.map((member) => (
                           <option key={member.id} value={member.id}>
@@ -5904,7 +5975,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Settlement date
+                      {appT.settlementDate}
                       <input
                         type="date"
                         value={settlementDate}
@@ -5925,7 +5996,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     }
                     onClick={() => void handleLoadMemberSettlement()}
                   >
-                    {loading ? 'Loading...' : 'Preview Settlement'}
+                    {loading ? appT.loadingMembers : appT.previewSettlement}
                   </button>
                 </div>
               </section>
@@ -5934,7 +6005,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 <section className="settlement-summary-grid">
                   <section className="information-card settlement-summary-card">
                     <div>
-                      <p className="eyebrow">CONTRIBUTION BALANCE</p>
+                      <p className="eyebrow">{appT.contributionBalanceLabel}</p>
                       <h3>
                         {formatPKR(
                           settlementPreview.contribution_balance ?? 0,
@@ -5948,7 +6019,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                   <section className="information-card settlement-summary-card">
                     <div>
-                      <p className="eyebrow">ASSET SHARE</p>
+                      <p className="eyebrow">{appT.assetShareLabel}</p>
                       <h3>
                         {formatPKR(settlementPreview.asset_share ?? 0)}
                       </h3>
@@ -5960,7 +6031,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                   <section className="information-card settlement-summary-card">
                     <div>
-                      <p className="eyebrow">GOODS VALUE</p>
+                      <p className="eyebrow">{appT.goodsValueLabel}</p>
                       <h3>
                         {formatPKR(settlementPreview.goods_value ?? 0)}
                       </h3>
@@ -5972,7 +6043,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                   <section className="information-card settlement-summary-card settlement-dues-card">
                     <div>
-                      <p className="eyebrow">OUTSTANDING DUES</p>
+                      <p className="eyebrow">{appT.outstandingDuesLabel}</p>
                       <h3>
                         {formatPKR(
                           settlementPreview.outstanding_dues ?? 0,
@@ -5989,7 +6060,7 @@ async function handleCreateCommittee(event: FormEvent) {
               {settlementPreview && (
                 <section className="information-card settlement-final-card">
                   <div>
-                    <p className="eyebrow">SETTLEMENT CALCULATION</p>
+                    <p className="eyebrow">{appT.settlementCalculation}</p>
                     <h3>
                       {formatPKR(settlementPreview.final_amount ?? 0)}
                     </h3>
@@ -6008,8 +6079,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     >
                       <button type="submit" disabled={loading}>
                         {loading
-                          ? 'Creating...'
-                          : 'Create Settlement'}
+                          ? appT.creating
+                          : '{appT.createSettlement}'}
                       </button>
                     </form>
                   )}
@@ -6019,9 +6090,9 @@ async function handleCreateCommittee(event: FormEvent) {
               {createdMemberSettlement && (
                 <section className="committee-banner">
                   <div>
-                    <p className="eyebrow">SETTLEMENT CREATED</p>
+                    <p className="eyebrow">{appT.settlementCreated}</p>
                     <h3>
-                      Settlement #
+                      {appT.settlement} #
                       {createdMemberSettlement.id ?? '—'}
                     </h3>
                     <p className="created-id">
@@ -6036,7 +6107,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </p>
                   </div>
                   <span className="active-badge">
-                    {createdMemberSettlement.status ?? 'Created'}
+                    {createdMemberSettlement.status ?? appT.created}
                   </span>
                 </section>
               )}
@@ -6045,8 +6116,8 @@ async function handleCreateCommittee(event: FormEvent) {
                 createdMemberSettlement.status !== 'paid' && (
                   <section className="information-card">
                     <div>
-                      <p className="eyebrow">FINAL PAYMENT</p>
-                      <h3>Record Settlement Payment</h3>
+                      <p className="eyebrow">{appT.finalPaymentLabel}</p>
+                      <h3>{appT.recordSettlementPayment}</h3>
                       <p className="form-help">
                         This records the final settlement payment and closes
                         the member's settlement.
@@ -6059,7 +6130,7 @@ async function handleCreateCommittee(event: FormEvent) {
                         disabled={loading}
                         onClick={() => void handlePayMemberSettlement()}
                       >
-                        {loading ? 'Processing...' : 'Pay Settlement'}
+                        {loading ? appT.processing : appT.paySettlement}
                       </button>
                     )}
                   </section>
@@ -6068,8 +6139,8 @@ async function handleCreateCommittee(event: FormEvent) {
               {paidMemberSettlement && (
                 <section className="committee-banner">
                   <div>
-                    <p className="eyebrow">SETTLEMENT PAID</p>
-                    <h3>Settlement completed</h3>
+                    <p className="eyebrow">{appT.settlementPaid}</p>
+                    <h3>{appT.settlementCompleted}</h3>
                     <p className="created-id">
                       Settlement ID:{' '}
                       {paidMemberSettlement.id ?? '—'}
@@ -6084,7 +6155,7 @@ async function handleCreateCommittee(event: FormEvent) {
                       )}
                     </p>
                   </div>
-                  <span className="active-badge">Completed</span>
+                  <span className="active-badge">{appT.settlementCompleted}</span>
                 </section>
               )}
             </section>
@@ -6092,17 +6163,16 @@ async function handleCreateCommittee(event: FormEvent) {
             <section className="module-page">
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">YOUR ACCOUNT</p>
-                  <h1>My Financial Position</h1>
+                  <p className="eyebrow">{appT.yourAccount}</p>
+                  <h1>{appT.navigation["My Financial Position"]}</h1>
                   <p className="page-subtitle">
-                    A simple summary of what you have contributed, what
-                    you own a share of, and what you currently owe.
+                    {appT.myFinancialPositionDescription}
                   </p>
                 </div>
               </div>
 
               {myFinancialSummaryLoading && (
-                <p className="form-help">Loading your financial position...</p>
+                <p className="form-help">{appT.loadingFinancialPosition}</p>
               )}
 
               {myFinancialSummaryError && (
@@ -6113,7 +6183,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 !myFinancialSummaryError &&
                 members.length === 0 && (
                   <p className="form-help">
-                    No member record was found for you in this committee.
+                    {appT.noMemberRecordFound}
                   </p>
                 )}
 
@@ -6121,7 +6191,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 <>
                   <div className="finpos-member-banner">
                     <div>
-                      <p className="eyebrow">MEMBER</p>
+                      <p className="eyebrow">{appT.member}</p>
                       <h3>{myFinancialSummary.member_name}</h3>
                       <p>
                         Member ID {myFinancialSummary.member_id} · Joined{' '}
@@ -6139,20 +6209,20 @@ async function handleCreateCommittee(event: FormEvent) {
                           : 'inactive-badge'
                       }
                     >
-                      {myFinancialSummary.is_active ? 'Active' : 'Inactive'}
+                      {myFinancialSummary.is_active ? appT.active : appT.inactive}
                     </span>
                   </div>
 
-                  <div className="finpos-hero">
-                    <p className="finpos-hero-label">
-                      What you would receive today
+                  <div className="dashboard-hero">
+                    <p className="dashboard-hero-label">
+                      {appT.whatYouWouldReceiveToday}
                     </p>
-                    <p className="finpos-hero-amount">
+                    <p className="dashboard-hero-amount">
                       {formatPKR(myFinancialSummary.current_final_value)}
                     </p>
-                    <p className="finpos-hero-note">
-                      This is your total value after your dues are
-                      subtracted. Gross value before dues:{' '}
+                    <p className="dashboard-hero-note">
+                      {appT.totalValueAfterDues}{' '}
+                      {appT.grossValueBeforeDues}:{' '}
                       {formatPKR(myFinancialSummary.current_gross_value)}.
                     </p>
                   </div>
@@ -6160,7 +6230,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   <div className="finpos-grid">
                     <div className="finpos-stat-card finpos-stat-card--positive">
                       <p className="finpos-stat-label">
-                        Total contributions paid
+                        {appT.totalContributionsPaid}
                       </p>
                       <p className="finpos-stat-amount">
                         {formatPKR(myFinancialSummary.total_contributions)}
@@ -6169,7 +6239,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                     <div className="finpos-stat-card finpos-stat-card--positive">
                       <p className="finpos-stat-label">
-                        Your contribution balance
+                        {appT.contributionBalance}
                       </p>
                       <p className="finpos-stat-amount">
                         {formatPKR(myFinancialSummary.contribution_balance)}
@@ -6178,7 +6248,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                     <div className="finpos-stat-card finpos-stat-card--neutral">
                       <p className="finpos-stat-label">
-                        Your share of committee assets
+                        {appT.committeeAssetShare}
                       </p>
                       <p className="finpos-stat-amount">
                         {formatPKR(myFinancialSummary.asset_share)}
@@ -6187,7 +6257,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                     <div className="finpos-stat-card finpos-stat-card--neutral">
                       <p className="finpos-stat-label">
-                        Value of your purchased goods
+                        {appT.goodsValue}
                       </p>
                       <p className="finpos-stat-amount">
                         {formatPKR(myFinancialSummary.goods_value)}
@@ -6196,7 +6266,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                     <div className="finpos-stat-card finpos-stat-card--warning">
                       <p className="finpos-stat-label">
-                        Ordinary dues you owe
+                        {appT.ordinaryDuesYouOwe}
                       </p>
                       <p className="finpos-stat-amount">
                         {formatPKR(myFinancialSummary.ordinary_dues)}
@@ -6205,7 +6275,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                     <div className="finpos-stat-card finpos-stat-card--warning">
                       <p className="finpos-stat-label">
-                        Qarz-e-Hasana (loan) you owe
+                        {appT.qarzEHasanaYouOwe}
                       </p>
                       <p className="finpos-stat-amount">
                         {formatPKR(myFinancialSummary.qarz_e_hasana_dues)}
@@ -6215,17 +6285,17 @@ async function handleCreateCommittee(event: FormEvent) {
 
                   <div className="finpos-section">
                     <p className="finpos-section-title">
-                      Total you currently owe:{' '}
+                      {appT.totalYouCurrentlyOwe}:{' '}
                       {formatPKR(myFinancialSummary.outstanding_dues)}
                     </p>
                   </div>
 
                   <div className="finpos-section">
-                    <p className="finpos-section-title">Your history</p>
+                    <p className="finpos-section-title">{appT.accountHistory}</p>
 
                     {myStatement.length === 0 ? (
                       <p className="finpos-empty">
-                        No financial transactions recorded yet.
+                        {appT.noFinancialTransactions}
                       </p>
                     ) : (
                       <div>
@@ -6254,12 +6324,12 @@ async function handleCreateCommittee(event: FormEvent) {
                   {myFinancialSummary.death_support && (
                     <div className="finpos-section">
                       <p className="finpos-section-title">
-                        Death support record
+                        {appT.deathSupportRecord}
                       </p>
 
                       <div className="finpos-history-row">
                         <div>
-                          <strong>Beneficiary</strong>
+                          <strong>{appT.beneficiary}</strong>
                         </div>
                         <span className="finpos-history-amount">
                           {myFinancialSummary.death_support.beneficiary_name}
@@ -6268,7 +6338,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                       <div className="finpos-history-row">
                         <div>
-                          <strong>Amount</strong>
+                          <strong>{appT.amount}</strong>
                         </div>
                         <span className="finpos-history-amount">
                           {formatPKR(myFinancialSummary.death_support.amount)}
@@ -6277,7 +6347,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                       <div className="finpos-history-row">
                         <div>
-                          <strong>Support date</strong>
+                          <strong>{appT.supportDate}</strong>
                         </div>
                         <span className="finpos-history-amount">
                           {myFinancialSummary.death_support.support_date}
@@ -6289,12 +6359,12 @@ async function handleCreateCommittee(event: FormEvent) {
                   {myFinancialSummary.settlement && (
                     <div className="finpos-section">
                       <p className="finpos-section-title">
-                        Settlement record
+                        {appT.settlementRecord}
                       </p>
 
                       <div className="finpos-history-row">
                         <div>
-                          <strong>Settlement date</strong>
+                          <strong>{appT.settlementDate}</strong>
                         </div>
                         <span className="finpos-history-amount">
                           {myFinancialSummary.settlement.settlement_date}
@@ -6303,7 +6373,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                       <div className="finpos-history-row">
                         <div>
-                          <strong>Gross amount</strong>
+                          <strong>{appT.grossAmount}</strong>
                         </div>
                         <span className="finpos-history-amount">
                           {formatPKR(
@@ -6314,7 +6384,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                       <div className="finpos-history-row">
                         <div>
-                          <strong>Outstanding amounts</strong>
+                          <strong>{appT.outstandingAmounts}</strong>
                         </div>
                         <span className="finpos-history-amount">
                           {formatPKR(
@@ -6325,7 +6395,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                       <div className="finpos-history-row">
                         <div>
-                          <strong>Final amount</strong>
+                          <strong>{appT.finalAmount}</strong>
                         </div>
                         <span className="finpos-history-amount">
                           {formatPKR(
@@ -6336,7 +6406,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                       <div className="finpos-history-row">
                         <div>
-                          <strong>Status</strong>
+                          <strong>{appT.status}</strong>
                         </div>
                         <span className="finpos-history-amount">
                           {myFinancialSummary.settlement.status}
@@ -6351,18 +6421,17 @@ async function handleCreateCommittee(event: FormEvent) {
             <section className="module-page">
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">YOUR ACCOUNT</p>
-                  <h1>My Contributions</h1>
+                  <p className="eyebrow">{appT.yourAccount}</p>
+                  <h1>{appT.navigation["My Contributions"]}</h1>
                   <p className="page-subtitle">
-                    Your recorded contribution history and running total
-                    within this committee.
+                    {appT.myContributionsDescription}
                   </p>
                 </div>
               </div>
 
               {myContributionsLoading && (
                 <p className="form-help">
-                  Loading your contribution history...
+                  {appT.loadingContributionHistory}
                 </p>
               )}
 
@@ -6379,34 +6448,33 @@ async function handleCreateCommittee(event: FormEvent) {
                 )}
 
               {myContributionTotal && (
-                <section className="information-card">
-                  <p className="eyebrow">RUNNING TOTAL</p>
-                  <h3>Total contributed</h3>
+                <div className="dashboard-hero member-contribution-hero">
+                  <p className="dashboard-hero-label">{appT.runningTotal}</p>
 
-                  <div className="position-row">
-                    <span>All recorded contributions</span>
-                    <strong>
-                      {formatPKR(myContributionTotal.total_contributed)}
-                    </strong>
-                  </div>
-                </section>
+                  <p className="dashboard-hero-amount">
+                    {formatPKR(myContributionTotal.total_contributed)}
+                  </p>
+
+                  <p className="dashboard-hero-note">
+                    {appT.totalRecordedContributions}
+                  </p>
+                </div>
               )}
 
-              <section className="information-card">
-                <p className="eyebrow">HISTORY</p>
-                <h3>Contribution records</h3>
+              <div className="finpos-section">
+                <p className="finpos-section-title">{appT.contributionRecords}</p>
 
                 {!myContributionsLoading &&
                 !myContributionsError &&
                 myContributions.length === 0 ? (
-                  <p className="form-help">
-                    No contributions have been recorded yet.
+                  <p className="finpos-empty">
+                    {appT.noContributionsRecorded}
                   </p>
                 ) : (
                   <div>
                     {myContributions.map((entry) => (
                       <div
-                        className="position-row"
+                        className="finpos-history-row"
                         key={entry.journal_entry_id}
                       >
                         <div>
@@ -6419,27 +6487,29 @@ async function handleCreateCommittee(event: FormEvent) {
                           </small>
                         </div>
 
-                        <strong>{formatPKR(entry.amount)}</strong>
+                        <span className="finpos-history-amount">
+                          {formatPKR(entry.amount)}
+                        </span>
                       </div>
                     ))}
                   </div>
                 )}
-              </section>
+              </div>
             </section>
           ) : activePage === 'My Dues' ? (
             <section className="module-page">
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">YOUR ACCOUNT</p>
-                  <h1>My Dues</h1>
+                  <p className="eyebrow">{appT.yourAccount}</p>
+                  <h1>{appT.navigation["My Dues"]}</h1>
                   <p className="page-subtitle">
-                    What you currently owe, and your full due history.
+                    {appT.myDuesDescription}
                   </p>
                 </div>
               </div>
 
               {myDuesLoading && (
-                <p className="form-help">Loading your dues...</p>
+                <p className="form-help">{appT.loadingYourDues}</p>
               )}
 
               {myDuesError && (
@@ -6456,36 +6526,34 @@ async function handleCreateCommittee(event: FormEvent) {
 
               {myOutstandingDues && (
                 <div
-                  className={`mydues-hero ${
-                    myOutstandingDues.outstanding_dues > 0
-                      ? 'mydues-hero--owing'
-                      : 'mydues-hero--clear'
-                  }`}
+                  className="dashboard-hero"
                 >
-                  <p className="mydues-hero-label">
+                  <p className="dashboard-hero-label">
                     {myOutstandingDues.outstanding_dues > 0
-                      ? 'You currently owe'
-                      : "You're all caught up"}
+                      ? appT.currentlyOwe
+                      : appT.ui.allCaughtUp}
                   </p>
-                  <p className="mydues-hero-amount">
+
+                  <p className="dashboard-hero-amount">
                     {formatPKR(myOutstandingDues.outstanding_dues)}
                   </p>
-                  <p className="mydues-hero-note">
+
+                  <p className="dashboard-hero-note">
                     {myOutstandingDues.outstanding_dues > 0
-                      ? 'This is the total across all your unpaid and partially paid dues.'
-                      : 'You have no outstanding dues at this time.'}
+                      ? appT.outstandingDuesDescription
+                      : appT.noOutstandingDues}
                   </p>
                 </div>
               )}
 
               <div className="finpos-section">
-                <p className="finpos-section-title">Due history</p>
+                <p className="finpos-section-title">{appT.dueHistory}</p>
 
                 {!myDuesLoading &&
                 !myDuesError &&
                 myDues.length === 0 ? (
                   <p className="finpos-empty">
-                    No dues have been recorded yet.
+                    {appT.noDuesRecorded}
                   </p>
                 ) : (
                   <div>
@@ -6499,10 +6567,10 @@ async function handleCreateCommittee(event: FormEvent) {
 
                       const statusLabel =
                         status === 'paid'
-                          ? 'Paid'
+                          ? appT.paid
                           : status === 'partial'
-                            ? 'Partial'
-                            : 'Unpaid'
+                            ? appT.partial
+                            : appT.unpaid
 
                       return (
                         <div className="mydues-due-row" key={due.id}>
@@ -6525,7 +6593,7 @@ async function handleCreateCommittee(event: FormEvent) {
                             </span>
                             {due.outstanding_amount > 0 && (
                               <small>
-                                {formatPKR(due.outstanding_amount)} owed
+                                {formatPKR(due.outstanding_amount)} {appT.owed}
                               </small>
                             )}
                           </div>
@@ -6540,17 +6608,16 @@ async function handleCreateCommittee(event: FormEvent) {
             <section className="module-page">
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">YOUR ACCOUNT</p>
-                  <h1>My Goods</h1>
+                  <p className="eyebrow">{appT.yourAccount}</p>
+                  <h1>{appT.navigation["My Goods"]}</h1>
                   <p className="page-subtitle">
-                    Items you've purchased through this committee and
-                    their current value.
+                    {appT.myGoodsDescription}
                   </p>
                 </div>
               </div>
 
               {myGoodsLoading && (
-                <p className="form-help">Loading your goods...</p>
+                <p className="form-help">{appT.loadingYourGoods}</p>
               )}
 
               {myGoodsError && (
@@ -6566,28 +6633,27 @@ async function handleCreateCommittee(event: FormEvent) {
                 )}
 
               {myGoodsTotal && (
-                <div className="finpos-hero">
-                  <p className="finpos-hero-label">
-                    Total value of your goods
+                <div className="dashboard-hero">
+                  <p className="dashboard-hero-label">
+                    {appT.totalValueOfYourGoods}
                   </p>
-                  <p className="finpos-hero-amount">
+                  <p className="dashboard-hero-amount">
                     {formatPKR(myGoodsTotal.total_goods_value)}
                   </p>
-                  <p className="finpos-hero-note">
-                    This is the current value of everything you've
-                    purchased through this committee.
+                  <p className="dashboard-hero-note">
+                    {appT.currentValueOfPurchasedGoods}
                   </p>
                 </div>
               )}
 
               <div className="finpos-section">
-                <p className="finpos-section-title">Goods history</p>
+                <p className="finpos-section-title">{appT.goods}</p>
 
                 {!myGoodsLoading &&
                 !myGoodsError &&
                 myGoods.length === 0 ? (
                   <p className="finpos-empty">
-                    No goods have been recorded yet.
+                    {appT.noGoodsRecorded}
                   </p>
                 ) : (
                   <div>
@@ -6599,14 +6665,14 @@ async function handleCreateCommittee(event: FormEvent) {
                           <div className="mygoods-item-info">
                             <strong>{good.name}</strong>
                             <small>
-                              Purchased {good.purchase_date}
+                              {appT.purchasedOn} {good.purchase_date}
                               {good.description
                                 ? ` · ${good.description}`
                                 : ''}
                             </small>
                             {!good.is_active && (
                               <span className="mygoods-inactive-badge">
-                                Inactive
+                                {appT.inactive}
                               </span>
                             )}
                           </div>
@@ -6616,7 +6682,7 @@ async function handleCreateCommittee(event: FormEvent) {
                               {formatPKR(good.current_value)}
                             </span>
                             <small>
-                              purchased at {formatPKR(good.purchase_price)}
+                              {appT.purchasedAt} {formatPKR(good.purchase_price)}
                             </small>
                             {delta !== 0 && (
                               <span
@@ -6627,7 +6693,7 @@ async function handleCreateCommittee(event: FormEvent) {
                                 }`}
                               >
                                 {delta > 0 ? '+' : ''}
-                                {formatPKR(delta)} since purchase
+                                {formatPKR(delta)} {appT.sincePurchase}
                               </span>
                             )}
                           </div>
@@ -6642,18 +6708,17 @@ async function handleCreateCommittee(event: FormEvent) {
             <section className="module-page">
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">YOUR ACCOUNT</p>
-                  <h1>My Death Support</h1>
+                  <p className="eyebrow">{appT.yourAccount}</p>
+                  <h1>{appT.navigation["My Death Support"]}</h1>
                   <p className="page-subtitle">
-                    Your death support record within this committee, if
-                    one has been recorded.
+                    {appT.myDeathSupportDescription}
                   </p>
                 </div>
               </div>
 
               {myDeathSupportLoading && (
                 <p className="form-help">
-                  Loading your death support record...
+                  {appT.loadingDeathSupportRecord}
                 </p>
               )}
 
@@ -6673,47 +6738,52 @@ async function handleCreateCommittee(event: FormEvent) {
                 !myDeathSupportError &&
                 myDeathSupportInfo &&
                 !myDeathSupportInfo.death_support && (
-                  <div className="mydeathsupport-empty">
+                  <div className="finpos-empty">
                     <p>
-                      No death support has been recorded for you at this
-                      time.
+                      {appT.noDeathSupportRecorded}
                     </p>
                   </div>
                 )}
 
               {myDeathSupportInfo?.death_support && (
-                <div className="mydeathsupport-card">
-                  <p className="mydeathsupport-title">
-                    Recorded death support
-                  </p>
+                <div className="finpos-section">
+                  <p className="finpos-section-title">{appT.deathSupport}</p>
 
-                  <div className="mydeathsupport-row">
-                    <span>Beneficiary</span>
-                    <strong>
+                  <div className="finpos-history-row">
+                    <div>
+                      <strong>{appT.beneficiary}</strong>
+                    </div>
+                    <span className="finpos-history-amount">
                       {myDeathSupportInfo.death_support.beneficiary_name}
-                    </strong>
+                    </span>
                   </div>
 
-                  <div className="mydeathsupport-row">
-                    <span>Amount</span>
-                    <strong>
+                  <div className="finpos-history-row">
+                    <div>
+                      <strong>{appT.amount}</strong>
+                    </div>
+                    <span className="finpos-history-amount">
                       {formatPKR(myDeathSupportInfo.death_support.amount)}
-                    </strong>
+                    </span>
                   </div>
 
-                  <div className="mydeathsupport-row">
-                    <span>Support date</span>
-                    <strong>
+                  <div className="finpos-history-row">
+                    <div>
+                      <strong>{appT.supportDate}</strong>
+                    </div>
+                    <span className="finpos-history-amount">
                       {myDeathSupportInfo.death_support.support_date}
-                    </strong>
+                    </span>
                   </div>
 
                   {myDeathSupportInfo.death_support.reference && (
-                    <div className="mydeathsupport-row">
-                      <span>Reference</span>
-                      <strong>
+                    <div className="finpos-history-row">
+                      <div>
+                        <strong>{appT.reference}</strong>
+                      </div>
+                      <span className="finpos-history-amount">
                         {myDeathSupportInfo.death_support.reference}
-                      </strong>
+                      </span>
                     </div>
                   )}
                 </div>
@@ -6723,19 +6793,17 @@ async function handleCreateCommittee(event: FormEvent) {
             <section className="module-page">
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">YOUR ACCOUNT</p>
-                  <h1>My Settlement</h1>
+                  <p className="eyebrow">{appT.yourAccount}</p>
+                  <h1>{appT.navigation["My Settlement"]}</h1>
                   <p className="page-subtitle">
-                    A live preview of what your settlement would be if
-                    calculated today. This updates as your contributions,
-                    dues, asset share, and goods change.
+                    {appT.mySettlementDescription}
                   </p>
                 </div>
               </div>
 
               {mySettlementLoading && (
                 <p className="form-help">
-                  Calculating your settlement preview...
+                  {appT.calculatingSettlementPreview}
                 </p>
               )}
 
@@ -6753,17 +6821,16 @@ async function handleCreateCommittee(event: FormEvent) {
 
               {mySettlementPreview && (
                 <>
-                  <div className="finpos-hero">
-                    <p className="finpos-hero-label">
-                      If you were settled today, you would receive
+                  <div className="dashboard-hero">
+                    <p className="dashboard-hero-label">
+                      {appT.ifSettledToday}
                     </p>
-                    <p className="finpos-hero-amount">
+                    <p className="dashboard-hero-amount">
                       {formatPKR(mySettlementPreview.final_amount)}
                     </p>
-                    <p className="finpos-hero-note">
-                      This is a live preview, not a final record - it
-                      changes as your contributions, dues, and shares
-                      change. Gross amount before dues:{' '}
+                    <p className="dashboard-hero-note">
+                      {appT.settlementPreviewNote}{' '}
+                      {appT.grossValueBeforeDues}:{' '}
                       {formatPKR(mySettlementPreview.gross_amount)}.
                     </p>
                   </div>
@@ -6771,7 +6838,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   <div className="finpos-grid">
                     <div className="finpos-stat-card finpos-stat-card--positive">
                       <p className="finpos-stat-label">
-                        Contribution balance
+                        {appT.contributionBalance}
                       </p>
                       <p className="finpos-stat-amount">
                         {formatPKR(mySettlementPreview.contribution_balance)}
@@ -6780,7 +6847,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
                     <div className="finpos-stat-card finpos-stat-card--neutral">
                       <p className="finpos-stat-label">
-                        Committee asset share
+                        {appT.committeeAssetShare}
                       </p>
                       <p className="finpos-stat-amount">
                         {formatPKR(mySettlementPreview.asset_share)}
@@ -6823,24 +6890,23 @@ async function handleCreateCommittee(event: FormEvent) {
           <div className="page-heading">
             <div>
               <p className="eyebrow dashboard-greeting">
-                {getTimeGreeting()}, {username}
+                {getTimeGreeting()},{' '}
+                {members.find(
+                  (member) =>
+                    Number(member.user_id) === authenticatedUser?.userId,
+                )?.name ?? authenticatedUser?.username ?? username}
               </p>
-              <h1 className="dashboard-title">
-                {summary?.committee_name ??
-                  committees.find(
-                    (committee) =>
-                      String(committee.id) === String(committeeId),
-                  )?.name ??
-                  committees.find(
-                    (committee) =>
-                      String(committee.id) === String(committeeId),
-                  )?.committee_name ??
-                  'Your Committee Workspace'}
-              </h1>
+
+              <h1 className="dashboard-title">Dashboard</h1>
+
               <p>
-                {summary
-                  ? 'All information and actions shown here belong to the committee you are currently managing.'
-                  : 'Select a committee to enter its isolated workspace.'}
+                {userRole === 'super_admin'
+                  ? appT.dashboardSuperAdminDescription
+                  : userRole === 'committee_admin'
+                    ? summary
+                      ? appT.dashboardCommitteeAdminDescription
+                      : appT.dashboardCommitteeAdminNoWorkspace
+                    : appT.dashboardMemberDescription}
               </p>
             </div>
 
@@ -6849,8 +6915,8 @@ async function handleCreateCommittee(event: FormEvent) {
 
               <div className="committee-context-help">
                 {committees.length > 1
-                  ? 'Choose the committee you want to work with.'
-                  : 'This is the committee currently available to you.'}
+                    ? appT.chooseCommitteeWorkspace
+                    : appT.committeeAvailableToYou}
               </div>
 
               <select
@@ -6861,17 +6927,11 @@ async function handleCreateCommittee(event: FormEvent) {
                   setError('')
                   setSummary(null)
                   setCommitteeId(nextCommitteeId)
-
-                  if (nextCommitteeId) {
-                    window.setTimeout(() => {
-                      void handleLoadCommittee()
-                    }, 0)
-                  }
                 }}
                 disabled={loading || committees.length === 0}
               >
                 {committees.length === 0 ? (
-                  <option value="">No committee available</option>
+                  <option value="">{appT.noCommitteeAvailable}</option>
                 ) : (
                   committees.map((committee) => (
                     <option key={committee.id} value={committee.id}>
@@ -6884,9 +6944,7 @@ async function handleCreateCommittee(event: FormEvent) {
               </select>
 
               <p className="committee-context-note">
-                All members, contributions, dues, goods, assets, death
-                assistance, and settlements shown below belong to this
-                committee.
+                {appT.committeeScopeNote}
               </p>
             </div>
           </div>
@@ -6894,78 +6952,59 @@ async function handleCreateCommittee(event: FormEvent) {
           {error && <div className="error page-error">{error}</div>}
 
           {!summary && !error && (
-            <section className="empty-state">
-              <div className="empty-icon">₨</div>
-              <h3>No committee workspace loaded</h3>
+            <div className="dashboard-empty">
+              <div className="dashboard-empty-icon">₨</div>
+              <h3>{appT.noCommitteeWorkspaceLoaded}</h3>
               <p>
-                Choose a committee above to open its workspace. Everything
-                you see and manage in this workspace belongs only to that
-                committee.
+                {appT.chooseCommitteeWorkspaceDescription}
               </p>
-            </section>
+            </div>
           )}
 
           {summary && (
             <>
-              <section className="committee-banner">
-                <div>
-                  <p className="eyebrow">ACTIVE WORKSPACE</p>
-                  <h3>{summary.committee_name}</h3>
-                  <p className="created-id">
-                    This workspace contains only this committee's records.
+              <section className="dashboard-financial-section">
+                <div className="dashboard-section-heading">
+                  <div>
+                    <p className="eyebrow">{appT.financialPosition}</p>
+                    <h2>{appT.committeeFinances}</h2>
+                    <p>
+                      {appT.financialPositionDescription}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="dashboard-hero">
+                <p className="dashboard-hero-label">
+                  {appT.currentCommitteeCashBalance}
+                </p>
+                <p className="dashboard-hero-amount">
+                  {formatPKR(summary.cash_balance)}
+                </p>
+                <p className="dashboard-hero-note">
+                  {appT.currentCashNote}{' '}
+                  {summary.committee_name}.
+                </p>
+              </div>
+
+              <div className="finpos-grid">
+                <div className="finpos-stat-card finpos-stat-card--positive">
+                  <p className="finpos-stat-label">
+                    {appT.totalMemberContributions}
+                  </p>
+                  <p className="finpos-stat-amount">
+                    {formatPKR(summary.total_contributions)}
                   </p>
                 </div>
 
-                <span
-                  className={
-                    summary.is_active
-                      ? 'active-badge'
-                      : 'inactive-badge'
-                  }
-                >
-                  {summary.is_active ? 'Active' : 'Inactive'}
-                </span>
-              </section>
-
-              <section className="stats-grid">
-                <article className="stat-card">
-                  <span>Total Contributions</span>
-                  <strong>{formatPKR(summary.total_contributions)}</strong>
-                  <small>Member Contributions recorded</small>
-                </article>
-
-                <article className="stat-card">
-                  <span>Death Support</span>
-                  <strong>{formatPKR(summary.total_death_support)}</strong>
-                  <small>Support paid by the committee</small>
-                </article>
-
-                <article className="stat-card primary">
-                  <span>Cash Balance</span>
-                  <strong>{formatPKR(summary.cash_balance)}</strong>
-                  <small>Current committee cash position</small>
-                </article>
-              </section>
-
-              <section className="information-card">
-                <div>
-                  <p className="eyebrow">FINANCIAL POSITION</p>
-                  <h3>Current committee position</h3>
-                </div>
-
-                <div className="position-row">
-                  <span>Committee</span>
-                  <strong>{summary.committee_name}</strong>
-                </div>
-
-                <div className="position-row">
-                  <span>Committee ID</span>
-                  <strong>{summary.committee_id}</strong>
-                </div>
-
-                <div className="position-row">
-                  <span>Cash balance</span>
-                  <strong>{formatPKR(summary.cash_balance)}</strong>
+                  <div className="finpos-stat-card finpos-stat-card--neutral">
+                    <p className="finpos-stat-label">
+                      {appT.totalDeathSupportPaid}
+                    </p>
+                    <p className="finpos-stat-amount">
+                      {formatPKR(summary.total_death_support)}
+                    </p>
+                  </div>
                 </div>
               </section>
             </>

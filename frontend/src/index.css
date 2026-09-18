@@ -11,17 +11,17 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --primary: #2563eb;
-  --primary-dark: #1d4ed8;
-  --primary-soft: #eff6ff;
+  --primary: #0f766e;
+  --primary-dark: #115e59;
+  --primary-soft: #f0fdfa;
 
-  --success: #059669;
-  --success-soft: #ecfdf5;
+  --success: #15803d;
+  --success-soft: #f0fdf4;
 
-  --danger: #dc2626;
+  --danger: #b91c1c;
   --danger-soft: #fef2f2;
 
-  --warning: #d97706;
+  --warning: #b45309;
   --warning-soft: #fffbeb;
 
   --text: #172033;
@@ -71,7 +71,7 @@ body {
   background:
     radial-gradient(
       circle at top right,
-      rgba(37, 99, 235, 0.06),
+      color-mix(in srgb, var(--primary) 6%, transparent),
       transparent 30%
     ),
     #f5f7fb;
@@ -95,7 +95,7 @@ button:disabled {
 }
 
 ::selection {
-  background: rgba(37, 99, 235, 0.18);
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
   color: #172033;
 }
 
@@ -123,7 +123,7 @@ input:focus-visible {
 }
 
 ::selection {
-  background: rgba(37, 99, 235, 0.2);
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
   color: #172033;
 }
 
@@ -206,8 +206,8 @@ input:focus-visible {
   display: grid;
   place-items: center;
   border-radius: 10px;
-  background: #eaf2ff;
-  color: #2563eb;
+  background: var(--primary-soft);
+  color: var(--primary);
   font-size: 14px;
   font-weight: 800;
 }
@@ -303,14 +303,14 @@ input:focus-visible {
   border: 1px solid #cbd5e1;
   border-radius: 50%;
   background: #fff;
-  color: #2563eb;
+  color: var(--primary);
   font-size: 12px;
   font-weight: 800;
 }
 
 .access-level-card.selected .access-level-radio {
-  border-color: #2563eb;
-  background: #2563eb;
+  border-color: var(--primary);
+  background: var(--primary);
   color: #fff;
 }
 
@@ -365,9 +365,9 @@ input:focus-visible {
 
 .user-account-card {
   overflow: hidden;
-  border: 1px solid #e2e7ef;
+  border: 1px solid var(--border);
   border-radius: 13px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .user-account-main {
@@ -384,8 +384,8 @@ input:focus-visible {
   display: grid;
   place-items: center;
   border-radius: 11px;
-  background: #edf4ff;
-  color: #2563eb;
+  background: var(--primary-soft);
+  color: var(--primary);
   font-size: 15px;
   font-weight: 800;
 }
@@ -404,12 +404,12 @@ input:focus-visible {
 }
 
 .user-account-name-row strong {
-  color: #172033;
+  color: var(--text);
   font-size: 15px;
 }
 
 .user-account-identity small {
-  color: #8a94a6;
+  color: var(--text-light);
   font-size: 11px;
 }
 
@@ -425,13 +425,13 @@ input:focus-visible {
 }
 
 .user-role-badge.member {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--surface-soft);
+  color: var(--text-muted);
 }
 
 .user-role-badge.administrator {
-  background: #eef5ff;
-  color: #2563eb;
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 
 .user-role-badge.system {
@@ -449,8 +449,8 @@ input:focus-visible {
 
 .user-account-access {
   padding: 15px 18px 17px;
-  border-top: 1px solid #edf0f4;
-  background: #fafbfd;
+  border-top: 1px solid var(--border-light);
+  background: var(--surface-soft);
 }
 
 .user-account-access-header {
@@ -471,7 +471,7 @@ input:focus-visible {
 }
 
 .user-account-access-header strong {
-  color: #334155;
+  color: var(--text);
   font-size: 13px;
 }
 
@@ -480,20 +480,20 @@ input:focus-visible {
   display: grid;
   gap: 4px;
   padding: 13px 14px;
-  border: 1px dashed #d7dee9;
+  border: 1px dashed var(--border);
   border-radius: 9px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .user-access-global-note strong,
 .user-access-empty strong {
-  color: #334155;
+  color: var(--text);
   font-size: 12px;
 }
 
 .user-access-global-note span,
 .user-access-empty span {
-  color: #7b8494;
+  color: var(--text-muted);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -509,9 +509,9 @@ input:focus-visible {
   justify-content: space-between;
   gap: 14px;
   padding: 11px 13px;
-  border: 1px solid #e4e8ef;
+  border: 1px solid var(--border);
   border-radius: 9px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .user-assignment-row > div {
@@ -521,13 +521,13 @@ input:focus-visible {
 }
 
 .user-assignment-row strong {
-  color: #334155;
+  color: var(--text);
   font-size: 12px;
   overflow-wrap: anywhere;
 }
 
 .user-assignment-row span {
-  color: #7b8494;
+  color: var(--text-muted);
   font-size: 11px;
 }
 
@@ -548,11 +548,11 @@ input:focus-visible {
   gap: 14px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #e7ebf1;
+  border-top: 1px solid var(--border-light);
 }
 
 .user-account-current-access > span {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 11px;
 }
 
@@ -616,3 +616,113 @@ input:focus-visible {
     width: 100%;
   }
 }
+
+/* =========================================================
+   SHARED CONTROL FOUNDATION
+   ========================================================= */
+
+button,
+input,
+select,
+textarea {
+  box-sizing: border-box;
+}
+
+button {
+  min-height: 40px;
+  border-radius: var(--radius-sm);
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    color var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+input,
+select,
+textarea {
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-light);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+select {
+  min-height: 40px;
+}
+
+/* =========================================================
+   URDU TYPOGRAPHY FOUNDATION
+   ========================================================= */
+
+[dir='rtl'] {
+  font-family:
+    "Noto Nastaliq Urdu",
+    "Noto Naskh Arabic",
+    "Noto Sans Arabic",
+    "Segoe UI",
+    Tahoma,
+    Arial,
+    sans-serif;
+}
+
+[dir='rtl'] body {
+  line-height: 1.7;
+}
+
+[dir='rtl'] h1,
+[dir='rtl'] h2,
+[dir='rtl'] h3,
+[dir='rtl'] h4,
+[dir='rtl'] p,
+[dir='rtl'] label,
+[dir='rtl'] button,
+[dir='rtl'] input,
+[dir='rtl'] select,
+[dir='rtl'] textarea {
+  letter-spacing: 0;
+}
+
+[dir='rtl'] .dashboard-title,
+[dir='rtl'] .page-heading h1 {
+  line-height: 1.35;
+}
+
+[dir='rtl'] .page-heading p {
+  line-height: 1.8;
+}
+
+[dir='rtl'] .eyebrow {
+  letter-spacing: 0;
+  line-height: 1.6;
+}
+
+[dir='rtl'] .nav-item {
+  line-height: 1.7;
+}
+
+[dir='rtl'] input,
+[dir='rtl'] select,
+[dir='rtl'] textarea {
+  line-height: 1.6;
+}
+

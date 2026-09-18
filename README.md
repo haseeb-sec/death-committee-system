@@ -234,12 +234,19 @@ Run the backend test suite with:
     cd backend
     pytest -q
 
-The project has previously reached a verified development checkpoint of:
+The current verified backend test suite contains:
 
-    46/46 backend tests passing
-    20/20 authorization tests passing
+    81 tests passing
 
-These numbers describe a development checkpoint rather than a claim of permanent test count or complete coverage.
+The tests cover important business, authorization, security, and financial-integrity behavior. Passing tests do not imply complete security coverage or production readiness.
+
+The frontend has also been verified with:
+
+    cd frontend
+    npm run build
+    npm run lint
+
+The frontend build completes successfully. Oxlint currently reports 0 errors and 9 warnings, primarily related to React effect dependency recommendations.
 
 ---
 
