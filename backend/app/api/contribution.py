@@ -66,6 +66,16 @@ def create_contribution_rate(
             committee_id=committee_id,
         )
 
+        existing_rate = db.query(ContributionRate).filter(
+            ContributionRate.committee_id == committee_id,
+            ContributionRate.effective_from == data.effective_from,
+        ).first()
+
+        if existing_rate is not None:
+            raise AccountingError(
+                "A contribution rate already exists for this effective date."
+            )
+
         rate = ContributionRate(
             committee_id=committee_id,
             amount=data.amount,

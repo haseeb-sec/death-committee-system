@@ -302,3 +302,39 @@ def test_member_cannot_view_contributions_of_another_committee(db):
 
     finally:
         app.dependency_overrides.clear()
+
+
+def test_duplicate_contribution_rate_effective_date_rejected(db):
+    committee, _ = _build_committee_with_member(
+        db,
+        committee_name="Duplicate Rate Committee",
+        member_name="Rate Member",
+    )
+
+    admin = _admin_for_committee(
+        db,
+        committee,
+        username="duplicate_rate_admin",
+    )
+
+    app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_current_user] = lambda: admin
+
+    try:
+        client = TestClient(app)
+
+        response = client.post(
+            f"/committees/{committee.id}/contribution-rates",
+            json={
+                "amount": 40000,
+                "effective_from": "2026-01-01",
+            },
+        )
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == (
+            "A contribution rate already exists for this effective date."
+        )
+
+    finally:
+        app.dependency_overrides.clear()
