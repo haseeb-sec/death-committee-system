@@ -66,6 +66,11 @@ def add_member_due(
             f"Committee is not active: {member.committee_id}"
         )
 
+    if not member.is_active:
+        raise AccountingError(
+            f"Member is already inactive: {member_id}"
+        )
+
     due = MemberDue(
         committee_id=member.committee_id,
         member_id=member.id,

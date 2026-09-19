@@ -1008,3 +1008,44 @@ def test_death_settlement_date_cannot_be_before_death_support_date(db):
             member_id=member.id,
             settlement_date=date(2026, 8, 17),
         )
+def test_settlement_payment_rejects_inconsistent_snapshot(db):
+    committee = create_committee(db, name="Snapshot Integrity Committee")
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        username="snapshot_integrity_member",
+        joined_on=date(2026, 8, 1),
+        name="Snapshot Integrity Member",
+    )
+
+    rate = ContributionRate(
+        committee_id=committee.id,
+        amount=1000,
+        effective_from=date(2026, 8, 1),
+    )
+    db.add(rate)
+    db.flush()
+
+    record_contribution(
+        db,
+        member_id=member.id,
+        contribution_date=date(2026, 8, 5),
+    )
+
+    settlement = settle_member(
+        db,
+        member_id=member.id,
+        settlement_date=date(2026, 8, 10),
+    )
+
+    settlement.final_amount += 1
+    db.flush()
+
+    with pytest.raises(
+        AccountingError,
+        match="internally inconsistent",
+    ):
+        pay_member_settlement(
+            db,
+            settlement_id=settlement.id,
+        )

@@ -177,3 +177,45 @@ def test_member_due_payment_allows_settlement(db):
     assert settlement.status == "paid"
 
     assert cash_balance(db, committee.id) == 500
+
+def test_inactive_member_cannot_receive_new_due(db):
+    committee = create_committee(
+        db,
+        name="Inactive Due Committee",
+    )
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Inactive Due Member",
+        joined_on=date(2026, 1, 1),
+    )
+
+    add_rate(db, committee.id)
+
+    record_contribution(
+        db,
+        member_id=member.id,
+        contribution_date=date(2026, 8, 1),
+        reference="INACTIVE-DUE",
+    )
+
+    leave_member(
+        db,
+        member_id=member.id,
+        leaving_date=date(2026, 8, 10),
+    )
+
+    assert member.is_active is False
+
+    with pytest.raises(
+        AccountingError,
+        match="already inactive",
+    ):
+        add_member_due(
+            db,
+            member_id=member.id,
+            amount=500,
+            due_date=date(2026, 8, 11),
+            description="Due after member left",
+        )
