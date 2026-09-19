@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -178,6 +178,20 @@ def update_member_good_value(
     if valuation_date < good.purchase_date:
         raise AccountingError(
             "Valuation date cannot be before purchase date."
+        )
+
+    latest_valuation_date = db.scalar(
+        select(func.max(MemberGoodValuation.valuation_date)).where(
+            MemberGoodValuation.good_id == good.id,
+        )
+    )
+
+    if (
+        latest_valuation_date is not None
+        and valuation_date < latest_valuation_date
+    ):
+        raise AccountingError(
+            "Valuation date cannot be before the latest valuation date."
         )
 
     valuation = MemberGoodValuation(
