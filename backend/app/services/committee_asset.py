@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -244,6 +244,20 @@ def update_asset_value(
     if valuation_date < asset.purchase_date:
         raise AccountingError(
             "Valuation date cannot be before purchase date."
+        )
+
+    latest_valuation_date = db.scalar(
+        select(func.max(AssetValuation.valuation_date)).where(
+            AssetValuation.asset_id == asset.id,
+        )
+    )
+
+    if (
+        latest_valuation_date is not None
+        and valuation_date < latest_valuation_date
+    ):
+        raise AccountingError(
+            "Valuation date cannot be before the latest valuation date."
         )
 
     valuation = AssetValuation(

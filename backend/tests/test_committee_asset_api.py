@@ -124,6 +124,28 @@ def test_committee_asset_api_lifecycle(db):
         assert data["purchase_value"] == 10000
         assert data["current_value"] == 12000
 
+        response = client.patch(
+            f"/committees/assets/{asset_id}/value",
+            json={
+                "valuation_date": "2026-08-19",
+                "new_value": 13000,
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["current_value"] == 13000
+
+        response = client.patch(
+            f"/committees/assets/{asset_id}/value",
+            json={
+                "valuation_date": "2026-08-18",
+                "new_value": 9000,
+            },
+        )
+
+        assert response.status_code == 400
+        assert "latest valuation date" in response.json()["detail"]
+
         response = client.get(
             f"/committees/assets/{asset_id}/valuations",
         )
@@ -132,12 +154,14 @@ def test_committee_asset_api_lifecycle(db):
 
         valuations = response.json()
 
-        assert len(valuations) == 2
+        assert len(valuations) == 3
         assert valuations[0]["asset_id"] == asset_id
         assert valuations[0]["valuation_date"] == "2026-08-17"
         assert valuations[0]["value"] == 10000
         assert valuations[1]["valuation_date"] == "2026-08-18"
         assert valuations[1]["value"] == 12000
+        assert valuations[2]["valuation_date"] == "2026-08-19"
+        assert valuations[2]["value"] == 13000
 
         response = client.get(
             f"/committees/assets/{asset_id}/participation",
