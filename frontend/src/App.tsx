@@ -3714,7 +3714,7 @@ async function handleCreateCommittee(event: FormEvent) {
                               ? '{appT.loadingMembers}'
                               : members.length === 0
                                 ? '{appT.noMembersAvailable}'
-                                : '{appT.selectMember}'}
+                                : appT.selectMember}
                           </option>
 
                           {members.map((member) => (
