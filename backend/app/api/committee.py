@@ -163,7 +163,7 @@ def assign_committee_admin_api(
     except AuthorizationError as exc:
         db.rollback()
         raise HTTPException(
-            status_code=400,
+            status_code=403,
             detail=str(exc),
         ) from exc
 
@@ -229,7 +229,7 @@ def revoke_committee_admin_api(
     except AuthorizationError as exc:
         db.rollback()
         raise HTTPException(
-            status_code=400,
+            status_code=403,
             detail=str(exc),
         ) from exc
 
@@ -364,7 +364,7 @@ def close_committee_api(
     except AuthorizationError as exc:
         db.rollback()
         raise HTTPException(
-            status_code=400,
+            status_code=403,
             detail=str(exc),
         ) from exc
 
