@@ -426,6 +426,43 @@ def test_jwt_wrong_token_version_rejected(db):
         app.dependency_overrides.clear()
 
 
+def test_logout_invalidates_existing_token(db):
+    user = make_user(
+        db,
+        "logout_revoke_user",
+        "logout-password",
+        UserRole.MEMBER.value,
+    )
+
+    token = create_access_token(
+        user.id,
+        user.role,
+        user.token_version,
+    )
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+        headers = {"Authorization": f"Bearer {token}"}
+
+        logout_response = client.post(
+            "/auth/logout",
+            headers=headers,
+        )
+
+        assert logout_response.status_code == 200
+
+        protected_response = client.get(
+            "/committees/1/summary",
+            headers=headers,
+        )
+
+        assert protected_response.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_invalid_token_rejected(db):
     app.dependency_overrides[get_db] = override_db(db)
 
