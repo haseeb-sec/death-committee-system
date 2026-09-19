@@ -1,11 +1,13 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_db
+from app.core.config import settings
 from app.main import app
 from app.models import Committee, ContributionRate, User, UserRole
 from app.services.auth import create_access_token, hash_password
+import jwt
 from app.services.member import add_member
 from app.services.committee import create_committee
 
@@ -290,6 +292,133 @@ def test_inactive_user_cannot_login(db):
             client,
             "inactive_user",
             "inactive-password",
+        )
+
+        assert response.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_expired_jwt_rejected(db):
+    user = make_user(
+        db,
+        "expired_jwt",
+        "expired-password",
+        UserRole.MEMBER.value,
+    )
+
+    token = jwt.encode(
+        {
+            "sub": str(user.id),
+            "role": user.role,
+            "ver": user.token_version,
+            "exp": datetime.now(timezone.utc) - timedelta(minutes=1),
+        },
+        settings.secret_key,
+        algorithm="HS256",
+    )
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        response = client.get(
+            "/committees/1/summary",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_tampered_jwt_signature_rejected(db):
+    user = make_user(
+        db,
+        "tampered_jwt",
+        "tampered-password",
+        UserRole.MEMBER.value,
+    )
+
+    token = create_access_token(
+        user.id,
+        user.role,
+        user.token_version,
+    )
+
+    tampered_token = token[:-1] + ("a" if token[-1] != "a" else "b")
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        response = client.get(
+            "/committees/1/summary",
+            headers={"Authorization": f"Bearer {tampered_token}"},
+        )
+
+        assert response.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_jwt_missing_required_claim_rejected(db):
+    user = make_user(
+        db,
+        "missing_claim_jwt",
+        "missing-claim-password",
+        UserRole.MEMBER.value,
+    )
+
+    token = jwt.encode(
+        {
+            "sub": str(user.id),
+            "role": user.role,
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=60),
+        },
+        settings.secret_key,
+        algorithm="HS256",
+    )
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        response = client.get(
+            "/committees/1/summary",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_jwt_wrong_token_version_rejected(db):
+    user = make_user(
+        db,
+        "wrong_version_jwt",
+        "wrong-version-password",
+        UserRole.MEMBER.value,
+    )
+
+    token = create_access_token(
+        user.id,
+        user.role,
+        user.token_version + 1,
+    )
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        response = client.get(
+            "/committees/1/summary",
+            headers={"Authorization": f"Bearer {token}"},
         )
 
         assert response.status_code == 401
