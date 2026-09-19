@@ -5,7 +5,12 @@ from fastapi.testclient import TestClient
 from app.api.auth import get_current_user
 from app.api.dependencies import get_db
 from app.main import app
-from app.models import ContributionRate, User, UserCommitteeAccess
+from app.models import (
+    CommitteeAsset,
+    ContributionRate,
+    User,
+    UserCommitteeAccess,
+)
 from app.services.committee import create_committee
 from app.services.contribution import record_contribution
 from app.services.member import add_member
@@ -187,6 +192,130 @@ def test_committee_asset_api_lifecycle(db):
             assert item["asset_id"] == asset_id
             assert item["ownership_units"] == 1
             assert item["total_units"] == 2
+
+    finally:
+        app.dependency_overrides.clear()
+
+def test_asset_valuation_duplicate_date_rejected(db):
+    committee = create_committee(
+        db,
+        name="Duplicate Valuation Committee",
+    )
+    db.flush()
+
+    rate = ContributionRate(
+        committee_id=committee.id,
+        amount=10000,
+        effective_from=date(2026, 1, 1),
+    )
+    db.add(rate)
+    db.flush()
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Duplicate Valuation Member",
+        joined_on=date(2026, 1, 1),
+    )
+    db.flush()
+
+    record_contribution(
+        db,
+        member_id=member.id,
+        contribution_date=date(2026, 8, 17),
+        reference="DUPLICATE-VALUATION",
+    )
+    db.flush()
+
+    db.commit()
+
+    test_user = User(
+        username="duplicate_valuation_admin",
+        password_hash="unused",
+        role="committee_admin",
+        is_active=True,
+    )
+    db.add(test_user)
+    db.flush()
+
+    db.add(
+        UserCommitteeAccess(
+            user_id=test_user.id,
+            committee_id=committee.id,
+            granted_by_user_id=test_user.id,
+            is_active=True,
+            is_admin=True,
+        )
+    )
+    db.commit()
+
+    def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    def override_get_current_user():
+        return test_user
+
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+    try:
+        client = TestClient(app)
+
+        response = client.post(
+            f"/committees/{committee.id}/assets",
+            json={
+                "name": "Duplicate Date Asset",
+                "purchase_date": "2026-08-17",
+                "purchase_value": 10000,
+                "description": "Duplicate valuation test",
+            },
+        )
+
+        assert response.status_code == 200
+        asset_id = response.json()["id"]
+
+        first = client.patch(
+            f"/committees/assets/{asset_id}/value",
+            json={
+                "valuation_date": "2026-08-18",
+                "new_value": 9000,
+            },
+        )
+
+        assert first.status_code == 200
+
+        duplicate = client.patch(
+            f"/committees/assets/{asset_id}/value",
+            json={
+                "valuation_date": "2026-08-18",
+                "new_value": 8000,
+            },
+        )
+
+        assert duplicate.status_code == 400
+        assert duplicate.json()["detail"] == (
+            "An asset valuation already exists for this date."
+        )
+
+        refreshed_asset = db.get(CommitteeAsset, asset_id)
+
+        assert refreshed_asset is not None
+        assert refreshed_asset.current_value == 9000
+
+        valuations = client.get(
+            f"/committees/assets/{asset_id}/valuations",
+        )
+
+        assert valuations.status_code == 200
+
+        valuation_data = valuations.json()
+
+        assert len(valuation_data) == 2
+        assert valuation_data[0]["valuation_date"] == "2026-08-17"
+        assert valuation_data[0]["value"] == 10000
+        assert valuation_data[1]["valuation_date"] == "2026-08-18"
+        assert valuation_data[1]["value"] == 9000
 
     finally:
         app.dependency_overrides.clear()

@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Integer
+from sqlalchemy import Date, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -8,6 +8,14 @@ from app.db.session import Base
 
 class AssetValuation(Base):
     __tablename__ = "asset_valuations"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "asset_id",
+            "valuation_date",
+            name="uq_asset_valuations_asset_date",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
 

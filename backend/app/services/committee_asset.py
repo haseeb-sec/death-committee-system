@@ -260,6 +260,18 @@ def update_asset_value(
             "Valuation date cannot be before the latest valuation date."
         )
 
+    existing_valuation = db.scalar(
+        select(AssetValuation).where(
+            AssetValuation.asset_id == asset.id,
+            AssetValuation.valuation_date == valuation_date,
+        )
+    )
+
+    if existing_valuation is not None:
+        raise AccountingError(
+            "An asset valuation already exists for this date."
+        )
+
     valuation = AssetValuation(
         asset_id=asset.id,
         valuation_date=valuation_date,

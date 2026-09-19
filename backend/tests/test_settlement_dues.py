@@ -219,3 +219,135 @@ def test_inactive_member_cannot_receive_new_due(db):
             due_date=date(2026, 8, 11),
             description="Due after member left",
         )
+
+
+def test_member_due_payment_rejects_overpayment(db):
+    committee = create_committee(
+        db,
+        name="Due Overpayment Committee",
+    )
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Overpayment Member",
+        joined_on=date(2026, 1, 1),
+    )
+
+    due = add_member_due(
+        db,
+        member_id=member.id,
+        amount=500,
+        due_date=date(2026, 8, 5),
+        description="Overpayment test",
+    )
+    db.commit()
+
+    with pytest.raises(
+        AccountingError,
+        match="exceeds outstanding due",
+    ):
+        pay_member_due(
+            db,
+            due_id=due.id,
+            amount=501,
+        )
+
+    db.rollback()
+    db.refresh(due)
+
+    assert due.paid_amount == 0
+    assert cash_balance(db, committee.id) == 0
+
+
+def test_member_due_cannot_be_paid_after_fully_paid(db):
+    committee = create_committee(
+        db,
+        name="Already Paid Due Committee",
+    )
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Already Paid Member",
+        joined_on=date(2026, 1, 1),
+    )
+
+    due = add_member_due(
+        db,
+        member_id=member.id,
+        amount=500,
+        due_date=date(2026, 8, 5),
+        description="Already paid test",
+    )
+
+    db.commit()
+
+    pay_member_due(
+        db,
+        due_id=due.id,
+        amount=500,
+    )
+    db.commit()
+
+    with pytest.raises(
+        AccountingError,
+        match="already fully paid",
+    ):
+        pay_member_due(
+            db,
+            due_id=due.id,
+            amount=1,
+        )
+
+    db.rollback()
+    db.refresh(due)
+
+    assert due.paid_amount == 500
+    assert cash_balance(db, committee.id) == 500
+
+
+def test_failed_due_overpayment_does_not_create_payment(db):
+    committee = create_committee(
+        db,
+        name="Failed Due Payment Committee",
+    )
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Failed Payment Member",
+        joined_on=date(2026, 1, 1),
+    )
+
+    due = add_member_due(
+        db,
+        member_id=member.id,
+        amount=500,
+        due_date=date(2026, 8, 5),
+        description="Failed payment test",
+    )
+
+    db.commit()
+
+    with pytest.raises(
+        AccountingError,
+        match="exceeds outstanding due",
+    ):
+        pay_member_due(
+            db,
+            due_id=due.id,
+            amount=600,
+        )
+
+    db.rollback()
+    db.refresh(due)
+
+    assert due.paid_amount == 0
+    assert cash_balance(db, committee.id) == 0
+
+    entries = db.query(
+        __import__("app.models", fromlist=["JournalEntry"]).JournalEntry
+    ).all()
+
+    assert entries == []

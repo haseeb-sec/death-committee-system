@@ -364,7 +364,7 @@ def test_asset_exit_settlement_preserves_historical_participation(db):
     update_asset_value(
         db,
         asset_id=asset.id,
-        valuation_date=date(2026, 8, 17),
+        valuation_date=date(2026, 8, 18),
         new_value=120000,
     )
     db.flush()
@@ -589,7 +589,7 @@ def test_combined_settlement_components_reconcile(db):
     update_asset_value(
         db,
         asset_id=asset.id,
-        valuation_date=date(2026, 8, 17),
+        valuation_date=date(2026, 8, 18),
         new_value=60000,
     )
     db.flush()
