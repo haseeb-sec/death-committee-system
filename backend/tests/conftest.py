@@ -77,3 +77,12 @@ def member(db, committee):
     db.flush()
 
     return member
+
+
+@pytest.fixture(autouse=True)
+def clear_login_rate_limit_state():
+    from app.api.auth import login_attempts
+
+    login_attempts.clear()
+    yield
+    login_attempts.clear()

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+import time
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -11,17 +13,62 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+# Lightweight abuse protection for the public login endpoint.
+# This intentionally lives in memory so it does not add database/accounting state.
+login_attempts: dict[str, list[float]] = {}
+LOGIN_RATE_WINDOW = 60.0
+LOGIN_RATE_LIMIT = 5
+
+
+def check_login_rate_limit(client_key: str) -> None:
+    now = time.monotonic()
+    attempts = login_attempts.get(client_key, [])
+
+    attempts = [
+        timestamp
+        for timestamp in attempts
+        if now - timestamp < LOGIN_RATE_WINDOW
+    ]
+
+    login_attempts[client_key] = attempts
+
+    if len(attempts) >= LOGIN_RATE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many login attempts. Please try again later.",
+        )
+
+
+def record_failed_login_attempt(client_key: str) -> None:
+    now = time.monotonic()
+    attempts = login_attempts.get(client_key, [])
+
+    attempts = [
+        timestamp
+        for timestamp in attempts
+        if now - timestamp < LOGIN_RATE_WINDOW
+    ]
+
+    attempts.append(now)
+    login_attempts[client_key] = attempts
+
 @router.post("/login")
 def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
+    client_host = request.client.host if request.client else "unknown"
+    check_login_rate_limit(client_host)
+
     user = db.query(User).filter(User.username == form_data.username).first()
 
     if not user or not user.is_active:
+        record_failed_login_attempt(client_host)
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     if not verify_password(form_data.password, user.password_hash):
+        record_failed_login_attempt(client_host)
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token(user.id, user.role, user.token_version)

@@ -1788,3 +1788,63 @@ def test_member_cannot_access_another_member_in_same_committee(db):
 
     finally:
         app.dependency_overrides.clear()
+
+
+def test_login_rate_limit_blocks_repeated_failed_attempts(db):
+    from app.api.auth import login_attempts
+
+    login_attempts.clear()
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        for _ in range(5):
+            response = login(
+                client,
+                "nonexistent-rate-limit-user",
+                "wrong-password",
+            )
+            assert response.status_code == 401
+
+        response = login(
+            client,
+            "nonexistent-rate-limit-user",
+            "wrong-password",
+        )
+
+        assert response.status_code == 429
+        assert "Too many login attempts" in response.json()["detail"]
+    finally:
+        login_attempts.clear()
+        app.dependency_overrides.clear()
+
+
+def test_successful_login_does_not_record_failed_attempt(db):
+    from app.api.auth import login_attempts
+
+    login_attempts.clear()
+
+    user = make_user(
+        db,
+        "rate_limit_success_user",
+        "correct-password",
+        UserRole.MEMBER.value,
+    )
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        response = login(
+            client,
+            user.username,
+            "correct-password",
+        )
+
+        assert response.status_code == 200
+        assert login_attempts.get("testclient", []) == []
+    finally:
+        login_attempts.clear()
+        app.dependency_overrides.clear()
