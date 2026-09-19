@@ -138,6 +138,11 @@ def settle_member(
             f"Member has already been settled: {member_id}"
         )
 
+    if settlement_date < member.joined_on:
+        raise AccountingError(
+            "Settlement date cannot be before member joining date."
+        )
+
     death_support = db.scalars(
         select(DeathSupport)
         .where(
@@ -146,6 +151,14 @@ def settle_member(
     ).first()
 
     is_death_settlement = death_support is not None
+
+    if (
+        death_support is not None
+        and settlement_date < death_support.support_date
+    ):
+        raise AccountingError(
+            "Settlement date cannot be before death support date."
+        )
 
     if not member.is_active and not is_death_settlement:
         raise AccountingError(

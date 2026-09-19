@@ -76,6 +76,11 @@ def record_death_support(
             f"Committee is not active: {member.committee_id}"
         )
 
+    if support_date < member.joined_on:
+        raise AccountingError(
+            "Death support date cannot be before member joining date."
+        )
+
     if member.account is None:
         raise AccountingError(
             f"Member account not found: {member_id}"

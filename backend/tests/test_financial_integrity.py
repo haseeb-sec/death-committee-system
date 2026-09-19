@@ -1,5 +1,7 @@
 from datetime import date
 
+import pytest
+
 from sqlalchemy import select
 
 from app.models import (
@@ -13,7 +15,7 @@ from app.models import (
     MemberDue,
     MemberSettlement,
 )
-from app.services.accounting import create_journal_entry
+from app.services.accounting import AccountingError, create_journal_entry
 from app.services.committee import create_committee
 from app.services.contribution import record_contribution
 from app.services.death_support import record_death_support
@@ -884,3 +886,125 @@ def test_sole_owner_asset_becomes_unallocated_after_exit(db):
 
     assert asset.is_active is True
     assert asset.current_value == 5000
+
+def test_death_support_date_cannot_be_before_member_joining_date(db):
+    committee = create_committee(
+        db,
+        name="Death Support Date Committee",
+    )
+    db.flush()
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Death Date Member",
+        joined_on=date(2026, 8, 17),
+    )
+    db.flush()
+
+    rate = ContributionRate(
+        committee_id=committee.id,
+        amount=20000,
+        effective_from=date(2026, 8, 17),
+    )
+    db.add(rate)
+    db.flush()
+
+    record_contribution(
+        db,
+        member_id=member.id,
+        contribution_date=date(2026, 8, 17),
+        reference="DEATH-DATE-CONTRIBUTION",
+    )
+    db.flush()
+
+    with pytest.raises(
+        AccountingError,
+        match="before member joining date",
+    ):
+        record_death_support(
+            db,
+            member_id=member.id,
+            beneficiary_name="Invalid Date Beneficiary",
+            amount=5000,
+            support_date=date(2026, 8, 16),
+            reference="INVALID-DEATH-DATE",
+        )
+
+
+def test_settlement_date_cannot_be_before_member_joining_date(db):
+    committee = create_committee(
+        db,
+        name="Settlement Date Committee",
+    )
+    db.flush()
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Settlement Date Member",
+        joined_on=date(2026, 8, 17),
+    )
+    db.flush()
+
+    with pytest.raises(
+        AccountingError,
+        match="before member joining date",
+    ):
+        settle_member(
+            db,
+            member_id=member.id,
+            settlement_date=date(2026, 8, 16),
+        )
+
+
+def test_death_settlement_date_cannot_be_before_death_support_date(db):
+    committee = create_committee(
+        db,
+        name="Death Settlement Date Committee",
+    )
+    db.flush()
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Death Settlement Member",
+        joined_on=date(2026, 8, 17),
+    )
+    db.flush()
+
+    rate = ContributionRate(
+        committee_id=committee.id,
+        amount=20000,
+        effective_from=date(2026, 8, 17),
+    )
+    db.add(rate)
+    db.flush()
+
+    record_contribution(
+        db,
+        member_id=member.id,
+        contribution_date=date(2026, 8, 17),
+        reference="DEATH-SETTLEMENT-CONTRIBUTION",
+    )
+    db.flush()
+
+    record_death_support(
+        db,
+        member_id=member.id,
+        beneficiary_name="Death Settlement Beneficiary",
+        amount=5000,
+        support_date=date(2026, 8, 18),
+        reference="DEATH-SETTLEMENT-SUPPORT",
+    )
+    db.flush()
+
+    with pytest.raises(
+        AccountingError,
+        match="before death support date",
+    ):
+        settle_member(
+            db,
+            member_id=member.id,
+            settlement_date=date(2026, 8, 17),
+        )
