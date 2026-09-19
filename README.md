@@ -10,7 +10,7 @@ Built with FastAPI, SQLAlchemy, Alembic, React, TypeScript, Vite, Tailwind CSS, 
 
 The system manages committee members, contributions, dues, death support, goods, shared assets, financial statements, and member settlements.
 
-The project focuses on enforcing financial and authorization rules in the backend rather than treating the application as a simple CRUD system.
+The project focuses on enforcing financial, authorization, and accounting rules in the backend rather than treating the application as a simple CRUD system.
 
 ## Key Features
 
@@ -18,20 +18,20 @@ The project focuses on enforcing financial and authorization rules in the backen
 - Contributions and contribution-rate versioning
 - Member dues and payments
 - Death-support workflows and Qarz-e-Hasana
-- Member goods and valuations
-- Committee assets and ownership
+- Member goods and valuation history
+- Committee assets and valuation history
 - Financial balances and statements
 - Member settlements and settlement payments
 - Authentication and password recovery
 - Role-based and committee-level authorization
 - Audit logging
 - Double-entry accounting
+- English/Urdu localization
+- Responsive frontend for desktop and mobile layouts
 
 ## Security
 
-The backend enforces authorization independently of frontend visibility.
-
-Committee access is explicitly represented through `UserCommitteeAccess`, allowing users to be assigned to specific committees while keeping committee resources isolated.
+The backend is the security boundary. Frontend role checks and page visibility do not replace backend authorization.
 
 ### Roles
 
@@ -41,16 +41,27 @@ Committee access is explicitly represented through `UserCommitteeAccess`, allowi
 | Committee Admin | Assigned committee administration |
 | Member | Permitted member functionality |
 
-Security mechanisms include:
+Security controls include:
 
 - JWT authentication
+- Required JWT claims and signature/expiry validation
 - Password hashing
-- Password recovery with expiring reset tokens
+- Expiring, single-use password-reset tokens
 - Active-user validation
-- Committee and member authorization
-- Explicit committee access control
+- Login abuse protection for repeated failed attempts
 - Session revocation through token-version invalidation
+- Explicit committee access control
+- Role-based and member-level authorization
+- Cross-committee and ownership checks
+- Security response headers
+- Configurable CORS origins
+- Input validation and password-length policy
+- Financial chronology and consistency checks
+- Database uniqueness constraints for valuation/rate history
 - Audit logging
+- Dependency vulnerability scanning through CI
+
+See [`SECURITY.md`](SECURITY.md) for the security model, limitations, and development practices.
 
 ## Financial Model
 
@@ -70,7 +81,7 @@ The accounting layer supports:
 
 Historical accounting records are preserved. Corrections use reversal operations rather than silently changing historical entries.
 
-Contribution rates use effective dates, and asset participation history is preserved for settlement calculations.
+Contribution rates use effective dates. Valuation history for member goods and committee assets is chronological and does not allow duplicate valuation dates for the same item.
 
 ## Architecture
 
@@ -90,17 +101,21 @@ The frontend provides role-aware pages, responsive layouts, and English/Urdu loc
 
 Alembic migrations track database schema changes.
 
-
 ## Testing
 
-The verified backend suite contains **82 passing tests** covering authentication, authorization, audit logging, financial integrity, contributions, dues, death support, assets, and settlements.
+The verified backend suite currently contains **103 passing tests** covering authentication, authorization, audit logging, financial integrity, contributions, dues, death support, goods, assets, settlements, password security, and related security regressions.
 
-Frontend verification:
-
-- `npm run build` succeeds
-- `npm run lint` reports 0 errors and 9 warnings
+Frontend verification includes production builds and lint checks during development and CI.
 
 Passing tests do not imply complete security coverage or production readiness.
+
+## CI and Security Scanning
+
+GitHub Actions runs backend tests and frontend checks on pushes and pull requests to `main`.
+
+The CI workflow also runs dependency vulnerability checks for the backend and frontend.
+
+These checks are intended to catch regressions and known dependency vulnerabilities; they do not replace manual security review.
 
 ## Run Locally
 
@@ -118,7 +133,9 @@ Start the API:
 
 `uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`
 
-API documentation: `http://127.0.0.1:8000/docs`
+API documentation:
+
+`http://127.0.0.1:8000/docs`
 
 ### Frontend
 
@@ -134,11 +151,15 @@ Start the development server:
 
 `npm run dev`
 
+The frontend uses the normal Vite development port `5173`.
+
 ### Environment
 
 Create the backend environment file:
 
 `cp backend/.env.example backend/.env`
+
+Use a long random value for `SECRET_KEY`. Never commit the real `.env` file.
 
 ## Technology Stack
 
@@ -150,18 +171,19 @@ Create the backend environment file:
 
 ## Current Status
 
-Implemented areas include committee and member management, contributions, dues, death support, goods, assets, accounting, settlements, authentication, password recovery, authorization, session revocation, audit logging, responsive UI, and English/Urdu localization.
+Implemented areas include committee and member management, contributions, dues, death support, goods, assets, accounting, settlements, authentication, password recovery, authorization, session revocation, audit logging, security controls, responsive UI, and English/Urdu localization.
 
 This is an active portfolio/development project, not a production SaaS or enterprise deployment.
 
 ## Roadmap
 
 - PostgreSQL production configuration
-- Deployment and CI/CD
-- Security scanning
+- Deployment and production infrastructure hardening
 - Expanded reporting and API documentation
 - Frontend and end-to-end tests
-- Observability and backup/recovery documentation
+- Observability
+- Backup and recovery procedures
+- Production security configuration review
 
 ## License
 
