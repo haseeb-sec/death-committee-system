@@ -5,7 +5,7 @@ from app.models import UserRole
 
 class UserCreate(BaseModel):
     username: str
-    password: str
+    password: str = Field(min_length=12, max_length=128)
     role: UserRole
 
 
@@ -31,7 +31,7 @@ class CommitteeAccessResponse(BaseModel):
 
 class PasswordChange(BaseModel):
     current_password: str
-    new_password: str
+    new_password: str = Field(min_length=12, max_length=128)
 
 class PasswordRecoveryRequest(BaseModel):
     username: str

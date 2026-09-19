@@ -85,7 +85,7 @@ def test_member_creation_audit_records_correct_committee_id(db):
             json={
                 "committee_id": committee.id,
                 "username": "audited_member",
-                "password": "password",
+                "password": "member-password-1",
                 "name": "Audited Member",
                 "joined_on": "2026-01-01",
             },
@@ -170,7 +170,7 @@ def test_committee_admin_cannot_list_audit_logs_of_another_committee(db):
             json={
                 "committee_id": committee_a.id,
                 "username": "isolation_test_member",
-                "password": "password",
+                "password": "member-password-2",
                 "name": "Isolation Test Member",
                 "joined_on": "2026-01-01",
             },
@@ -246,7 +246,7 @@ def test_super_admin_can_list_all_and_filter_by_committee(db):
                 json={
                     "committee_id": committee.id,
                     "username": member_username,
-                    "password": "password",
+                    "password": "member-password-3",
                     "name": member_username,
                     "joined_on": "2026-01-01",
                 },

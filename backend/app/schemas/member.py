@@ -1,12 +1,12 @@
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class MemberCreate(BaseModel):
     committee_id: int
     username: str
-    password: str
+    password: str = Field(min_length=12, max_length=128)
     name: str
     joined_on: date
 
