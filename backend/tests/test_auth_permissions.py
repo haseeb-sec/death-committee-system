@@ -1,12 +1,19 @@
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
+from fastapi import HTTPException, Request
 
 from app.api.dependencies import get_db
 from app.core.config import settings
+from app.schemas.users import PasswordReset
 from app.main import app
 from app.models import Committee, ContributionRate, User, UserRole
-from app.services.auth import create_access_token, hash_password
+from app.services.auth import (
+    create_access_token,
+    create_password_reset_token,
+    hash_password,
+    hash_password_reset_token,
+)
 import jwt
 from app.services.member import add_member
 from app.services.committee import create_committee
@@ -459,6 +466,97 @@ def test_logout_invalidates_existing_token(db):
         )
 
         assert protected_response.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_password_reset_expired_token_rejected(db):
+    from app.api.users import reset_password
+
+    user = make_user(
+        db,
+        "expired_reset",
+        "old-password-123",
+        UserRole.MEMBER.value,
+    )
+
+    token = create_password_reset_token()
+    user.password_reset_token_hash = hash_password_reset_token(token)
+    user.password_reset_expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db.commit()
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        response = reset_password(
+            PasswordReset(
+                token=token,
+                new_password="new-password-123",
+            ),
+            Request({"type": "http", "client": ("testclient", 50000)}),
+            db,
+        )
+
+        assert False, "Expected expired password reset token to be rejected"
+    except HTTPException as exc:
+        assert exc.status_code == 400
+        assert exc.detail == "Invalid or expired password reset token"
+        assert user.password_reset_token_hash is None
+        assert user.password_reset_expires_at is None
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_password_reset_token_is_single_use(db):
+    from app.api.users import reset_password
+
+    user = make_user(
+        db,
+        "single_use_reset",
+        "old-password-123",
+        UserRole.MEMBER.value,
+    )
+
+    token = create_password_reset_token()
+    user.password_reset_token_hash = hash_password_reset_token(token)
+    user.password_reset_expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+    db.commit()
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        request = Request(
+            {"type": "http", "client": ("testclient", 50000)}
+        )
+
+        first_response = reset_password(
+            PasswordReset(
+                token=token,
+                new_password="new-password-123",
+            ),
+            request,
+            db,
+        )
+
+        assert first_response["message"] == "Password reset successfully"
+
+        second_request = Request(
+            {"type": "http", "client": ("testclient", 50001)}
+        )
+
+        try:
+            reset_password(
+                PasswordReset(
+                    token=token,
+                    new_password="another-password-123",
+                ),
+                second_request,
+                db,
+            )
+            assert False, "Expected reused password reset token to be rejected"
+        except HTTPException as exc:
+            assert exc.status_code == 400
+            assert exc.detail == "Invalid or expired password reset token"
     finally:
         app.dependency_overrides.clear()
 

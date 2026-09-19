@@ -80,6 +80,15 @@ def member(db, committee):
 
 
 @pytest.fixture(autouse=True)
+def clear_password_reset_rate_limit_state():
+    from app.api.users import password_reset_attempts
+
+    password_reset_attempts.clear()
+    yield
+    password_reset_attempts.clear()
+
+
+@pytest.fixture(autouse=True)
 def clear_login_rate_limit_state():
     from app.api.auth import login_attempts
 
