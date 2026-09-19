@@ -194,6 +194,18 @@ def update_member_good_value(
             "Valuation date cannot be before the latest valuation date."
         )
 
+    existing_valuation = db.scalar(
+        select(MemberGoodValuation).where(
+            MemberGoodValuation.good_id == good.id,
+            MemberGoodValuation.valuation_date == valuation_date,
+        )
+    )
+
+    if existing_valuation is not None:
+        raise AccountingError(
+            "A member good valuation already exists for this date."
+        )
+
     valuation = MemberGoodValuation(
         good_id=good.id,
         valuation_date=valuation_date,

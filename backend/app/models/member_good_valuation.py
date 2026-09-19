@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Integer
+from sqlalchemy import Date, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -8,6 +8,14 @@ from app.db.session import Base
 
 class MemberGoodValuation(Base):
     __tablename__ = "member_good_valuations"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "good_id",
+            "valuation_date",
+            name="uq_member_good_valuations_good_date",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
 

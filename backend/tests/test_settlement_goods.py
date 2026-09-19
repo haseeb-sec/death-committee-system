@@ -268,3 +268,82 @@ def test_member_good_valuation_cannot_go_backwards(db):
     assert valuations[1].value == 12000
     assert valuations[2].valuation_date == date(2026, 8, 11)
     assert valuations[2].value == 13000
+
+def test_member_good_valuation_duplicate_date_rejected(db):
+    committee = create_committee(
+        db,
+        name="Duplicate Good Valuation Committee",
+    )
+
+    db.commit()
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Duplicate Valuation Member",
+        joined_on=date(2026, 1, 1),
+    )
+
+    add_rate(
+        db,
+        committee.id,
+        amount=10000,
+    )
+
+    record_contribution(
+        db,
+        member_id=member.id,
+        contribution_date=date(2026, 8, 1),
+        reference="DUPLICATE-VALUATION-TEST",
+    )
+
+    db.commit()
+
+    good = add_member_good(
+        db,
+        member_id=member.id,
+        name="Duplicate Valuation Laptop",
+        purchase_date=date(2026, 8, 1),
+        purchase_price=10000,
+    )
+
+    db.commit()
+
+    update_member_good_value(
+        db,
+        good_id=good.id,
+        valuation_date=date(2026, 8, 10),
+        new_value=12000,
+    )
+    db.commit()
+
+    try:
+        update_member_good_value(
+            db,
+            good_id=good.id,
+            valuation_date=date(2026, 8, 10),
+            new_value=9000,
+        )
+    except Exception as exc:
+        assert str(exc) == (
+            "A member good valuation already exists for this date."
+        )
+    else:
+        raise AssertionError(
+            "Expected duplicate valuation date to be rejected."
+        )
+
+    db.refresh(good)
+
+    assert good.current_value == 12000
+
+    valuations = get_good_valuations(
+        db,
+        good_id=good.id,
+    )
+
+    assert len(valuations) == 2
+    assert valuations[0].valuation_date == date(2026, 8, 1)
+    assert valuations[0].value == 10000
+    assert valuations[1].valuation_date == date(2026, 8, 10)
+    assert valuations[1].value == 12000
