@@ -133,7 +133,7 @@ export default function UsersPage(props: UsersPageProps) {
     </div>
 
     <form
-      className="committee-create-form"
+      className="committee-create-form users-form"
       onSubmit={
         canWrite
           ? handleChangePassword
@@ -199,7 +199,7 @@ export default function UsersPage(props: UsersPageProps) {
     </div>
 
     <form
-      className="committee-create-form"
+      className="committee-create-form users-form"
       onSubmit={
         canWrite
           ? handleCreateUser
@@ -253,7 +253,7 @@ export default function UsersPage(props: UsersPageProps) {
       </div>
 
       <button type="submit" disabled={loading}>
-        {loading ? appT.creating : 'Create User'}
+        {loading ? appT.creating : appT.usersCreateUserButton}
       </button>
     </form>
   </section>
