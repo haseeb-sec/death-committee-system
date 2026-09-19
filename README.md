@@ -93,7 +93,7 @@ Alembic migrations track database schema changes.
 
 ## Testing
 
-The verified backend suite contains **81 passing tests** covering authentication, authorization, audit logging, financial integrity, contributions, dues, death support, assets, and settlements.
+The verified backend suite contains **82 passing tests** covering authentication, authorization, audit logging, financial integrity, contributions, dues, death support, assets, and settlements.
 
 Frontend verification:
 
