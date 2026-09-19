@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
 import UsersPage from './components/UsersPage'
+import MySettlementPage from './components/MySettlementPage'
+import MyDeathSupportPage from './components/MyDeathSupportPage'
+import MyGoodsPage from './components/MyGoodsPage'
+import MyDuesPage from './components/MyDuesPage'
+import MyContributionsPage from './components/MyContributionsPage'
 import type { FormEvent } from 'react'
 import './App.css'
 import type {
@@ -88,7 +93,6 @@ import AssetsPage from './components/AssetsPage'
 import GoodsPage from './components/GoodsPage'
 import SettlementsPage from './components/SettlementsPage'
 import MyFinancialPositionPage from './components/MyFinancialPositionPage'
-import MyContributionsPage from './components/MyContributionsPage'
 
 
 function App() {
@@ -4142,381 +4146,41 @@ async function handleCreateCommittee(event: FormEvent) {
               myContributionTotal={myContributionTotal}
               formatPKR={formatPKR}
             />
-) : activePage === 'My Dues' ? (
-            <section className="module-page">
-              <div className="page-heading">
-                <div>
-                  <p className="eyebrow">{appT.yourAccount}</p>
-                  <h1>{appT.navigation["My Dues"]}</h1>
-                  <p className="page-subtitle">
-                    {appT.myDuesDescription}
-                  </p>
-                </div>
-              </div>
-
-              {myDuesLoading && (
-                <p className="form-help">{appT.loadingYourDues}</p>
-              )}
-
-              {myDuesError && (
-                <p className="form-error">{myDuesError}</p>
-              )}
-
-              {!myDuesLoading &&
-                !myDuesError &&
-                members.length === 0 && (
-                  <p className="form-help">
-                    No member record was found for you in this committee.
-                  </p>
-                )}
-
-              {myOutstandingDues && (
-                <div
-                  className="dashboard-hero"
-                >
-                  <p className="dashboard-hero-label">
-                    {myOutstandingDues.outstanding_dues > 0
-                      ? appT.currentlyOwe
-                      : appT.ui.allCaughtUp}
-                  </p>
-
-                  <p className="dashboard-hero-amount">
-                    {formatPKR(myOutstandingDues.outstanding_dues)}
-                  </p>
-
-                  <p className="dashboard-hero-note">
-                    {myOutstandingDues.outstanding_dues > 0
-                      ? appT.outstandingDuesDescription
-                      : appT.noOutstandingDues}
-                  </p>
-                </div>
-              )}
-
-              <div className="finpos-section">
-                <p className="finpos-section-title">{appT.dueHistory}</p>
-
-                {!myDuesLoading &&
-                !myDuesError &&
-                myDues.length === 0 ? (
-                  <p className="finpos-empty">
-                    {appT.noDuesRecorded}
-                  </p>
-                ) : (
-                  <div>
-                    {myDues.map((due) => {
-                      const status =
-                        due.paid_amount >= due.amount
-                          ? 'paid'
-                          : due.paid_amount > 0
-                            ? 'partial'
-                            : 'unpaid'
-
-                      const statusLabel =
-                        status === 'paid'
-                          ? appT.paid
-                          : status === 'partial'
-                            ? appT.partial
-                            : appT.unpaid
-
-                      return (
-                        <div className="mydues-due-row" key={due.id}>
-                          <div className="mydues-due-info">
-                            <strong>{due.description}</strong>
-                            <small>
-                              {due.due_date}
-                              {due.reference ? ` · ${due.reference}` : ''}
-                            </small>
-                          </div>
-
-                          <div className="mydues-due-amounts">
-                            <span
-                              className={`mydues-status-badge mydues-status-badge--${status}`}
-                            >
-                              {statusLabel}
-                            </span>
-                            <span className="mydues-due-total">
-                              {formatPKR(due.amount)}
-                            </span>
-                            {due.outstanding_amount > 0 && (
-                              <small>
-                                {formatPKR(due.outstanding_amount)} {appT.owed}
-                              </small>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </section>
-          ) : activePage === 'My Goods' ? (
-            <section className="module-page">
-              <div className="page-heading">
-                <div>
-                  <p className="eyebrow">{appT.yourAccount}</p>
-                  <h1>{appT.navigation["My Goods"]}</h1>
-                  <p className="page-subtitle">
-                    {appT.myGoodsDescription}
-                  </p>
-                </div>
-              </div>
-
-              {myGoodsLoading && (
-                <p className="form-help">{appT.loadingYourGoods}</p>
-              )}
-
-              {myGoodsError && (
-                <p className="form-error">{myGoodsError}</p>
-              )}
-
-              {!myGoodsLoading &&
-                !myGoodsError &&
-                members.length === 0 && (
-                  <p className="form-help">
-                    No member record was found for you in this committee.
-                  </p>
-                )}
-
-              {myGoodsTotal && (
-                <div className="dashboard-hero">
-                  <p className="dashboard-hero-label">
-                    {appT.totalValueOfYourGoods}
-                  </p>
-                  <p className="dashboard-hero-amount">
-                    {formatPKR(myGoodsTotal.total_goods_value)}
-                  </p>
-                  <p className="dashboard-hero-note">
-                    {appT.currentValueOfPurchasedGoods}
-                  </p>
-                </div>
-              )}
-
-              <div className="finpos-section">
-                <p className="finpos-section-title">{appT.goods}</p>
-
-                {!myGoodsLoading &&
-                !myGoodsError &&
-                myGoods.length === 0 ? (
-                  <p className="finpos-empty">
-                    {appT.noGoodsRecorded}
-                  </p>
-                ) : (
-                  <div>
-                    {myGoods.map((good) => {
-                      const delta = good.current_value - good.purchase_price
-
-                      return (
-                        <div className="mygoods-item-row" key={good.id}>
-                          <div className="mygoods-item-info">
-                            <strong>{good.name}</strong>
-                            <small>
-                              {appT.purchasedOn} {good.purchase_date}
-                              {good.description
-                                ? ` · ${good.description}`
-                                : ''}
-                            </small>
-                            {!good.is_active && (
-                              <span className="mygoods-inactive-badge">
-                                {appT.inactive}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mygoods-item-amounts">
-                            <span className="mygoods-item-value">
-                              {formatPKR(good.current_value)}
-                            </span>
-                            <small>
-                              {appT.purchasedAt} {formatPKR(good.purchase_price)}
-                            </small>
-                            {delta !== 0 && (
-                              <span
-                                className={`mygoods-item-delta ${
-                                  delta > 0
-                                    ? 'mygoods-item-delta--up'
-                                    : 'mygoods-item-delta--down'
-                                }`}
-                              >
-                                {delta > 0 ? '+' : ''}
-                                {formatPKR(delta)} {appT.sincePurchase}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </section>
-          ) : activePage === 'My Death Support' ? (
-            <section className="module-page">
-              <div className="page-heading">
-                <div>
-                  <p className="eyebrow">{appT.yourAccount}</p>
-                  <h1>{appT.navigation["My Death Support"]}</h1>
-                  <p className="page-subtitle">
-                    {appT.myDeathSupportDescription}
-                  </p>
-                </div>
-              </div>
-
-              {myDeathSupportLoading && (
-                <p className="form-help">
-                  {appT.loadingDeathSupportRecord}
-                </p>
-              )}
-
-              {myDeathSupportError && (
-                <p className="form-error">{myDeathSupportError}</p>
-              )}
-
-              {!myDeathSupportLoading &&
-                !myDeathSupportError &&
-                members.length === 0 && (
-                  <p className="form-help">
-                    No member record was found for you in this committee.
-                  </p>
-                )}
-
-              {!myDeathSupportLoading &&
-                !myDeathSupportError &&
-                myDeathSupportInfo &&
-                !myDeathSupportInfo.death_support && (
-                  <div className="finpos-empty">
-                    <p>
-                      {appT.noDeathSupportRecorded}
-                    </p>
-                  </div>
-                )}
-
-              {myDeathSupportInfo?.death_support && (
-                <div className="finpos-section">
-                  <p className="finpos-section-title">{appT.deathSupport}</p>
-
-                  <div className="finpos-history-row">
-                    <div>
-                      <strong>{appT.beneficiary}</strong>
-                    </div>
-                    <span className="finpos-history-amount">
-                      {myDeathSupportInfo.death_support.beneficiary_name}
-                    </span>
-                  </div>
-
-                  <div className="finpos-history-row">
-                    <div>
-                      <strong>{appT.amount}</strong>
-                    </div>
-                    <span className="finpos-history-amount">
-                      {formatPKR(myDeathSupportInfo.death_support.amount)}
-                    </span>
-                  </div>
-
-                  <div className="finpos-history-row">
-                    <div>
-                      <strong>{appT.supportDate}</strong>
-                    </div>
-                    <span className="finpos-history-amount">
-                      {myDeathSupportInfo.death_support.support_date}
-                    </span>
-                  </div>
-
-                  {myDeathSupportInfo.death_support.reference && (
-                    <div className="finpos-history-row">
-                      <div>
-                        <strong>{appT.reference}</strong>
-                      </div>
-                      <span className="finpos-history-amount">
-                        {myDeathSupportInfo.death_support.reference}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </section>
-          ) : activePage === 'My Settlement' ? (
-            <section className="module-page">
-              <div className="page-heading">
-                <div>
-                  <p className="eyebrow">{appT.yourAccount}</p>
-                  <h1>{appT.navigation["My Settlement"]}</h1>
-                  <p className="page-subtitle">
-                    {appT.mySettlementDescription}
-                  </p>
-                </div>
-              </div>
-
-              {mySettlementLoading && (
-                <p className="form-help">
-                  {appT.calculatingSettlementPreview}
-                </p>
-              )}
-
-              {mySettlementError && (
-                <p className="form-error">{mySettlementError}</p>
-              )}
-
-              {!mySettlementLoading &&
-                !mySettlementError &&
-                members.length === 0 && (
-                  <p className="form-help">
-                    No member record was found for you in this committee.
-                  </p>
-                )}
-
-              {mySettlementPreview && (
-                <>
-                  <div className="dashboard-hero">
-                    <p className="dashboard-hero-label">
-                      {appT.ifSettledToday}
-                    </p>
-                    <p className="dashboard-hero-amount">
-                      {formatPKR(mySettlementPreview.final_amount)}
-                    </p>
-                    <p className="dashboard-hero-note">
-                      {appT.settlementPreviewNote}{' '}
-                      {appT.grossValueBeforeDues}:{' '}
-                      {formatPKR(mySettlementPreview.gross_amount)}.
-                    </p>
-                  </div>
-
-                  <div className="finpos-grid">
-                    <div className="finpos-stat-card finpos-stat-card--positive">
-                      <p className="finpos-stat-label">
-                        {appT.contributionBalance}
-                      </p>
-                      <p className="finpos-stat-amount">
-                        {formatPKR(mySettlementPreview.contribution_balance)}
-                      </p>
-                    </div>
-
-                    <div className="finpos-stat-card finpos-stat-card--neutral">
-                      <p className="finpos-stat-label">
-                        {appT.committeeAssetShare}
-                      </p>
-                      <p className="finpos-stat-amount">
-                        {formatPKR(mySettlementPreview.asset_share)}
-                      </p>
-                    </div>
-
-                    <div className="finpos-stat-card finpos-stat-card--neutral">
-                      <p className="finpos-stat-label">Goods value</p>
-                      <p className="finpos-stat-amount">
-                        {formatPKR(mySettlementPreview.goods_value)}
-                      </p>
-                    </div>
-
-                    <div className="finpos-stat-card finpos-stat-card--warning">
-                      <p className="finpos-stat-label">Outstanding dues</p>
-                      <p className="finpos-stat-amount">
-                        {formatPKR(mySettlementPreview.outstanding_dues)}
-                      </p>
-                    </div>
-                  </div>
-                </>
-              )}
-            </section>
+          ) : activePage === 'My Dues' ? (
+            <MyDuesPage
+              appT={appT}
+              members={members}
+              myDuesLoading={myDuesLoading}
+              myDuesError={myDuesError}
+              myOutstandingDues={myOutstandingDues}
+              myDues={myDues}
+              formatPKR={formatPKR}
+            />
+          ) : activePage === 'My Goods' ? (            <MyGoodsPage
+              appT={appT}
+              members={members}
+              myGoodsLoading={myGoodsLoading}
+              myGoodsError={myGoodsError}
+              myGoods={myGoods}
+              myGoodsTotal={myGoodsTotal}
+              formatPKR={formatPKR}
+            />
+          ) : activePage === 'My Death Support' ? (            <MyDeathSupportPage
+              appT={appT}
+              members={members}
+              myDeathSupportLoading={myDeathSupportLoading}
+              myDeathSupportError={myDeathSupportError}
+              myDeathSupportInfo={myDeathSupportInfo}
+              formatPKR={formatPKR}
+            />
+          ) : activePage === 'My Settlement' ? (            <MySettlementPage
+              appT={appT}
+              members={members}
+              mySettlementLoading={mySettlementLoading}
+              mySettlementError={mySettlementError}
+              mySettlementPreview={mySettlementPreview}
+              formatPKR={formatPKR}
+            />
           ) : activePage !== 'Dashboard' ? (
             <section className="module-placeholder">
               <div className="module-placeholder-icon">DC</div>
