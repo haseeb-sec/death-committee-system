@@ -61,8 +61,23 @@ def test_super_admin_can_change_own_password(db):
         assert response.status_code == 200
         assert response.json()["message"] == "Password changed successfully"
 
+        old_token_response = client.get(
+            "/users/me/committees/access",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert old_token_response.status_code == 401
+
+        new_login = login(client, user.username, "new-password")
+        assert new_login.status_code == 200
+
+        new_token = new_login.json()["access_token"]
+        new_token_response = client.get(
+            "/users/me/committees/access",
+            headers={"Authorization": f"Bearer {new_token}"},
+        )
+        assert new_token_response.status_code == 200
+
         assert login(client, user.username, "old-password").status_code == 401
-        assert login(client, user.username, "new-password").status_code == 200
     finally:
         app.dependency_overrides.clear()
 

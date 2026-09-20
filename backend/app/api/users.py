@@ -117,6 +117,7 @@ def change_my_password(
         )
 
     current_user.password_hash = hash_password(data.new_password)
+    current_user.token_version += 1
 
     record_audit(
         db,
@@ -170,6 +171,7 @@ def reset_password(
         )
 
     user.password_hash = hash_password(data.new_password)
+    user.token_version += 1
     user.password_reset_token_hash = None
     user.password_reset_expires_at = None
 

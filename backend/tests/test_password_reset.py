@@ -52,6 +52,17 @@ def test_password_reset_succeeds_and_token_is_single_use(db):
     client = make_client(db)
     try:
         user = make_user(db)
+
+        login_response = client.post(
+            "/auth/login",
+            data={
+                "username": user.username,
+                "password": "old-password",
+            },
+        )
+        assert login_response.status_code == 200
+        old_access_token = login_response.json()["access_token"]
+
         token = issue_token(user, db)
 
         response = client.post(
@@ -64,6 +75,37 @@ def test_password_reset_succeeds_and_token_is_single_use(db):
 
         assert response.status_code == 200
         assert response.json()["message"] == "Password reset successfully"
+
+        old_token_response = client.get(
+            "/users/me/committees/access",
+            headers={"Authorization": f"Bearer {old_access_token}"},
+        )
+        assert old_token_response.status_code == 401
+
+        new_login = client.post(
+            "/auth/login",
+            data={
+                "username": user.username,
+                "password": "new-secure-password",
+            },
+        )
+        assert new_login.status_code == 200
+
+        new_access_token = new_login.json()["access_token"]
+
+        new_token_response = client.get(
+            "/users/me/committees/access",
+            headers={"Authorization": f"Bearer {new_access_token}"},
+        )
+        assert new_token_response.status_code == 200
+
+        assert client.post(
+            "/auth/login",
+            data={
+                "username": user.username,
+                "password": "old-password",
+            },
+        ).status_code == 401
 
         db.refresh(user)
         assert user.password_reset_token_hash is None
