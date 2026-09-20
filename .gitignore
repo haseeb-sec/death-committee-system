@@ -66,3 +66,5 @@ repair_*.py
 
 # Authorization migration snapshots
 .authorization_*/
+
+/backend/backups/*.sql
