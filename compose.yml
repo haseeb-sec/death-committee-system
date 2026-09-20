@@ -7,8 +7,6 @@ services:
       POSTGRES_DB: death_committee
       POSTGRES_USER: death_committee
       POSTGRES_PASSWORD: death_committee_dev_password
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
