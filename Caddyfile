@@ -1,0 +1,47 @@
+{
+    local_certs
+}
+
+https://localhost {
+    tls internal
+
+    handle /auth/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /users/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /committees/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /members/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /contributions/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /settlements/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /death-support/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /audit-logs/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /assets/* {
+        reverse_proxy frontend:80
+    }
+
+    handle {
+        reverse_proxy frontend:80
+    }
+}
