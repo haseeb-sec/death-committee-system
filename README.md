@@ -182,7 +182,6 @@ This is an active portfolio/development project, not a production SaaS or enterp
 - Expanded reporting and API documentation
 - Frontend and end-to-end tests
 - Observability
-- Backup and recovery procedures
 - Production security configuration review
 
 ## License

@@ -115,7 +115,7 @@ Known limitations include:
 - The current application uses SQLite for development and testing.
 - The login rate limiter is in-memory and IP-based; a distributed production deployment would require shared or infrastructure-level rate limiting.
 - Production deployment and infrastructure hardening are not yet implemented.
-- Observability and backup/recovery procedures are not yet fully implemented.
+- SQLite backup and restore tooling is implemented and tested, but production backup storage, retention, and recovery infrastructure are not yet implemented.
 - Frontend and end-to-end security testing is less extensive than backend security testing.
 - Authorization testing is extensive but is not an exhaustive formal proof of every resource, role, and cross-committee combination.
 - Automated dependency scanning detects known dependency issues but does not replace application-level security testing.
