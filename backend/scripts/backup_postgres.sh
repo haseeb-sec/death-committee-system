@@ -12,6 +12,7 @@ docker compose exec -T postgres \
   --username=death_committee \
   --dbname=death_committee \
   --format=plain \
+  --no-owner \
   > "$BACKUP_FILE"
 
 echo "PostgreSQL backup created: $BACKUP_FILE"
