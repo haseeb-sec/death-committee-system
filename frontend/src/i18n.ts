@@ -352,6 +352,7 @@ export type AppTranslation = {
   usersActive: string
   usersIssueRecoveryToken: string
   usersDeactivate: string
+  usersActivate: string
   usersGlobalPlatformAuthority: string
   usersAssignedCommittees: string
   usersViewAccess: string
@@ -650,6 +651,7 @@ export type AppTranslation = {
     grantCommitteeAccess: string
     revokeCommitteeAccess: string
     createUser: string
+    activateUser: string
     deactivateUser: string
   }
 
@@ -953,6 +955,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
     usersActive: 'Active',
     usersIssueRecoveryToken: 'Issue Recovery Token',
     usersDeactivate: 'Deactivate',
+    usersActivate: 'Activate',
     usersGlobalPlatformAuthority: 'Global platform authority',
     usersAssignedCommittees: 'Assigned committees',
     usersViewAccess: 'View Access',
@@ -1236,6 +1239,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
       revokeCommitteeAccess: 'Unable to revoke committee access',
       createUser: 'Unable to create user',
       deactivateUser: 'Unable to deactivate user',
+      activateUser: 'Unable to activate user',
     },
 
     loadingYourGoods: 'Loading your goods...',
@@ -1548,6 +1552,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
     usersActive: 'فعال',
     usersIssueRecoveryToken: 'بازیابی ٹوکن جاری کریں',
     usersDeactivate: 'غیر فعال کریں',
+    usersActivate: 'فعال کریں',
     usersGlobalPlatformAuthority: 'پورے نظام کا اختیار',
     usersAssignedCommittees: 'تفویض کردہ کمیٹیاں',
     usersViewAccess: 'رسائی دیکھیں',
@@ -1833,6 +1838,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
       revokeCommitteeAccess: 'کمیٹی تک رسائی ختم نہیں کی جا سکی',
       createUser: 'صارف نہیں بنایا جا سکا',
       deactivateUser: 'صارف کو غیر فعال نہیں کیا جا سکا',
+      activateUser: 'صارف کو فعال نہیں کیا جا سکا',
     },
 
     loadingYourGoods: 'آپ کی خریداری کی اشیا لوڈ ہو رہی ہیں...',

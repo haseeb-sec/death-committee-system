@@ -171,3 +171,17 @@ export async function deactivateUser(
 
   return response.json()
 }
+
+export async function activateUser(userId: number, token: string): Promise<Record<string, any>> {
+  const response = await fetch(`${API_BASE}/users/${userId}/activate`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(formatApiError(data?.detail, 'Unable to activate user'))
+  }
+
+  return response.json()
+}

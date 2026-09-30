@@ -24,6 +24,7 @@ type UsersPageProps = {
   handleCreateUser: any
   handleLoadUsers: any
   handleDeactivateUser: any
+  handleActivateUser: any
   handleIssuePasswordReset: any
   assignmentUserId: any
   setAssignmentUserId: any
@@ -74,6 +75,7 @@ export default function UsersPage(props: UsersPageProps) {
     handleCreateUser,
     handleLoadUsers,
     handleDeactivateUser,
+    handleActivateUser,
     handleIssuePasswordReset,
     assignmentUserId,
     setAssignmentUserId,
@@ -596,8 +598,8 @@ export default function UsersPage(props: UsersPageProps) {
                       }`}
                     >
                       {user.is_active === false
-                        ? 'Inactive'
-                        : 'Active'}
+                        ? appT.usersInactive
+                        : appT.usersActive}
                     </span>
                   </div>
 
@@ -607,7 +609,7 @@ export default function UsersPage(props: UsersPageProps) {
                 </div>
 
                 <div className="user-account-actions">
-                  {user.is_active !== false && (
+                  {user.is_active !== false ? (
                     <>
                       <button
                         type="button"
@@ -638,9 +640,25 @@ export default function UsersPage(props: UsersPageProps) {
                             : undefined
                         }
                       >
-                        Deactivate
+                        {appT.usersDeactivate}
                       </button>
                     </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="management-action management-action-secondary"
+                      disabled={usersLoading}
+                      onClick={
+                        canWrite
+                          ? () =>
+                              void handleActivateUser(
+                                Number(user.id),
+                              )
+                          : undefined
+                      }
+                    >
+                      {appT.usersActivate}
+                    </button>
                   )}
                 </div>
               </div>

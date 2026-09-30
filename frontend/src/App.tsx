@@ -83,6 +83,7 @@ import {
   deactivateUserCommitteeAccess,
   createUser,
   deactivateUser,
+  activateUser,
 } from './api/user'
 
 import { decodeJwtPayload, getTimeGreeting, formatPKR } from './utils'
@@ -2572,6 +2573,33 @@ async function handleCreateCommittee(event: FormEvent) {
     }
   }
 
+  async function handleActivateUser(userId: number) {
+    if (!canWrite) {
+      setError(appT.errors.permissionDenied)
+      return
+    }
+
+    if (!token) {
+      setError(appT.errors.notAuthenticated)
+      return
+    }
+
+    setError('')
+    setUsersLoading(true)
+
+    try {
+      const data = await activateUser(userId, token)
+      setCreatedUser(data)
+      await handleLoadUsers()
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : appT.errors.activateUser,
+      )
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
   async function logout() {
     const currentToken = localStorage.getItem('death_committee_token')
 
@@ -3595,6 +3623,7 @@ async function handleCreateCommittee(event: FormEvent) {
               handleCreateUser={handleCreateUser}
               handleLoadUsers={handleLoadUsers}
               handleDeactivateUser={handleDeactivateUser}
+              handleActivateUser={handleActivateUser}
               handleIssuePasswordReset={handleIssuePasswordReset}
               assignmentUserId={assignmentUserId}
               setAssignmentUserId={setAssignmentUserId}
