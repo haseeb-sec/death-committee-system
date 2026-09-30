@@ -95,6 +95,7 @@ import AssetsPage from './components/AssetsPage'
 import GoodsPage from './components/GoodsPage'
 import SettlementsPage from './components/SettlementsPage'
 import MyFinancialPositionPage from './components/MyFinancialPositionPage'
+import AuditLogsPage from './components/AuditLogsPage'
 
 
 function App() {
@@ -3546,6 +3547,14 @@ async function handleCreateCommittee(event: FormEvent) {
                 </>
               )}
             </>
+          ) : activePage === 'Audit Logs' ? (
+            <AuditLogsPage
+              appT={appT}
+              token={token ?? ''}
+              isSuperAdmin={isSuperAdmin}
+              committeeId={committeeId}
+              committees={committees}
+            />
           ) : activePage === 'Contributions' ? (
             <ContributionsPage
               appT={appT}

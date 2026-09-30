@@ -61,6 +61,7 @@ export default function AppShell({
         'Goods',
         'Assets',
         'Settlements',
+        'Audit Logs',
       ]
     : isSelectedCommitteeAdmin
       ? [
@@ -72,6 +73,7 @@ export default function AppShell({
           'Goods',
           'Assets',
           'Settlements',
+          'Audit Logs',
         ]
       : [
           'Dashboard',

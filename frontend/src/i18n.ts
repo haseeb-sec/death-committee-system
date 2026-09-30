@@ -525,6 +525,30 @@ export type AppTranslation = {
   ifSettledToday: string
   settlementPreviewNote: string
   outstandingDues: string
+  auditLogs: string
+  auditLogsDescription: string
+  auditLogsCommittee: string
+  auditLogsAllCommittees: string
+  auditLogsEntityType: string
+  auditLogsEntityId: string
+  auditLogsUserId: string
+  auditLogsStartDate: string
+  auditLogsEndDate: string
+  auditLogsApplyFilters: string
+  auditLogsClearFilters: string
+  auditLogsRefresh: string
+  auditLogsLoading: string
+  auditLogsEmpty: string
+  auditLogsShowingLatest: string
+  auditLogsCreatedAt: string
+  auditLogsAction: string
+  auditLogsEntity: string
+  auditLogsDescriptionColumn: string
+  auditLogsUser: string
+  auditLogsCommitteeColumn: string
+  auditLogsEntityIdColumn: string
+  auditLogsUserIdColumn: string
+  auditLogsCommitteeIdColumn: string
   loadingYourDues: string
   access: string
   module: string
@@ -566,6 +590,7 @@ export type AppTranslation = {
     loadGoods: string
     loadDeathSupport: string
     loadSettlementPreview: string
+    loadAuditLogs: string
     issueRecoveryToken: string
     passwordChanged: string
     changePassword: string
@@ -685,6 +710,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
       'My Goods': 'My Purchases',
       'My Financial Position': 'My Financial Summary',
       'My Settlement': 'My Settlement',
+      'Audit Logs': 'Audit Logs',
     },
 
     access: 'ACCESS',
@@ -1138,6 +1164,30 @@ export const appTranslations: Record<Language, AppTranslation> = {
     settlementPreviewNote:
       'This is a live preview, not a final record. It changes as your contributions, dues, and shares change.',
     outstandingDues: 'Outstanding dues',
+    auditLogs: 'Audit Logs',
+    auditLogsDescription: 'Review recent administrative and financial activity recorded by the system.',
+    auditLogsCommittee: 'Committee',
+    auditLogsAllCommittees: 'All committees',
+    auditLogsEntityType: 'Entity type',
+    auditLogsEntityId: 'Entity ID',
+    auditLogsUserId: 'User ID',
+    auditLogsStartDate: 'Start date',
+    auditLogsEndDate: 'End date',
+    auditLogsApplyFilters: 'Apply filters',
+    auditLogsClearFilters: 'Clear filters',
+    auditLogsRefresh: 'Refresh',
+    auditLogsLoading: 'Loading audit logs...',
+    auditLogsEmpty: 'No audit logs found for the selected filters.',
+    auditLogsShowingLatest: 'Showing the latest 100 matching entries.',
+    auditLogsCreatedAt: 'Created at',
+    auditLogsAction: 'Action',
+    auditLogsEntity: 'Entity',
+    auditLogsDescriptionColumn: 'Description',
+    auditLogsUser: 'User',
+    auditLogsCommitteeColumn: 'Committee',
+    auditLogsEntityIdColumn: 'Entity ID',
+    auditLogsUserIdColumn: 'User ID',
+    auditLogsCommitteeIdColumn: 'Committee ID',
     loadingYourDues: 'Loading your dues...',
     invalidWholeNumber: 'New value must be a whole number greater than or equal to 0',
     onlySuperAdminCloseCommittees: 'Only Super Administrators can close committees',
@@ -1153,6 +1203,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
       loadGoods: 'Unable to load your goods',
       loadDeathSupport: 'Unable to load your death support record',
       loadSettlementPreview: 'Unable to load your settlement preview',
+      loadAuditLogs: 'Unable to load audit logs',
       issueRecoveryToken: 'Unable to issue recovery token',
       passwordChanged: 'Password changed successfully',
       changePassword: 'Unable to change password',
@@ -1282,6 +1333,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
       'My Goods': 'میری خریداری',
       'My Financial Position': 'میرا مالی خلاصہ',
       'My Settlement': 'میرا حتمی حساب',
+      'Audit Logs': 'آڈٹ لاگز',
     },
 
     access: 'رسائی',
@@ -1737,6 +1789,30 @@ export const appTranslations: Record<Language, AppTranslation> = {
     settlementPreviewNote:
       'یہ حتمی ریکارڈ نہیں بلکہ موجودہ اندازہ ہے۔ آپ کی جمع شدہ رقوم، واجبات اور حصوں میں تبدیلی کے ساتھ یہ رقم بھی بدل سکتی ہے۔',
     outstandingDues: 'بقایا واجبات',
+    auditLogs: 'آڈٹ لاگز',
+    auditLogsDescription: 'سسٹم میں درج حالیہ انتظامی اور مالی سرگرمی کا ریکارڈ دیکھیں۔',
+    auditLogsCommittee: 'کمیٹی',
+    auditLogsAllCommittees: 'تمام کمیٹیاں',
+    auditLogsEntityType: 'ریکارڈ کی قسم',
+    auditLogsEntityId: 'ریکارڈ آئی ڈی',
+    auditLogsUserId: 'صارف آئی ڈی',
+    auditLogsStartDate: 'شروع کی تاریخ',
+    auditLogsEndDate: 'اختتام کی تاریخ',
+    auditLogsApplyFilters: 'فلٹرز لاگو کریں',
+    auditLogsClearFilters: 'فلٹرز صاف کریں',
+    auditLogsRefresh: 'تازہ کریں',
+    auditLogsLoading: 'آڈٹ لاگز لوڈ ہو رہے ہیں...',
+    auditLogsEmpty: 'منتخب فلٹرز کے مطابق کوئی آڈٹ لاگ نہیں ملا۔',
+    auditLogsShowingLatest: 'تازہ ترین 100 متعلقہ اندراجات دکھائے جا رہے ہیں۔',
+    auditLogsCreatedAt: 'وقت',
+    auditLogsAction: 'کارروائی',
+    auditLogsEntity: 'ریکارڈ',
+    auditLogsDescriptionColumn: 'تفصیل',
+    auditLogsUser: 'صارف',
+    auditLogsCommitteeColumn: 'کمیٹی',
+    auditLogsEntityIdColumn: 'ریکارڈ آئی ڈی',
+    auditLogsUserIdColumn: 'صارف آئی ڈی',
+    auditLogsCommitteeIdColumn: 'کمیٹی آئی ڈی',
     loadingYourDues: 'آپ کے واجبات لوڈ ہو رہے ہیں...',
     invalidWholeNumber: 'نئی رقم صفر یا اس سے زیادہ کی مکمل عدد ہونی چاہیے',
     onlySuperAdminCloseCommittees: 'صرف سپر ایڈمنسٹریٹر ہی کمیٹیاں بند کر سکتے ہیں',
@@ -1752,6 +1828,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
       loadGoods: 'آپ کی خریداری کی اشیا لوڈ نہیں ہو سکیں',
       loadDeathSupport: 'آپ کی وفات کی امداد کا ریکارڈ لوڈ نہیں ہو سکا',
       loadSettlementPreview: 'آپ کے تصفیے کا پیش نظارہ لوڈ نہیں ہو سکا',
+      loadAuditLogs: 'آڈٹ لاگز لوڈ نہیں ہو سکے',
       issueRecoveryToken: 'ریکوری ٹوکن جاری نہیں ہو سکا',
       passwordChanged: 'پاس ورڈ کامیابی سے تبدیل ہو گیا',
       changePassword: 'پاس ورڈ تبدیل نہیں ہو سکا',

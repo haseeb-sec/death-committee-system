@@ -33,6 +33,10 @@ https://localhost {
         reverse_proxy backend:8000
     }
 
+    handle /audit-logs {
+        reverse_proxy backend:8000
+    }
+
     handle /audit-logs/* {
         reverse_proxy backend:8000
     }
