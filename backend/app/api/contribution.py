@@ -115,7 +115,7 @@ def create_contribution_rate(
             detail=str(exc),
         ) from exc
 
-    except Exception as exc:
+    except AccountingError as exc:
         db.rollback()
         raise HTTPException(
             status_code=400,

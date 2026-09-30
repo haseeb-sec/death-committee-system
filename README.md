@@ -2,7 +2,7 @@
 
 A full-stack financial management system for community-based mutual death-support committees.
 
-Built with FastAPI, SQLAlchemy, Alembic, React, TypeScript, Vite, Tailwind CSS, and SQLite.
+Built with FastAPI, SQLAlchemy, Alembic, React, TypeScript, Vite, Tailwind CSS, and PostgreSQL.
 
 > Status: Active development / portfolio project
 
@@ -57,7 +57,7 @@ Security controls include:
 - Configurable CORS origins
 - Input validation and password-length policy
 - Financial chronology and consistency checks
-- Database uniqueness constraints for valuation/rate history
+- Database uniqueness and financial-integrity constraints
 - Audit logging
 - Dependency vulnerability scanning through CI
 
@@ -83,11 +83,13 @@ Historical accounting records are preserved. Corrections use reversal operations
 
 Contribution rates use effective dates. Valuation history for member goods and committee assets is chronological and does not allow duplicate valuation dates for the same item.
 
+Member financial shortfalls that are supported by the committee are represented as Qarz-e-Hasana obligations and tracked through member dues.
+
 ## Architecture
 
 ### Backend
 
-FastAPI → authorization/dependencies → services → SQLAlchemy models → database
+FastAPI → authorization/dependencies → services → SQLAlchemy models → PostgreSQL
 
 The service layer contains domain and financial rules instead of placing important logic only in route handlers.
 
@@ -99,15 +101,63 @@ React + TypeScript + Vite + Tailwind CSS
 
 The frontend provides role-aware pages, responsive layouts, and English/Urdu localization.
 
-Alembic migrations track database schema changes.
+### Deployment
+
+The application is containerized with Docker Compose.
+
+The deployed architecture is:
+
+- Browser → Caddy HTTPS reverse proxy
+- Caddy → Frontend (Nginx)
+- Caddy → Backend (FastAPI/Uvicorn)
+- Backend → PostgreSQL 17
+
+Caddy terminates HTTPS and routes application requests to the frontend or backend.
+
+PostgreSQL is internal to the Docker Compose network and is not exposed directly to the host.
+
+### Database Migrations
+
+Alembic manages database schema migrations.
+
+The migration chain currently has a single head. Pending migrations are automatically applied when the backend container starts, before the FastAPI application begins serving requests.
 
 ## Testing
 
-The verified backend suite currently contains **103 passing tests** covering authentication, authorization, audit logging, financial integrity, contributions, dues, death support, goods, assets, settlements, password security, and related security regressions.
+The current verified backend suite contains **122 passing tests** covering authentication, authorization, audit logging, financial integrity, contributions, dues, death support, goods, assets, settlements, password security, and related security regressions.
 
-Frontend verification includes production builds and lint checks during development and CI.
+Frontend verification includes successful production builds and lint checks during development and CI.
 
-Passing tests do not imply complete security coverage or production readiness.
+Passing tests do not imply complete security coverage or eliminate the need for deployment-specific operational controls.
+
+## Backup and Recovery
+
+### PostgreSQL Backups
+
+PostgreSQL backups are created with:
+
+`bash backend/scripts/backup_postgres.sh`
+
+The script creates timestamped plain SQL backups under:
+
+`backend/backups/`
+
+### PostgreSQL Recovery
+
+PostgreSQL backups can be restored into an isolated database for recovery testing with:
+
+`bash backend/scripts/restore_postgres.sh <backup.sql> <target_database>`
+
+The restore script:
+
+- Requires an existing SQL backup file
+- Validates the target database name
+- Refuses to overwrite an existing database
+- Refuses restoration into the live `death_committee` database unless explicitly overridden
+- Restores with `ON_ERROR_STOP`
+- Removes a partially restored isolated database if restoration fails
+
+A fresh PostgreSQL backup and isolated restore have been successfully verified during development.
 
 ## CI and Security Scanning
 
@@ -119,7 +169,22 @@ These checks are intended to catch regressions and known dependency vulnerabilit
 
 ## Run Locally
 
-### Backend
+### Docker Compose
+
+The complete application stack can be started with:
+
+`docker compose up -d --build`
+
+The stack includes:
+
+- PostgreSQL 17
+- FastAPI backend
+- React/Vite frontend served by Nginx
+- Caddy HTTPS reverse proxy
+
+The backend automatically applies pending Alembic migrations during startup.
+
+### Backend Development
 
 From the project root:
 
@@ -129,7 +194,7 @@ Activate the virtual environment:
 
 `source .venv/bin/activate`
 
-Start the API:
+Start the API directly:
 
 `uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`
 
@@ -137,7 +202,7 @@ API documentation:
 
 `http://127.0.0.1:8000/docs`
 
-### Frontend
+### Frontend Development
 
 From the project root:
 
@@ -161,28 +226,54 @@ Create the backend environment file:
 
 Use a long random value for `SECRET_KEY`. Never commit the real `.env` file.
 
+For containerized deployment, database and application settings are supplied through the Docker Compose environment configuration.
+
 ## Technology Stack
 
-**Backend:** Python, FastAPI, SQLAlchemy, Alembic, Pydantic, SQLite, Pytest
+**Backend:** Python, FastAPI, SQLAlchemy, Alembic, Pydantic, PostgreSQL, Pytest
 
 **Frontend:** React, TypeScript, Vite, Tailwind CSS, Oxlint
+
+**Infrastructure:** Docker, Docker Compose, Caddy, Nginx
 
 **Development:** Git, GitHub, REST APIs, automated testing, database migrations
 
 ## Current Status
 
-Implemented areas include committee and member management, contributions, dues, death support, goods, assets, accounting, settlements, authentication, password recovery, authorization, session revocation, audit logging, security controls, responsive UI, and English/Urdu localization.
+Implemented and verified areas include:
 
-This is an active portfolio/development project, not a production SaaS or enterprise deployment.
+- Committee and member management
+- Contributions and contribution-rate versioning
+- Member dues and payments
+- Death support and Qarz-e-Hasana
+- Member goods and valuation history
+- Committee assets and valuation history
+- Double-entry accounting
+- Financial statements
+- Member settlements and settlement payments
+- Authentication and password recovery
+- Role-based and committee-level authorization
+- Session revocation
+- Audit logging
+- Financial database integrity constraints
+- PostgreSQL deployment configuration
+- Automatic database migrations
+- HTTPS reverse proxy configuration
+- PostgreSQL backup and isolated restore procedures
+- Responsive UI
+- English/Urdu localization
+- 122 verified backend tests
+
+This is an active portfolio/development project rather than a managed production SaaS service. Deployment-specific secrets, infrastructure monitoring, external backup storage, and operational procedures still depend on the target hosting environment.
 
 ## Roadmap
 
-- PostgreSQL production configuration
-- Deployment and production infrastructure hardening
 - Expanded reporting and API documentation
-- Frontend and end-to-end tests
-- Observability
-- Production security configuration review
+- Frontend and end-to-end test coverage
+- Observability and operational monitoring
+- Deployment-specific production security configuration
+- External/off-host backup strategy
+- Formal open-source licensing if distribution policy is finalized
 
 ## License
 

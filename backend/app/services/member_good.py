@@ -7,6 +7,7 @@ from app.models import (
     Account,
     AccountType,
     Member,
+    MemberDue,
     MemberGood,
     MemberGoodValuation,
 )
@@ -26,18 +27,22 @@ def add_member_good(
     description: str | None = None,
 ) -> MemberGood:
     """
-    Record a good purchased using a member's accumulated funds.
+    Record a committee-funded purchase of a member-owned good.
 
-    The purchase is treated as a transfer of value from the
-    member's committee balance into a member-owned good.
+    The purchase is paid from the committee's collective cash pool.
+    The member's available refundable balance covers part of the
+    purchase when possible; any remaining amount becomes
+    Qarz-e-Hasana owed by the member.
 
     Accounting:
 
         Member Account   +purchase_price
         Committee Cash   -purchase_price
 
-    The member's refundable cash balance therefore decreases,
-    while the good becomes part of the member's refundable value.
+    The member's refundable cash balance therefore decreases by
+    the full purchase amount, while the good becomes part of the
+    member's refundable value. Any amount beyond the member's
+    available balance is recorded as Qarz-e-Hasana.
 
     The good's current value is tracked separately and may change
     through later valuations.
@@ -55,7 +60,11 @@ def add_member_good(
             "Purchase price must be greater than zero."
         )
 
-    member = db.get(Member, member_id)
+    member = db.scalar(
+        select(Member)
+        .where(Member.id == member_id)
+        .with_for_update()
+    )
 
     if member is None:
         raise AccountingError(
@@ -91,19 +100,30 @@ def add_member_good(
             "Committee cash account not found."
         )
 
-    # The member must actually have enough accumulated balance
-    # to purchase the good.
+    # The purchase is funded from the committee's collective cash pool.
+    # The member does not need enough personal balance: any shortfall
+    # becomes Qarz-e-Hasana owed by the member.
+    cash_balance = sum(
+        line.amount
+        for line in cash_account.journal_lines
+    )
+
+    if cash_balance < purchase_price:
+        raise AccountingError(
+            f"Insufficient committee cash. "
+            f"Required: {purchase_price}, "
+            f"available: {cash_balance}"
+        )
+
     member_balance = -sum(
         line.amount
         for line in member.account.journal_lines
     )
 
-    if member_balance < purchase_price:
-        raise AccountingError(
-            f"Insufficient member balance. "
-            f"Required: {purchase_price}, "
-            f"available: {member_balance}"
-        )
+    qarz_e_hasana_amount = max(
+        purchase_price - max(member_balance, 0),
+        0,
+    )
 
     good = MemberGood(
         member_id=member.id,
@@ -143,6 +163,23 @@ def add_member_good(
         ],
     )
 
+    if qarz_e_hasana_amount > 0:
+        db.add(
+            MemberDue(
+                committee_id=member.committee_id,
+                member_id=member.id,
+                amount=qarz_e_hasana_amount,
+                paid_amount=0,
+                due_date=purchase_date,
+                description=(
+                    f"Qarz-e-Hasana member good purchase for "
+                    f"{member.name}"
+                ),
+                due_type="qarz_e_hasana",
+                reference=f"MEMBER-GOOD-{good.id}-QARZ",
+            )
+        )
+
     db.flush()
 
     return good
@@ -168,7 +205,11 @@ def update_member_good_value(
             "Good value cannot be negative."
         )
 
-    good = db.get(MemberGood, good_id)
+    good = db.scalar(
+        select(MemberGood)
+        .where(MemberGood.id == good_id)
+        .with_for_update()
+    )
 
     if good is None:
         raise AccountingError(

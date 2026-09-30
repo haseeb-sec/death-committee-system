@@ -30,7 +30,11 @@ def record_contribution(
         Member Account   -amount
     """
 
-    member = db.get(Member, member_id)
+    member = db.scalar(
+        select(Member)
+        .where(Member.id == member_id)
+        .with_for_update()
+    )
 
     if member is None:
         raise AccountingError(
@@ -146,7 +150,11 @@ def get_member_contributions(
     Results are ordered from oldest to newest contribution.
     """
 
-    member = db.get(Member, member_id)
+    member = db.scalar(
+        select(Member)
+        .where(Member.id == member_id)
+        .with_for_update()
+    )
 
     if member is None:
         raise AccountingError(

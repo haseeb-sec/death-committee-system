@@ -15,7 +15,7 @@ export async function login(username: string, password: string) {
   })
 
   if (!response.ok) {
-    throw new Error('Invalid username or password')
+    throw new Error('LOGIN_FAILED')
   }
 
   return response.json()

@@ -179,6 +179,8 @@ export default function UsersPage(props: UsersPageProps) {
             required
           />
         </label>
+
+        <p className="form-help">{appT.usersPasswordRequirements}</p>
       </div>
 
       <button type="submit" disabled={loading}>
@@ -221,7 +223,7 @@ export default function UsersPage(props: UsersPageProps) {
         </label>
 
         <label>
-          Password
+          {appT.usersPassword}
           <input
             type="password"
             value={userPassword}
@@ -232,6 +234,8 @@ export default function UsersPage(props: UsersPageProps) {
             required
           />
         </label>
+
+        <p className="form-help">{appT.usersPasswordRequirements}</p>
 
         <label>
           {appT.usersPlatformRole}

@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import CheckConstraint, Date, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -14,6 +14,10 @@ class MemberGoodValuation(Base):
             "good_id",
             "valuation_date",
             name="uq_member_good_valuations_good_date",
+        ),
+        CheckConstraint(
+            "value >= 0",
+            name="ck_member_good_valuations_value_nonnegative",
         ),
     )
 

@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Integer, String
+from sqlalchemy import CheckConstraint, Date, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -8,6 +8,21 @@ from app.db.session import Base
 
 class MemberDue(Base):
     __tablename__ = "member_dues"
+
+    __table_args__ = (
+        CheckConstraint(
+            "amount >= 0",
+            name="ck_member_dues_amount_nonnegative",
+        ),
+        CheckConstraint(
+            "paid_amount >= 0",
+            name="ck_member_dues_paid_amount_nonnegative",
+        ),
+        CheckConstraint(
+            "paid_amount <= amount",
+            name="ck_member_dues_paid_amount_not_exceed_amount",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
 

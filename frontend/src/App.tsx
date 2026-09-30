@@ -695,24 +695,18 @@ function App() {
     async function loadMyContributions() {
       setMyContributionsLoading(true)
       setMyContributionsError('')
+      setMyContributions([])
+      setMyContributionTotal(null)
 
       try {
-        const historyData = await getMemberContributions(
-          ownMemberId,
-          token,
-        )
+        const [historyData, totalData] = await Promise.all([
+          getMemberContributions(ownMemberId, token),
+          getMemberContributionTotal(ownMemberId, token),
+        ])
 
         if (cancelled) return
 
         setMyContributions(historyData)
-
-        const totalData = await getMemberContributionTotal(
-          ownMemberId,
-          token,
-        )
-
-        if (cancelled) return
-
         setMyContributionTotal(totalData)
       } catch (err) {
         if (cancelled) return
@@ -747,24 +741,18 @@ function App() {
     async function loadMyDues() {
       setMyDuesLoading(true)
       setMyDuesError('')
+      setMyDues([])
+      setMyOutstandingDues(null)
 
       try {
-        const duesData = await getMyMemberDues(
-          ownMemberId,
-          token,
-        )
+        const [duesData, outstandingData] = await Promise.all([
+          getMyMemberDues(ownMemberId, token),
+          getMyOutstandingDues(ownMemberId, token),
+        ])
 
         if (cancelled) return
 
         setMyDues(duesData)
-
-        const outstandingData = await getMyOutstandingDues(
-          ownMemberId,
-          token,
-        )
-
-        if (cancelled) return
-
         setMyOutstandingDues(outstandingData)
       } catch (err) {
         if (cancelled) return
@@ -929,7 +917,7 @@ function App() {
 
   async function handleIssuePasswordReset(userId: number) {
     if (!canWrite) {
-      setError('You do not have permission to perform this action')
+      setError(appT.errors.permissionDenied)
       return
     }
 
@@ -938,7 +926,7 @@ function App() {
     setIssuedResetExpiry(null)
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -964,7 +952,7 @@ function App() {
     event.preventDefault()
 
     if (!canWrite) {
-      setError('You do not have permission to perform this action')
+      setError(appT.errors.permissionDenied)
       return
     }
 
@@ -972,22 +960,22 @@ function App() {
     setPasswordChangeMessage('')
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     if (!currentPassword) {
-      setError('Current password is required')
+      setError(appT.errors.currentPasswordRequired)
       return
     }
 
     if (!newPassword) {
-      setError('New password is required')
+      setError(appT.errors.newPasswordRequired)
       return
     }
 
     if (newPassword !== confirmNewPassword) {
-      setError('New passwords do not match')
+      setError(appT.errors.passwordsDoNotMatch)
       return
     }
 
@@ -1027,12 +1015,12 @@ function App() {
     }
 
     if (!recoveryNewPassword) {
-      setError('New password is required')
+      setError(appT.errors.newPasswordRequired)
       return
     }
 
     if (recoveryNewPassword !== recoveryConfirmPassword) {
-      setError('New passwords do not match')
+      setError(appT.errors.passwordsDoNotMatch)
       return
     }
 
@@ -1078,8 +1066,8 @@ function App() {
         systemRole: data.role ?? '',
         token: data.access_token,
       })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : appT.errors.loginFailed)
+    } catch {
+      setError(appT.errors.invalidCredentials)
     } finally {
       setLoading(false)
     }
@@ -1091,12 +1079,12 @@ function App() {
     event.preventDefault()
 
     if (!canWrite) {
-      setError('You do not have permission to perform write actions')
+      setError(appT.errors.writeActionsDenied)
       return
     }
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -1104,22 +1092,22 @@ function App() {
     const purchaseValue = Number(assetPurchaseValue)
 
     if (!Number.isInteger(selectedCommitteeId) || selectedCommitteeId <= 0) {
-      setError('Select a valid committee')
+      setError(appT.errors.validCommitteeRequired)
       return
     }
 
     if (!assetName.trim()) {
-      setError('Asset name is required')
+      setError(appT.errors.assetNameRequired)
       return
     }
 
     if (!assetPurchaseDate) {
-      setError('Purchase date is required')
+      setError(appT.errors.purchaseDateRequired)
       return
     }
 
     if (!Number.isInteger(purchaseValue) || purchaseValue <= 0) {
-      setError('Purchase value must be a positive whole number')
+      setError(appT.errors.purchaseValuePositive)
       return
     }
 
@@ -1155,12 +1143,12 @@ function App() {
     event.preventDefault()
 
     if (!canWrite) {
-      setError('You do not have permission to perform write actions')
+      setError(appT.errors.writeActionsDenied)
       return
     }
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -1168,12 +1156,12 @@ function App() {
     const newValue = Number(assetNewValue)
 
     if (!Number.isInteger(assetId) || assetId <= 0) {
-      setError('Enter a valid asset ID')
+      setError(appT.errors.validAssetIdRequired)
       return
     }
 
     if (!assetValuationDate) {
-      setError('Valuation date is required')
+      setError(appT.errors.valuationDateRequired)
       return
     }
 
@@ -1212,14 +1200,14 @@ function App() {
 
   async function handleLoadAssetValuations() {
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const assetId = Number(valuationAssetId)
 
     if (!Number.isInteger(assetId) || assetId <= 0) {
-      setError('Enter a valid asset ID')
+      setError(appT.errors.validAssetIdRequired)
       return
     }
 
@@ -1242,14 +1230,14 @@ function App() {
 
   async function handleLoadAssetParticipation() {
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const assetId = Number(participationAssetId)
 
     if (!Number.isInteger(assetId) || assetId <= 0) {
-      setError('Enter a valid asset ID')
+      setError(appT.errors.validAssetIdRequired)
       return
     }
 
@@ -1275,12 +1263,12 @@ function App() {
     event.preventDefault()
 
     if (!canWrite) {
-      setError('You do not have permission to perform write actions')
+      setError(appT.errors.writeActionsDenied)
       return
     }
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -1288,22 +1276,22 @@ function App() {
     const purchasePrice = Number(goodPurchasePrice)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
-      setError('Select a valid member')
+      setError(appT.errors.validMemberRequired)
       return
     }
 
     if (!goodName.trim()) {
-      setError('Good name is required')
+      setError(appT.errors.goodNameRequired)
       return
     }
 
     if (!goodPurchaseDate) {
-      setError('Purchase date is required')
+      setError(appT.errors.purchaseDateRequired)
       return
     }
 
     if (!Number.isInteger(purchasePrice) || purchasePrice <= 0) {
-      setError('Purchase price must be a positive whole number')
+      setError(appT.errors.purchasePricePositive)
       return
     }
 
@@ -1337,14 +1325,14 @@ function App() {
 
   async function handleLoadMemberGoods() {
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const memberId = Number(goodsListMemberId)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
-      setError('Enter a valid member ID')
+      setError(appT.errors.validMemberIdRequired)
       return
     }
 
@@ -1367,14 +1355,14 @@ function App() {
 
   async function handleLoadMemberGoodsTotal() {
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const memberId = Number(goodsTotalMemberId)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
-      setError('Enter a valid member ID')
+      setError(appT.errors.validMemberIdRequired)
       return
     }
 
@@ -1399,12 +1387,12 @@ function App() {
     event.preventDefault()
 
     if (!canWrite) {
-      setError('You do not have permission to perform write actions')
+      setError(appT.errors.writeActionsDenied)
       return
     }
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -1412,12 +1400,12 @@ function App() {
     const newValue = Number(goodNewValue)
 
     if (!Number.isInteger(goodId) || goodId <= 0) {
-      setError('Enter a valid good ID')
+      setError(appT.errors.validGoodIdRequired)
       return
     }
 
     if (!goodValuationDate) {
-      setError('Valuation date is required')
+      setError(appT.errors.valuationDateRequired)
       return
     }
 
@@ -1456,12 +1444,12 @@ function App() {
     event.preventDefault()
 
     if (!canWrite) {
-      setError('You do not have permission to modify committee records')
+      setError(appT.errors.committeeRecordsDenied)
       return
     }
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -1469,17 +1457,17 @@ function App() {
     const amount = Number(dueAmount)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
-      setError('Enter a valid member ID')
+      setError(appT.errors.validMemberIdRequired)
       return
     }
 
     if (!Number.isInteger(amount) || amount <= 0) {
-      setError('Amount due must be a positive whole number')
+      setError(appT.errors.amountDuePositive)
       return
     }
 
     if (!dueDate) {
-      setError('Due date is required')
+      setError(appT.errors.dueDateRequired)
       return
     }
 
@@ -1511,14 +1499,14 @@ function App() {
 
   async function handleLoadMemberDues() {
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const memberId = Number(duesListMemberId)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
-      setError('Enter a valid member ID')
+      setError(appT.errors.validMemberIdRequired)
       return
     }
 
@@ -1539,14 +1527,14 @@ function App() {
 
   async function handleLoadOutstandingDues() {
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const memberId = Number(outstandingDuesMemberId)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
-      setError('Enter a valid member ID')
+      setError(appT.errors.validMemberIdRequired)
       return
     }
 
@@ -1571,12 +1559,12 @@ function App() {
     event.preventDefault()
 
     if (!canWrite) {
-      setError('You do not have permission to modify committee records')
+      setError(appT.errors.committeeRecordsDenied)
       return
     }
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -1584,12 +1572,12 @@ function App() {
     const amount = Number(duePaymentAmount)
 
     if (!Number.isInteger(dueId) || dueId <= 0) {
-      setError('Enter a valid due ID')
+      setError(appT.errors.validDueIdRequired)
       return
     }
 
     if (!Number.isInteger(amount) || amount <= 0) {
-      setError('Payment amount must be a positive whole number')
+      setError(appT.errors.paymentAmountPositive)
       return
     }
 
@@ -1600,6 +1588,34 @@ function App() {
       const data = await payMemberDue(dueId, amount, token)
       setPaidMemberDue(data)
       setDuePaymentAmount('')
+
+      const paidMemberId = Number(data.member_id)
+
+      try {
+        if (
+          Number.isInteger(paidMemberId) &&
+          paidMemberId > 0 &&
+          paidMemberId === Number(duesListMemberId)
+        ) {
+          const updatedDues = await getMemberDues(paidMemberId, token)
+          setMemberDues(updatedDues)
+        }
+
+        if (
+          Number.isInteger(paidMemberId) &&
+          paidMemberId > 0 &&
+          paidMemberId === Number(outstandingDuesMemberId)
+        ) {
+          const updatedOutstanding = await getOutstandingDues(
+            paidMemberId,
+            token,
+          )
+          setMemberOutstandingDues(updatedOutstanding)
+        }
+      } catch {
+        // The payment succeeded; a failed refresh must not make it
+        // appear that the payment itself failed.
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : appT.errors.payMemberDue,
@@ -1613,14 +1629,14 @@ function App() {
 
   async function handleLoadMemberSettlement() {
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const memberId = Number(settlementMemberId)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
-      setError('Select a valid member')
+      setError(appT.errors.validMemberRequired)
       return
     }
 
@@ -1647,24 +1663,24 @@ function App() {
     event.preventDefault()
 
     if (!canWrite) {
-      setError('You do not have permission to perform write actions')
+      setError(appT.errors.writeActionsDenied)
       return
     }
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const memberId = Number(settlementMemberId)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
-      setError('Select a valid member')
+      setError(appT.errors.validMemberRequired)
       return
     }
 
     if (!settlementDate) {
-      setError('Settlement date is required')
+      setError(appT.errors.settlementDateRequired)
       return
     }
 
@@ -1694,11 +1710,11 @@ function App() {
 
   async function handlePayMemberSettlement() {
     if (!canWrite) {
-      setError('You do not have permission to perform write actions')
+      setError(appT.errors.writeActionsDenied)
       return
     }
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -1707,7 +1723,7 @@ function App() {
     )
 
     if (!Number.isInteger(settlementId) || settlementId <= 0) {
-      setError('Create a settlement before paying it')
+      setError(appT.errors.createSettlementBeforePayment)
       return
     }
 
@@ -1737,7 +1753,7 @@ async function handleCloseCommittee(committeeId: number) {
     }
 
     if (!Number.isInteger(committeeId) || committeeId <= 0) {
-      setError('Invalid committee')
+      setError(appT.errors.invalidCommittee)
       return
     }
 
@@ -1746,7 +1762,7 @@ async function handleCloseCommittee(committeeId: number) {
     )
 
     if (!committee) {
-      setError('Committee not found')
+      setError(appT.errors.committeeNotFound)
       return
     }
 
@@ -1812,12 +1828,12 @@ async function handleCreateCommittee(event: FormEvent) {
     const name = committeeName.trim()
 
     if (!name) {
-      setError('Committee name is required')
+      setError(appT.errors.committeeNameRequired)
       return
     }
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -1839,13 +1855,13 @@ async function handleCreateCommittee(event: FormEvent) {
 
   async function handleCreateContributionRate(event: FormEvent) {
     if (!canWrite) {
-      setError('You do not have permission to modify committee records')
+      setError(appT.errors.committeeRecordsDenied)
       return
     }
     event.preventDefault()
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -1853,17 +1869,17 @@ async function handleCreateCommittee(event: FormEvent) {
     const amount = Number(contributionAmount)
 
     if (!Number.isInteger(selectedCommitteeId) || selectedCommitteeId <= 0) {
-      setError('Select a valid committee')
+      setError(appT.errors.validCommitteeRequired)
       return
     }
 
     if (!Number.isInteger(amount) || amount <= 0) {
-      setError('Contribution amount must be a positive whole number')
+      setError(appT.errors.contributionAmountPositive)
       return
     }
 
     if (!effectiveFrom) {
-      setError('Effective date is required')
+      setError(appT.errors.effectiveDateRequired)
       return
     }
 
@@ -1893,25 +1909,25 @@ async function handleCreateCommittee(event: FormEvent) {
 
   async function handleCreateContribution(event: FormEvent) {
     if (!canWrite) {
-      setError('You do not have permission to modify committee records')
+      setError(appT.errors.committeeRecordsDenied)
       return
     }
     event.preventDefault()
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const memberId = Number(contributionMemberId)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
-      setError('Enter a valid member ID')
+      setError(appT.errors.validMemberIdRequired)
       return
     }
 
     if (!contributionDate) {
-      setError('Payment date is required')
+      setError(appT.errors.paymentDateRequired)
       return
     }
 
@@ -1943,14 +1959,14 @@ async function handleCreateCommittee(event: FormEvent) {
     memberIdOverride?: number,
   ) {
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const memberId = memberIdOverride ?? Number(financialMemberId)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
-      setError('Enter a valid member ID')
+      setError(appT.errors.validMemberIdRequired)
       return
     }
 
@@ -1976,13 +1992,13 @@ async function handleCreateCommittee(event: FormEvent) {
 
   async function handleCreateDeathSupport(event: FormEvent) {
     if (!canWrite) {
-      setError('You do not have permission to modify committee records')
+      setError(appT.errors.committeeRecordsDenied)
       return
     }
     event.preventDefault()
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -1990,22 +2006,22 @@ async function handleCreateCommittee(event: FormEvent) {
     const amount = Number(deathSupportAmount)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
-      setError('Select a valid member')
+      setError(appT.errors.validMemberRequired)
       return
     }
 
     if (!deathSupportBeneficiaryName.trim()) {
-      setError('Beneficiary name is required')
+      setError(appT.errors.beneficiaryNameRequired)
       return
     }
 
     if (!Number.isInteger(amount) || amount <= 0) {
-      setError('Support amount must be a positive whole number')
+      setError(appT.errors.supportAmountPositive)
       return
     }
 
     if (!deathSupportDate) {
-      setError('Support date is required')
+      setError(appT.errors.supportDateRequired)
       return
     }
 
@@ -2039,14 +2055,14 @@ async function handleCreateCommittee(event: FormEvent) {
 
   async function handleLoadDeathSupportStatus() {
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const memberId = Number(deathSupportStatusMemberId)
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
-      setError('Select a valid member')
+      setError(appT.errors.validMemberRequired)
       return
     }
 
@@ -2069,12 +2085,12 @@ async function handleCreateCommittee(event: FormEvent) {
 
   async function handleLeaveMember(memberId: number) {
     if (!canWrite) {
-      setError('You do not have permission to modify committee members')
+      setError(appT.errors.committeeMembersDenied)
       return
     }
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -2107,7 +2123,7 @@ async function handleCreateCommittee(event: FormEvent) {
     event.preventDefault()
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -2115,29 +2131,29 @@ async function handleCreateCommittee(event: FormEvent) {
     const name = memberName.trim()
 
     if (!Number.isInteger(selectedCommitteeId) || selectedCommitteeId <= 0) {
-      setError('Select a valid committee')
+      setError(appT.errors.validCommitteeRequired)
       return
     }
 
     if (!name) {
-      setError('Full name is required')
+      setError(appT.errors.fullNameRequired)
       return
     }
 
     const username = memberUsername.trim()
 
     if (!username) {
-      setError('Username is required')
+      setError(appT.errors.usernameRequired)
       return
     }
 
     if (!memberPassword) {
-      setError('Password is required')
+      setError(appT.errors.passwordRequired)
       return
     }
 
     if (!memberJoinedOn) {
-      setError('Joined date is required')
+      setError(appT.errors.joinedDateRequired)
       return
     }
 
@@ -2210,7 +2226,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
   async function handleLoadUsers() {
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -2241,12 +2257,12 @@ async function handleCreateCommittee(event: FormEvent) {
     const selectedCommitteeId = Number(assignmentCommitteeId)
 
     if (!Number.isInteger(userId) || userId <= 0) {
-      setError('Select a user to assign')
+      setError(appT.errors.selectUserToAssign)
       return
     }
 
     if (!Number.isInteger(selectedCommitteeId) || selectedCommitteeId <= 0) {
-      setError('Select a committee to assign')
+      setError(appT.errors.selectCommitteeToAssign)
       return
     }
 
@@ -2316,7 +2332,7 @@ async function handleCreateCommittee(event: FormEvent) {
     userId: number,
   ) {
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -2346,14 +2362,14 @@ async function handleCreateCommittee(event: FormEvent) {
 
   async function handleLoadCommitteeAccess(userId: number) {
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const selectedCommitteeId = Number(committeeId)
 
     if (!Number.isInteger(selectedCommitteeId) || selectedCommitteeId <= 0) {
-      setError('Select a valid committee')
+      setError(appT.errors.validCommitteeRequired)
       return
     }
 
@@ -2387,14 +2403,14 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const selectedCommitteeId = Number(committeeId)
 
     if (!Number.isInteger(selectedCommitteeId) || selectedCommitteeId <= 0) {
-      setError('Select a valid committee')
+      setError(appT.errors.validCommitteeRequired)
       return
     }
 
@@ -2427,14 +2443,14 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
     const selectedCommitteeId = Number(committeeId)
 
     if (!Number.isInteger(selectedCommitteeId) || selectedCommitteeId <= 0) {
-      setError('Select a valid committee')
+      setError(appT.errors.validCommitteeRequired)
       return
     }
 
@@ -2471,12 +2487,12 @@ async function handleCreateCommittee(event: FormEvent) {
     event.preventDefault()
 
     if (!canWrite) {
-      setError('You do not have permission to perform this action')
+      setError(appT.errors.permissionDenied)
       return
     }
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -2484,12 +2500,12 @@ async function handleCreateCommittee(event: FormEvent) {
     const passwordValue = userPassword
 
     if (!usernameValue) {
-      setError('Username is required')
+      setError(appT.errors.usernameRequired)
       return
     }
 
     if (!passwordValue) {
-      setError('Password is required')
+      setError(appT.errors.passwordRequired)
       return
     }
 
@@ -2501,7 +2517,7 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     if (!['super_admin', 'committee_admin', 'member'].includes(userCreateRole)) {
-      setError('Select a valid user role')
+      setError(appT.errors.validUserRoleRequired)
       return
     }
 
@@ -2531,12 +2547,12 @@ async function handleCreateCommittee(event: FormEvent) {
 
   async function handleDeactivateUser(userId: number) {
     if (!canWrite) {
-      setError('You do not have permission to perform this action')
+      setError(appT.errors.permissionDenied)
       return
     }
 
     if (!token) {
-      setError('You are not authenticated')
+      setError(appT.errors.notAuthenticated)
       return
     }
 
@@ -2686,6 +2702,8 @@ async function handleCreateCommittee(event: FormEvent) {
                 />
               </label>
 
+              <p className="form-help">{t.passwordRequirements}</p>
+
               {error && <div className="login-error">{error}</div>}
 
               {recoveryMessage && (
@@ -2806,7 +2824,7 @@ async function handleCreateCommittee(event: FormEvent) {
           {activePage === 'Users' && userRole !== 'super_admin' ? (
             <section className="module-placeholder">
               <div className="module-placeholder-icon">DC</div>
-              <p className="eyebrow">ACCESS</p>
+              <p className="eyebrow">{appT.access}</p>
               <h1>{appT.ui.accessRestricted}</h1>
               <p>
                 {appT.ui.onlySuperAdminManageUsers}
@@ -2826,7 +2844,7 @@ async function handleCreateCommittee(event: FormEvent) {
 
               {error && <div className="error page-error">{error}</div>}
 
-              {canWrite && (
+              {isSuperAdmin && (
                 <section className="information-card">
                   <div>
                     <p className="eyebrow">{appT.newCommittee}</p>
@@ -2972,7 +2990,7 @@ async function handleCreateCommittee(event: FormEvent) {
                                 : appT.ui.viewAdministrators}
                             </button>
 
-                            {canWrite && (
+                            {isSuperAdmin && (
                               <button
                                 type="button"
                                 className="management-action management-action-primary"
@@ -3788,7 +3806,7 @@ async function handleCreateCommittee(event: FormEvent) {
           ) : activePage !== 'Dashboard' ? (
             <section className="module-placeholder">
               <div className="module-placeholder-icon">DC</div>
-              <p className="eyebrow">MODULE</p>
+              <p className="eyebrow">{appT.module}</p>
               <h1>{activePage}</h1>
               <p>
                 This module is now connected to the application navigation.
@@ -3811,7 +3829,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 )?.name ?? authenticatedUser?.username ?? username}
               </p>
 
-              <h1 className="dashboard-title">Dashboard</h1>
+              <h1 className="dashboard-title">{appT.dashboard}</h1>
 
               <p>
                 {userRole === 'super_admin'
@@ -3825,7 +3843,7 @@ async function handleCreateCommittee(event: FormEvent) {
             </div>
 
             <div className="committee-loader">
-              <label htmlFor="committee-id">Committee workspace</label>
+              <label htmlFor="committee-id">{appT.committeeWorkspace}</label>
 
               <div className="committee-context-help">
                 {committees.length > 1

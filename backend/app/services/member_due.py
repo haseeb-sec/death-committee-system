@@ -118,7 +118,11 @@ def pay_member_due(
             "Payment amount must be greater than zero."
         )
 
-    due = db.get(MemberDue, due_id)
+    due = db.scalar(
+        select(MemberDue)
+        .where(MemberDue.id == due_id)
+        .with_for_update()
+    )
 
     if due is None:
         raise AccountingError(

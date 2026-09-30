@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Integer, String
+from sqlalchemy import CheckConstraint, Date, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -8,6 +8,17 @@ from app.db.session import Base
 
 class MemberGood(Base):
     __tablename__ = "member_goods"
+
+    __table_args__ = (
+        CheckConstraint(
+            "purchase_price >= 0",
+            name="ck_member_goods_purchase_price_nonnegative",
+        ),
+        CheckConstraint(
+            "current_value >= 0",
+            name="ck_member_goods_current_value_nonnegative",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
 

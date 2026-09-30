@@ -13,9 +13,11 @@ from app.models import (
     JournalLine,
     Member,
     MemberDue,
+    MemberGood,
+    MemberGoodValuation,
     MemberSettlement,
 )
-from app.services.accounting import AccountingError, create_journal_entry
+from app.services.accounting import AccountingError
 from app.services.committee import create_committee
 from app.services.contribution import record_contribution
 from app.services.death_support import record_death_support
@@ -1049,3 +1051,132 @@ def test_settlement_payment_rejects_inconsistent_snapshot(db):
             db,
             settlement_id=settlement.id,
         )
+
+
+def test_member_due_database_constraints(db, member):
+    from sqlalchemy.exc import IntegrityError
+
+    invalid_cases = [
+        MemberDue(
+            committee_id=member.committee_id,
+            member_id=member.id,
+            amount=-1,
+            paid_amount=0,
+            due_date=date(2026, 9, 29),
+            description="Invalid negative amount",
+        ),
+        MemberDue(
+            committee_id=member.committee_id,
+            member_id=member.id,
+            amount=100,
+            paid_amount=-1,
+            due_date=date(2026, 9, 29),
+            description="Invalid negative payment",
+        ),
+        MemberDue(
+            committee_id=member.committee_id,
+            member_id=member.id,
+            amount=100,
+            paid_amount=101,
+            due_date=date(2026, 9, 29),
+            description="Invalid excess payment",
+        ),
+    ]
+
+    for due in invalid_cases:
+        db.add(due)
+
+        with pytest.raises(IntegrityError):
+            db.flush()
+
+        db.rollback()
+
+
+def test_member_good_database_constraints(db, member):
+    from sqlalchemy.exc import IntegrityError
+
+    invalid_purchase = MemberGood(
+        member_id=member.id,
+        name="Invalid Purchase Price",
+        purchase_date=date(2026, 9, 29),
+        purchase_price=-1,
+        current_value=0,
+    )
+    db.add(invalid_purchase)
+
+    with pytest.raises(IntegrityError):
+        db.flush()
+
+    db.rollback()
+
+    invalid_value = MemberGood(
+        member_id=member.id,
+        name="Invalid Current Value",
+        purchase_date=date(2026, 9, 29),
+        purchase_price=100,
+        current_value=-1,
+    )
+    db.add(invalid_value)
+
+    with pytest.raises(IntegrityError):
+        db.flush()
+
+    db.rollback()
+
+
+def test_member_good_valuation_database_constraint(db, member):
+    from sqlalchemy.exc import IntegrityError
+
+    good = MemberGood(
+        member_id=member.id,
+        name="Valuation Constraint Good",
+        purchase_date=date(2026, 9, 29),
+        purchase_price=100,
+        current_value=100,
+    )
+    db.add(good)
+    db.flush()
+
+    valuation = MemberGoodValuation(
+        good_id=good.id,
+        valuation_date=date(2026, 9, 29),
+        value=-1,
+    )
+    db.add(valuation)
+
+    with pytest.raises(IntegrityError):
+        db.flush()
+
+    db.rollback()
+
+
+def test_member_settlement_database_constraints(db, member):
+    from sqlalchemy.exc import IntegrityError
+
+    fields = [
+        "contribution_balance",
+        "asset_share",
+        "goods_value",
+        "gross_amount",
+        "outstanding_dues",
+    ]
+
+    for field in fields:
+        settlement = MemberSettlement(
+            member_id=member.id,
+            settlement_date=date(2026, 9, 29),
+            contribution_balance=0,
+            asset_share=0,
+            goods_value=0,
+            gross_amount=0,
+            outstanding_dues=0,
+            final_amount=0,
+        )
+        setattr(settlement, field, -1)
+
+        db.add(settlement)
+
+        with pytest.raises(IntegrityError):
+            db.flush()
+
+        db.rollback()

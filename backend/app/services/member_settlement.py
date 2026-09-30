@@ -251,9 +251,10 @@ def pay_member_settlement(
     A settlement can only be paid once.
     """
 
-    record = db.get(
-        MemberSettlement,
-        settlement_id,
+    record = db.scalar(
+        select(MemberSettlement)
+        .where(MemberSettlement.id == settlement_id)
+        .with_for_update()
     )
 
     if record is None:

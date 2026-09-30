@@ -82,14 +82,14 @@ export default function MySettlementPage({
                     </div>
 
                     <div className="finpos-stat-card finpos-stat-card--neutral">
-                      <p className="finpos-stat-label">Goods value</p>
+                      <p className="finpos-stat-label">{appT.goodsValueLabel}</p>
                       <p className="finpos-stat-amount">
                         {formatPKR(mySettlementPreview.goods_value)}
                       </p>
                     </div>
 
                     <div className="finpos-stat-card finpos-stat-card--warning">
-                      <p className="finpos-stat-label">Outstanding dues</p>
+                      <p className="finpos-stat-label">{appT.outstandingDuesLabel}</p>
                       <p className="finpos-stat-amount">
                         {formatPKR(mySettlementPreview.outstanding_dues)}
                       </p>

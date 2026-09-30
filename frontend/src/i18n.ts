@@ -59,6 +59,7 @@ export type LoginTranslation = {
   newPasswordPlaceholder: string
   confirmNewPassword: string
   confirmNewPasswordPlaceholder: string
+  passwordRequirements: string
   resetButton: string
   resetting: string
   languageLabel: string
@@ -86,6 +87,7 @@ export const loginTranslations: Record<Language, LoginTranslation> = {
     newPasswordPlaceholder: 'Enter your new password',
     confirmNewPassword: 'Confirm new password',
     confirmNewPasswordPlaceholder: 'Confirm your new password',
+    passwordRequirements: 'Password must be 12–128 characters.',
     resetButton: 'Reset password',
     resetting: 'Resetting...',
     languageLabel: 'Language',
@@ -111,6 +113,7 @@ export const loginTranslations: Record<Language, LoginTranslation> = {
     newPasswordPlaceholder: 'اپنا نیا پاسورڈ درج کریں',
     confirmNewPassword: 'نئے پاسورڈ کی تصدیق کریں',
     confirmNewPasswordPlaceholder: 'اپنے نئے پاسورڈ کی تصدیق کریں',
+    passwordRequirements: 'پاسورڈ 12 سے 128 حروف پر مشتمل ہونا چاہیے۔',
     resetButton: 'پاسورڈ ری سیٹ کریں',
     resetting: 'ری سیٹ ہو رہا ہے...',
     languageLabel: 'زبان',
@@ -298,6 +301,7 @@ export type AppTranslation = {
   usersCurrentPassword: string
   usersNewPassword: string
   usersConfirmNewPassword: string
+  usersPasswordRequirements: string
   usersChanging: string
   usersChangePasswordButton: string
   usersAddUser: string
@@ -423,6 +427,8 @@ export type AppTranslation = {
   recordGood: string
   memberGoodCreated: string
   goodId: string
+  memberFundedAmount: string
+  qarzEHasanaAmount: string
   goods: string
   viewMemberGoods: string
   loadGoods: string
@@ -438,6 +444,7 @@ export type AppTranslation = {
   updateGoodValue: string
   goodValueUpdated: string
   duesEyebrow: string
+  financialManagementEyebrow: string
   duesDescription: string
   recordObligation: string
   createMemberDue: string
@@ -518,6 +525,8 @@ export type AppTranslation = {
   settlementPreviewNote: string
   outstandingDues: string
   loadingYourDues: string
+  access: string
+  module: string
   ui: {
     accessRestricted: string
     onlySuperAdminManageUsers: string
@@ -562,7 +571,49 @@ export type AppTranslation = {
     recoveryTokenRequired: string
     passwordReset: string
     resetPassword: string
+    permissionDenied: string
+    writeActionsDenied: string
+    committeeRecordsDenied: string
+    committeeMembersDenied: string
+    notAuthenticated: string
+    currentPasswordRequired: string
+    invalidCredentials: string
+    newPasswordRequired: string
+    passwordsDoNotMatch: string
     loginFailed: string
+    validCommitteeRequired: string
+    validMemberRequired: string
+    validMemberIdRequired: string
+    validAssetIdRequired: string
+    validGoodIdRequired: string
+    validDueIdRequired: string
+    validUserRoleRequired: string
+    usernameRequired: string
+    passwordRequired: string
+    fullNameRequired: string
+    committeeNameRequired: string
+    assetNameRequired: string
+    goodNameRequired: string
+    beneficiaryNameRequired: string
+    purchaseDateRequired: string
+    purchaseValuePositive: string
+    valuationDateRequired: string
+    purchasePricePositive: string
+    amountDuePositive: string
+    paymentAmountPositive: string
+    settlementDateRequired: string
+    contributionAmountPositive: string
+    effectiveDateRequired: string
+    supportAmountPositive: string
+    paymentDateRequired: string
+    dueDateRequired: string
+    createSettlementBeforePayment: string
+    invalidCommittee: string
+    committeeNotFound: string
+    supportDateRequired: string
+    joinedDateRequired: string
+    selectUserToAssign: string
+    selectCommitteeToAssign: string
     createCommitteeAsset: string
     updateCommitteeAssetValue: string
     loadAssetValuations: string
@@ -634,6 +685,8 @@ export const appTranslations: Record<Language, AppTranslation> = {
       'My Settlement': 'My Settlement',
     },
 
+    access: 'ACCESS',
+    module: 'MODULE',
     ui: {
       accessRestricted: 'Access restricted',
       onlySuperAdminManageUsers: 'Only Super Administrators can manage system user accounts.',
@@ -849,6 +902,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
     usersCurrentPassword: 'Current password',
     usersNewPassword: 'New password',
     usersConfirmNewPassword: 'Confirm new password',
+    usersPasswordRequirements: 'Password must be 12–128 characters.',
     usersChanging: 'Changing...',
     usersChangePasswordButton: 'Change Password',
     usersAddUser: 'ADD USER',
@@ -974,6 +1028,8 @@ export const appTranslations: Record<Language, AppTranslation> = {
     recordGood: 'Record Good',
     memberGoodCreated: 'Member good created',
     goodId: 'Good ID',
+    memberFundedAmount: 'Member funded amount',
+    qarzEHasanaAmount: 'Qarz-e-Hasana amount',
     goods: 'GOODS',
     viewMemberGoods: 'View member goods',
     loadGoods: 'Load Goods',
@@ -989,6 +1045,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
     updateGoodValue: 'Update Good Value',
     goodValueUpdated: 'Good value updated',
     duesEyebrow: 'OUTSTANDING DUES',
+    financialManagementEyebrow: 'FINANCIAL MANAGEMENT',
     duesDescription: 'Record, review, and settle member obligations.',
     recordObligation: 'RECORD OBLIGATION',
     createMemberDue: 'Create a member due',
@@ -1099,7 +1156,49 @@ export const appTranslations: Record<Language, AppTranslation> = {
       recoveryTokenRequired: 'Recovery token is required',
       passwordReset: 'Password reset successfully',
       resetPassword: 'Unable to reset password',
+      permissionDenied: 'You do not have permission to perform this action',
+      writeActionsDenied: 'You do not have permission to perform write actions',
+      committeeRecordsDenied: 'You do not have permission to modify committee records',
+      committeeMembersDenied: 'You do not have permission to modify committee members',
+      notAuthenticated: 'You are not authenticated',
+      currentPasswordRequired: 'Current password is required',
+      invalidCredentials: 'Invalid username or password',
+      newPasswordRequired: 'New password is required',
+      passwordsDoNotMatch: 'New passwords do not match',
       loginFailed: 'Login failed',
+      validCommitteeRequired: 'Select a valid committee',
+      validMemberRequired: 'Select a valid member',
+      validMemberIdRequired: 'Enter a valid member ID',
+      validAssetIdRequired: 'Enter a valid asset ID',
+      validGoodIdRequired: 'Enter a valid good ID',
+      validDueIdRequired: 'Enter a valid due ID',
+      validUserRoleRequired: 'Select a valid user role',
+      usernameRequired: 'Username is required',
+      passwordRequired: 'Password is required',
+      fullNameRequired: 'Full name is required',
+      committeeNameRequired: 'Committee name is required',
+      assetNameRequired: 'Asset name is required',
+      goodNameRequired: 'Good name is required',
+      beneficiaryNameRequired: 'Beneficiary name is required',
+      purchaseDateRequired: 'Purchase date is required',
+      purchaseValuePositive: 'Purchase value must be a positive whole number',
+      valuationDateRequired: 'Valuation date is required',
+      purchasePricePositive: 'Purchase price must be a positive whole number',
+      amountDuePositive: 'Amount due must be a positive whole number',
+      paymentAmountPositive: 'Payment amount must be a positive whole number',
+      settlementDateRequired: 'Settlement date is required',
+      contributionAmountPositive: 'Contribution amount must be a positive whole number',
+      effectiveDateRequired: 'Effective date is required',
+      supportAmountPositive: 'Support amount must be a positive whole number',
+      paymentDateRequired: 'Payment date is required',
+      dueDateRequired: 'Due date is required',
+      createSettlementBeforePayment: 'Create a settlement before paying it',
+      invalidCommittee: 'Invalid committee',
+      committeeNotFound: 'Committee not found',
+      supportDateRequired: 'Support date is required',
+      joinedDateRequired: 'Joined date is required',
+      selectUserToAssign: 'Select a user to assign',
+      selectCommitteeToAssign: 'Select a committee to assign',
       createCommitteeAsset: 'Unable to create committee asset',
       updateCommitteeAssetValue: 'Unable to update committee asset value',
       loadAssetValuations: 'Unable to load asset valuations',
@@ -1181,6 +1280,8 @@ export const appTranslations: Record<Language, AppTranslation> = {
       'My Settlement': 'میرا حتمی حساب',
     },
 
+    access: 'رسائی',
+    module: 'ماڈیول',
     ui: {
       accessRestricted: 'رسائی محدود ہے',
       onlySuperAdminManageUsers: 'صرف سپر ایڈمنسٹریٹر سسٹم صارفین کے اکاؤنٹس کا انتظام کر سکتے ہیں۔',
@@ -1396,6 +1497,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
     usersCurrentPassword: 'موجودہ پاس ورڈ',
     usersNewPassword: 'نیا پاس ورڈ',
     usersConfirmNewPassword: 'نئے پاس ورڈ کی تصدیق',
+    usersPasswordRequirements: 'پاس ورڈ 12 سے 128 حروف پر مشتمل ہونا چاہیے۔',
     usersChanging: 'تبدیل کیا جا رہا ہے...',
     usersChangePasswordButton: 'پاس ورڈ تبدیل کریں',
     usersAddUser: 'صارف شامل کریں',
@@ -1520,6 +1622,8 @@ export const appTranslations: Record<Language, AppTranslation> = {
     recordGood: 'شے درج کریں',
     memberGoodCreated: 'رکن کی شے درج ہو گئی',
     goodId: 'شے آئی ڈی',
+    memberFundedAmount: 'رکن کی ادا کردہ رقم',
+    qarzEHasanaAmount: 'قرضِ حسنہ کی رقم',
     goods: 'اشیاء',
     viewMemberGoods: 'رکن کی اشیاء دیکھیں',
     loadGoods: 'اشیاء لوڈ کریں',
@@ -1535,6 +1639,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
     updateGoodValue: 'شے کی مالیت اپ ڈیٹ کریں',
     goodValueUpdated: 'شے کی مالیت اپ ڈیٹ ہو گئی',
     duesEyebrow: 'بقایا واجبات',
+    financialManagementEyebrow: 'مالی انتظام',
     duesDescription: 'ارکان کے واجبات درج کریں، ان کا جائزہ لیں اور انہیں نمٹائیں۔',
     recordObligation: 'واجب درج کریں',
     createMemberDue: 'رکن کا واجب بنائیں',
@@ -1648,7 +1753,49 @@ export const appTranslations: Record<Language, AppTranslation> = {
       recoveryTokenRequired: 'ریکوری ٹوکن درکار ہے',
       passwordReset: 'پاس ورڈ کامیابی سے ری سیٹ ہو گیا',
       resetPassword: 'پاس ورڈ ری سیٹ نہیں ہو سکا',
+      permissionDenied: 'آپ کو یہ کارروائی کرنے کی اجازت نہیں ہے',
+      writeActionsDenied: 'آپ کو تبدیلی کی کارروائیاں کرنے کی اجازت نہیں ہے',
+      committeeRecordsDenied: 'آپ کو کمیٹی کے ریکارڈ میں تبدیلی کرنے کی اجازت نہیں ہے',
+      committeeMembersDenied: 'آپ کو کمیٹی کے اراکین میں تبدیلی کرنے کی اجازت نہیں ہے',
+      notAuthenticated: 'آپ کی تصدیق نہیں ہوئی',
+      currentPasswordRequired: 'موجودہ پاس ورڈ درکار ہے',
+      invalidCredentials: 'یوزر نیم یا پاس ورڈ غلط ہے',
+      newPasswordRequired: 'نیا پاس ورڈ درکار ہے',
+      passwordsDoNotMatch: 'نئے پاس ورڈ ایک جیسے نہیں ہیں',
       loginFailed: 'لاگ اِن ناکام ہو گیا',
+      validCommitteeRequired: 'درست کمیٹی منتخب کریں',
+      validMemberRequired: 'درست رکن منتخب کریں',
+      validMemberIdRequired: 'درست رکن آئی ڈی درج کریں',
+      validAssetIdRequired: 'درست اثاثہ آئی ڈی درج کریں',
+      validGoodIdRequired: 'درست خریداری آئی ڈی درج کریں',
+      validDueIdRequired: 'درست واجب آئی ڈی درج کریں',
+      validUserRoleRequired: 'درست صارف کردار منتخب کریں',
+      usernameRequired: 'یوزر نیم درکار ہے',
+      passwordRequired: 'پاس ورڈ درکار ہے',
+      fullNameRequired: 'پورا نام درکار ہے',
+      committeeNameRequired: 'کمیٹی کا نام درکار ہے',
+      assetNameRequired: 'اثاثے کا نام درکار ہے',
+      goodNameRequired: 'خریداری کا نام درکار ہے',
+      beneficiaryNameRequired: 'مستحق کا نام درکار ہے',
+      purchaseDateRequired: 'خریداری کی تاریخ درکار ہے',
+      purchaseValuePositive: 'خریداری کی مالیت مثبت مکمل عدد ہونی چاہیے',
+      valuationDateRequired: 'مالیت کی تاریخ درکار ہے',
+      purchasePricePositive: 'خریداری کی قیمت مثبت مکمل عدد ہونی چاہیے',
+      amountDuePositive: 'واجب رقم مثبت مکمل عدد ہونی چاہیے',
+      paymentAmountPositive: 'ادائیگی کی رقم مثبت مکمل عدد ہونی چاہیے',
+      settlementDateRequired: 'حتمی حساب کی تاریخ درکار ہے',
+      contributionAmountPositive: 'چندے کی رقم مثبت مکمل عدد ہونی چاہیے',
+      effectiveDateRequired: 'مؤثر تاریخ درکار ہے',
+      supportAmountPositive: 'امداد کی رقم مثبت مکمل عدد ہونی چاہیے',
+      paymentDateRequired: 'ادائیگی کی تاریخ درکار ہے',
+      dueDateRequired: 'واجب الادا تاریخ درکار ہے',
+      createSettlementBeforePayment: 'ادائیگی سے پہلے حتمی حساب بنائیں',
+      invalidCommittee: 'کمیٹی درست نہیں ہے',
+      committeeNotFound: 'کمیٹی نہیں ملی',
+      supportDateRequired: 'امداد کی تاریخ درکار ہے',
+      joinedDateRequired: 'شمولیت کی تاریخ درکار ہے',
+      selectUserToAssign: 'تفویض کرنے کے لیے صارف منتخب کریں',
+      selectCommitteeToAssign: 'تفویض کرنے کے لیے کمیٹی منتخب کریں',
       createCommitteeAsset: 'کمیٹی کا اثاثہ نہیں بنایا جا سکا',
       updateCommitteeAssetValue: 'کمیٹی کے اثاثے کی مالیت اپ ڈیٹ نہیں ہو سکی',
       loadAssetValuations: 'اثاثوں کی مالیت کا ریکارڈ لوڈ نہیں ہو سکا',

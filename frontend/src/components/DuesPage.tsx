@@ -80,7 +80,7 @@ export default function DuesPage({
             <section className="module-page dues-module">
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">FINANCIAL MANAGEMENT</p>
+                  <p className="eyebrow">{appT.financialManagementEyebrow}</p>
                   <h1>{appT.navigation.Dues}</h1>
                   <p className="page-subtitle">
                     Record member obligations, review outstanding balances,

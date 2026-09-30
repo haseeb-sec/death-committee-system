@@ -68,3 +68,6 @@ repair_*.py
 .authorization_*/
 
 /backend/backups/*.sql
+
+# Local HTTPS development certificate
+caddy-local-root.crt

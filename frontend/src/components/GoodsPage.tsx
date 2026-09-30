@@ -182,10 +182,24 @@ export default function GoodsPage(props: GoodsPageProps) {
                     </p>
 
                     <p className="created-id">
-                      `${appT.purchasePrice}:`{' '}
+                      {appT.purchasePrice}:{' '}
                       {formatPKR(
                         createdMemberGood.purchase_price ??
                           Number(goodPurchasePrice),
+                      )}
+                    </p>
+
+                    <p className="created-id">
+                      {appT.memberFundedAmount}:{' '}
+                      {formatPKR(
+                        createdMemberGood.member_funded_amount ?? 0,
+                      )}
+                    </p>
+
+                    <p className="created-id">
+                      {appT.qarzEHasanaAmount}:{' '}
+                      {formatPKR(
+                        createdMemberGood.qarz_e_hasana_amount ?? 0,
                       )}
                     </p>
                   </div>
@@ -228,7 +242,7 @@ export default function GoodsPage(props: GoodsPageProps) {
 
               {memberGoods.length > 0 && (
                 <section className="information-card">
-                  <p className="eyebrow">MEMBER GOODS</p>
+                  <p className="eyebrow">{appT.goodsEyebrow}</p>
                   <h3>{appT.recordedGoods}</h3>
 
                   {memberGoods.map((good) => (

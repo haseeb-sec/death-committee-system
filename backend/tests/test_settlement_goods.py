@@ -347,3 +347,282 @@ def test_member_good_valuation_duplicate_date_rejected(db):
     assert valuations[0].value == 10000
     assert valuations[1].valuation_date == date(2026, 8, 10)
     assert valuations[1].value == 12000
+
+
+def test_member_good_purchase_uses_qarz_e_hasana_for_member_shortfall(db):
+    from app.models import MemberDue
+
+    committee = create_committee(
+        db,
+        name="Good Qarz Committee",
+    )
+
+    db.commit()
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Qarz Good Member",
+        joined_on=date(2026, 1, 1),
+    )
+
+    # Member has 30,000 personally available.
+    add_rate(
+        db,
+        committee.id,
+        amount=30000,
+    )
+
+    record_contribution(
+        db,
+        member_id=member.id,
+        contribution_date=date(2026, 8, 1),
+        reference="GOOD-QARZ-CONTRIBUTION",
+    )
+
+    # Another member provides committee liquidity, so the
+    # committee can fund the full 50,000 purchase.
+    other_member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Liquidity Member",
+        joined_on=date(2026, 1, 1),
+    )
+
+    record_contribution(
+        db,
+        member_id=other_member.id,
+        contribution_date=date(2026, 8, 1),
+        reference="GOOD-QARZ-LIQUIDITY",
+    )
+
+    db.commit()
+
+    good = add_member_good(
+        db,
+        member_id=member.id,
+        name="Qarz Laptop",
+        purchase_date=date(2026, 8, 2),
+        purchase_price=50000,
+    )
+
+    db.commit()
+
+    db.refresh(member)
+
+    assert good.current_value == 50000
+    assert get_member_goods(
+        db,
+        member_id=member.id,
+    )[0].id == good.id
+
+    due = db.query(MemberDue).filter(
+        MemberDue.member_id == member.id,
+        MemberDue.due_type == "qarz_e_hasana",
+    ).one()
+
+    assert due.amount == 20000
+    assert due.paid_amount == 0
+
+    # The shortfall is represented by the member's negative
+    # accounting balance and the matching Qarz-e-Hasana due.
+    from app.services.member_balance import get_member_balance
+
+    assert get_member_balance(
+        db,
+        member_id=member.id,
+    ) == -20000
+
+    assert cash_balance(
+        db,
+        committee.id,
+    ) == 10000
+
+
+def test_member_good_purchase_rejects_when_committee_cash_is_insufficient(db):
+    from app.models import MemberGood, MemberDue
+    from app.services.member_balance import get_member_balance
+    from app.services.accounting import AccountingError
+
+    committee = create_committee(
+        db,
+        name="Insufficient Good Cash Committee",
+    )
+
+    db.commit()
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Insufficient Cash Member",
+        joined_on=date(2026, 1, 1),
+    )
+
+    add_rate(
+        db,
+        committee.id,
+        amount=30000,
+    )
+
+    record_contribution(
+        db,
+        member_id=member.id,
+        contribution_date=date(2026, 8, 1),
+        reference="INSUFFICIENT-CASH-CONTRIBUTION",
+    )
+
+    db.commit()
+
+    cash_before = cash_balance(
+        db,
+        committee.id,
+    )
+    balance_before = get_member_balance(
+        db,
+        member_id=member.id,
+    )
+
+    try:
+        add_member_good(
+            db,
+            member_id=member.id,
+            name="Too Expensive Laptop",
+            purchase_date=date(2026, 8, 2),
+            purchase_price=50000,
+        )
+    except AccountingError as exc:
+        assert "Insufficient committee cash" in str(exc)
+    else:
+        raise AssertionError(
+            "Expected insufficient committee cash to reject the purchase."
+        )
+
+    assert db.query(MemberGood).filter(
+        MemberGood.member_id == member.id,
+    ).count() == 0
+
+    assert db.query(MemberDue).filter(
+        MemberDue.member_id == member.id,
+        MemberDue.due_type == "qarz_e_hasana",
+    ).count() == 0
+
+    assert cash_balance(
+        db,
+        committee.id,
+    ) == cash_before
+
+    assert get_member_balance(
+        db,
+        member_id=member.id,
+    ) == balance_before
+
+
+def test_member_good_qarz_payment_restores_member_balance_and_allows_settlement(db):
+    from app.models import MemberDue
+    from app.services.member_balance import get_member_balance
+    from app.services.member_due import pay_member_due
+
+    committee = create_committee(
+        db,
+        name="Good Qarz Repayment Committee",
+    )
+
+    db.commit()
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Good Qarz Repayment Member",
+        joined_on=date(2026, 1, 1),
+    )
+
+    add_rate(
+        db,
+        committee.id,
+        amount=30000,
+    )
+
+    record_contribution(
+        db,
+        member_id=member.id,
+        contribution_date=date(2026, 8, 1),
+        reference="GOOD-QARZ-REPAYMENT-CONTRIBUTION",
+    )
+
+    other_member = add_member(
+        db,
+        committee_id=committee.id,
+        name="Good Qarz Repayment Liquidity",
+        joined_on=date(2026, 1, 1),
+    )
+
+    record_contribution(
+        db,
+        member_id=other_member.id,
+        contribution_date=date(2026, 8, 1),
+        reference="GOOD-QARZ-REPAYMENT-LIQUIDITY",
+    )
+
+    db.commit()
+
+    good = add_member_good(
+        db,
+        member_id=member.id,
+        name="Qarz Repayment Laptop",
+        purchase_date=date(2026, 8, 2),
+        purchase_price=50000,
+    )
+
+    db.commit()
+
+    due = db.query(MemberDue).filter(
+        MemberDue.member_id == member.id,
+        MemberDue.due_type == "qarz_e_hasana",
+        MemberDue.reference == f"MEMBER-GOOD-{good.id}-QARZ",
+    ).one()
+
+    assert due.amount == 20000
+    assert get_member_balance(
+        db,
+        member_id=member.id,
+    ) == -20000
+
+    # Repaying the Qarz must restore the member's accounting
+    # balance without removing the member-owned Good.
+    pay_member_due(
+        db,
+        due_id=due.id,
+        amount=20000,
+    )
+
+    db.commit()
+
+    db.refresh(due)
+    db.refresh(good)
+
+    assert due.paid_amount == 20000
+    assert get_member_balance(
+        db,
+        member_id=member.id,
+    ) == 0
+    assert good.is_active is True
+    assert good.current_value == 50000
+
+    # Once the Qarz is fully repaid, settlement is allowed.
+    leave_member(
+        db,
+        member_id=member.id,
+        leaving_date=date(2026, 8, 10),
+    )
+
+    db.commit()
+
+    settlement = db.query(MemberSettlement).filter(
+        MemberSettlement.member_id == member.id
+    ).one()
+
+    assert settlement.outstanding_dues == 0
+    assert settlement.contribution_balance == 0
+    assert settlement.goods_value == 50000
+    assert settlement.final_amount == 50000
+    assert settlement.status == "pending"

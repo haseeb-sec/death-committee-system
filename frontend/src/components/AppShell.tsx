@@ -15,6 +15,7 @@ type AppShellTranslations = {
     member: string
   }
   signOut: string
+  access: string
   ui: {
     accessRestricted: string
     onlySuperAdminManageUsers: string
@@ -207,7 +208,7 @@ export default function AppShell({
           {activePage === 'Users' && userRole !== 'super_admin' ? (
             <section className="module-placeholder">
               <div className="module-placeholder-icon">DC</div>
-              <p className="eyebrow">ACCESS</p>
+              <p className="eyebrow">{appT.access}</p>
               <h1>{appT.ui.accessRestricted}</h1>
               <p>{appT.ui.onlySuperAdminManageUsers}</p>
             </section>

@@ -112,10 +112,10 @@ This project is a portfolio/development application and is not presented as a pr
 
 Known limitations include:
 
-- The current application uses SQLite for development and testing.
+- The current application stack uses PostgreSQL 17 through Docker Compose; SQLite is retained only where lightweight isolated testing is useful.
 - The login rate limiter is in-memory and IP-based; a distributed production deployment would require shared or infrastructure-level rate limiting.
-- Production deployment and infrastructure hardening are not yet implemented.
-- SQLite backup and restore tooling is implemented and tested, but production backup storage, retention, and recovery infrastructure are not yet implemented.
+- HTTPS reverse proxying, containerization, internal PostgreSQL networking, automatic migrations, and basic backup/recovery procedures are implemented; target-hosting secrets, monitoring, external backup storage, and deployment-specific hardening still depend on the deployment environment.
+- PostgreSQL backup and isolated restore tooling is implemented and verified; off-host backup storage, retention policies, and disaster-recovery procedures remain deployment-specific.
 - Frontend and end-to-end security testing is less extensive than backend security testing.
 - Authorization testing is extensive but is not an exhaustive formal proof of every resource, role, and cross-committee combination.
 - Automated dependency scanning detects known dependency issues but does not replace application-level security testing.

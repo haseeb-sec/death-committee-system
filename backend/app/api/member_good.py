@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models import MemberDue
 from app.schemas.member_good import (
     MemberGoodCreate,
+    MemberGoodCreateResponse,
     MemberGoodResponse,
     MemberGoodValuationResponse,
     MemberGoodValueUpdate,
@@ -35,7 +38,7 @@ router = APIRouter(
 
 @router.post(
     "/{member_id}/goods",
-    response_model=MemberGoodResponse,
+    response_model=MemberGoodCreateResponse,
 )
 def create_member_good(
     member_id: int,
@@ -85,6 +88,23 @@ def create_member_good(
             ),
         )
 
+        qarz_due = db.scalar(
+            select(MemberDue).where(
+                MemberDue.reference == f"MEMBER-GOOD-{good.id}-QARZ",
+                MemberDue.member_id == member_id,
+            )
+        )
+
+        qarz_e_hasana_amount = (
+            qarz_due.amount
+            if qarz_due is not None
+            else 0
+        )
+
+        member_funded_amount = (
+            good.purchase_price - qarz_e_hasana_amount
+        )
+
         db.commit()
         db.refresh(good)
 
@@ -97,6 +117,8 @@ def create_member_good(
             "current_value": good.current_value,
             "description": good.description,
             "is_active": good.is_active,
+            "member_funded_amount": member_funded_amount,
+            "qarz_e_hasana_amount": qarz_e_hasana_amount,
         }
 
     except AccountingError as exc:
@@ -313,6 +335,23 @@ def update_good_value(
             ),
         )
 
+        qarz_due = db.scalar(
+            select(MemberDue).where(
+                MemberDue.reference == f"MEMBER-GOOD-{good.id}-QARZ",
+                MemberDue.member_id == member_id,
+            )
+        )
+
+        qarz_e_hasana_amount = (
+            qarz_due.amount
+            if qarz_due is not None
+            else 0
+        )
+
+        member_funded_amount = (
+            good.purchase_price - qarz_e_hasana_amount
+        )
+
         db.commit()
         db.refresh(good)
 
@@ -325,6 +364,8 @@ def update_good_value(
             "current_value": good.current_value,
             "description": good.description,
             "is_active": good.is_active,
+            "member_funded_amount": member_funded_amount,
+            "qarz_e_hasana_amount": qarz_e_hasana_amount,
         }
 
     except AccountingError as exc:

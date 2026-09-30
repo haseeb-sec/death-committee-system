@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Integer, String
+from sqlalchemy import CheckConstraint, Date, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -8,6 +8,29 @@ from app.db.session import Base
 
 class MemberSettlement(Base):
     __tablename__ = "member_settlements"
+
+    __table_args__ = (
+        CheckConstraint(
+            "contribution_balance >= 0",
+            name="ck_member_settlements_contribution_balance_nonnegative",
+        ),
+        CheckConstraint(
+            "asset_share >= 0",
+            name="ck_member_settlements_asset_share_nonnegative",
+        ),
+        CheckConstraint(
+            "goods_value >= 0",
+            name="ck_member_settlements_goods_value_nonnegative",
+        ),
+        CheckConstraint(
+            "gross_amount >= 0",
+            name="ck_member_settlements_gross_amount_nonnegative",
+        ),
+        CheckConstraint(
+            "outstanding_dues >= 0",
+            name="ck_member_settlements_outstanding_dues_nonnegative",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
 

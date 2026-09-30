@@ -40,3 +40,8 @@ class MemberGoodValuationResponse(BaseModel):
 class MemberGoodsTotalResponse(BaseModel):
     member_id: int
     total_goods_value: int
+
+
+class MemberGoodCreateResponse(MemberGoodResponse):
+    member_funded_amount: int
+    qarz_e_hasana_amount: int
