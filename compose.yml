@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: death_committee
       POSTGRES_USER: death_committee
-      POSTGRES_PASSWORD: death_committee_dev_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,9 +21,9 @@ services:
     container_name: death-committee-backend
     restart: unless-stopped
     environment:
-      SECRET_KEY: docker-compose-pilot-secret-32-characters-long
-      DATABASE_URL: postgresql+psycopg://death_committee:death_committee_dev_password@postgres:5432/death_committee
-      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
     expose:
       - "8000"
     depends_on:
