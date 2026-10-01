@@ -53,7 +53,7 @@ It is intentionally not exposed through the current Caddy configuration. The Doc
 
 For a fresh database, create the first Super Admin inside the backend container:
 
-`docker compose exec backend python app/bootstrap_admin.py`
+`docker compose exec backend python -m app.bootstrap_admin`
 
 The bootstrap command refuses to create the initial account when users already exist.
 
