@@ -1807,9 +1807,6 @@ async function handleCloseCommittee(committeeId: number) {
         [String(committeeId)]: appT.errors.closed,
       }))
 
-      if (Number(committeeId) === Number(committeeId)) {
-        setSummary((current) => current)
-      }
     } catch (err) {
       setCommitteeLifecycleStatus((current) => ({
         ...current,
