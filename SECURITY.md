@@ -80,7 +80,7 @@ Database constraints provide an additional integrity boundary where appropriate.
 
 Access tokens use signed JWTs with an expiry time and required claims.
 
-The backend validates the token signature, expiry, subject, and token version. Logging out invalidates existing tokens by incrementing the user's token version.
+The backend validates the token signature, expiry, subject, and token version. Session invalidation by incrementing the user's token version occurs on logout, successful password change, and successful password reset. After any of these events, previously issued JWTs are rejected.
 
 Password-reset tokens are random, stored as hashes, expire, and are single-use.
 
