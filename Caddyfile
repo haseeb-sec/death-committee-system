@@ -5,6 +5,12 @@
 https://localhost {
     tls internal
 
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+
     handle /auth/* {
         reverse_proxy backend:8000
     }
