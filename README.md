@@ -220,13 +220,17 @@ The frontend uses the normal Vite development port `5173`.
 
 ### Environment
 
-Create the backend environment file:
+For local backend development, create the backend environment file:
 
 `cp backend/.env.example backend/.env`
 
-Use a long random value for `SECRET_KEY`. Never commit the real `.env` file.
+For Docker Compose, create the root environment file used by Compose:
 
-For containerized deployment, database and application settings are supplied through the Docker Compose environment configuration.
+`cp .env.example .env`
+
+Use long random values for `SECRET_KEY` and `POSTGRES_PASSWORD`. Never commit either real `.env` file.
+
+The backend and Docker Compose templates use different database hostnames because local development connects to PostgreSQL on the host, while Compose connects to the postgres service inside the Docker network.
 
 ## Technology Stack
 
