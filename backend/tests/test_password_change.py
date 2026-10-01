@@ -6,11 +6,16 @@ from app.models import User, UserRole
 from app.services.auth import hash_password
 
 
-def make_super_admin(db, username="password_admin", password="old-password"):
+def make_super_admin(
+    db,
+    username="password_admin",
+    password="old-password",
+    role=UserRole.SUPER_ADMIN.value,
+):
     user = User(
         username=username,
         password_hash=hash_password(password),
-        role=UserRole.SUPER_ADMIN.value,
+        role=role,
         is_active=True,
     )
     db.add(user)
@@ -81,6 +86,47 @@ def test_super_admin_can_change_own_password(db):
     finally:
         app.dependency_overrides.clear()
 
+
+def test_authenticated_committee_admin_can_change_own_password(db):
+    user = make_super_admin(
+        db,
+        username="committee_password_admin",
+        role=UserRole.COMMITTEE_ADMIN.value,
+    )
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        response = login(client, user.username, "old-password")
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+
+        response = client.post(
+            "/users/me/password",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "current_password": "old-password",
+                "new_password": "new-password",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["message"] == "Password changed successfully"
+
+        old_token_response = client.get(
+            "/users/me/committees/access",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert old_token_response.status_code == 401
+
+        new_login = login(client, user.username, "new-password")
+        assert new_login.status_code == 200
+
+        assert login(client, user.username, "old-password").status_code == 401
+    finally:
+        app.dependency_overrides.clear()
 
 def test_password_change_rejects_wrong_current_password(db):
     user = make_super_admin(db, username="wrong_current_admin")

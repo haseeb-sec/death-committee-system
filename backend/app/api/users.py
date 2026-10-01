@@ -102,7 +102,7 @@ def create_user(
 def change_my_password(
     data: PasswordChange,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_super_admin),
+    current_user: User = Depends(require_authenticated),
 ):
     if not verify_password(data.current_password, current_user.password_hash):
         raise HTTPException(
