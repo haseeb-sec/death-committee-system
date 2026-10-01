@@ -1,7 +1,10 @@
 type GoodsPageProps = {
   appT: any
   canWrite: any
-  loading: any
+  createLoading: boolean
+  goodsLoading: boolean
+  totalLoading: boolean
+  updateValueLoading: boolean
   goodsMemberId: any
   setGoodsMemberId: any
   goodName: any
@@ -37,7 +40,10 @@ export default function GoodsPage(props: GoodsPageProps) {
   const {
     appT,
     canWrite,
-    loading,
+    createLoading,
+    goodsLoading,
+    totalLoading,
+    updateValueLoading,
     goodsMemberId,
     setGoodsMemberId,
     goodName,
@@ -159,8 +165,8 @@ export default function GoodsPage(props: GoodsPageProps) {
                     />
                   </label>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.recording : appT.recordGood}
+                  <button type="submit" disabled={createLoading}>
+                    {createLoading ? appT.recording : appT.recordGood}
                   </button>
                 </form>
               </section>              )}
@@ -234,8 +240,8 @@ export default function GoodsPage(props: GoodsPageProps) {
                     />
                   </label>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.loadingMembers : appT.loadGoods}
+                  <button type="submit" disabled={goodsLoading}>
+                    {goodsLoading ? appT.loadingMembers : appT.loadGoods}
                   </button>
                 </form>
               </section>
@@ -300,8 +306,8 @@ export default function GoodsPage(props: GoodsPageProps) {
                     />
                   </label>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.loadingMembers : appT.loadTotal}
+                  <button type="submit" disabled={totalLoading}>
+                    {totalLoading ? appT.loadingMembers : appT.loadTotal}
                   </button>
                 </form>
               </section>
@@ -383,8 +389,8 @@ export default function GoodsPage(props: GoodsPageProps) {
                     </label>
                   </div>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.updating : appT.updateGoodValue}
+                  <button type="submit" disabled={updateValueLoading}>
+                    {updateValueLoading ? appT.updating : appT.updateGoodValue}
                   </button>
                 </form>
               </section>              )}

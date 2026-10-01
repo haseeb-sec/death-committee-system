@@ -6,7 +6,8 @@ type ContributionsPageProps = {
   membersLoading: boolean
   error: string
   canWrite: boolean
-  loading: boolean
+  contributionLoading: boolean
+  rateLoading: boolean
   contributionMemberId: string
   setContributionMemberId: (value: string) => void
   contributionDate: string
@@ -30,7 +31,8 @@ export default function ContributionsPage({
   membersLoading,
   error,
   canWrite,
-  loading,
+  contributionLoading,
+  rateLoading,
   contributionMemberId,
   setContributionMemberId,
   contributionDate,
@@ -129,8 +131,8 @@ export default function ContributionsPage({
                     </label>
                   </div>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.recording : appT.recordContributionButton}
+                  <button type="submit" disabled={contributionLoading}>
+                    {contributionLoading ? appT.recording : appT.recordContributionButton}
                   </button>
                 </form>
                 </section>
@@ -209,8 +211,8 @@ export default function ContributionsPage({
                     </label>
                   </div>
 
-                  <button type="submit" disabled={loading}>
-                    {loading
+                  <button type="submit" disabled={rateLoading}>
+                    {rateLoading
                       ? appT.creating
                       : appT.createCurrentContributionAmount}
                   </button>

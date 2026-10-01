@@ -7,7 +7,9 @@ type SettlementsPageProps = {
   committeeId: string
   members: any[]
   membersLoading: boolean
-  loading: boolean
+  settlementLoading: boolean
+  createLoading: boolean
+  paymentLoading: boolean
   canWrite: boolean
   formatPKR: (value: number) => string
 
@@ -34,7 +36,9 @@ export default function SettlementsPage({
   committeeId,
   members,
   membersLoading,
-  loading,
+  settlementLoading,
+  createLoading,
+  paymentLoading,
   canWrite,
   formatPKR,
   settlementMemberId,
@@ -131,13 +135,13 @@ export default function SettlementsPage({
                   <button
                     type="button"
                     disabled={
-                      loading ||
+                      settlementLoading ||
                       membersLoading ||
                       !settlementMemberId
                     }
                     onClick={() => void handleLoadMemberSettlement()}
                   >
-                    {loading ? appT.loadingMembers : appT.previewSettlement}
+                    {settlementLoading ? appT.loadingMembers : appT.previewSettlement}
                   </button>
                 </div>
               </section>
@@ -218,8 +222,8 @@ export default function SettlementsPage({
                       className="committee-create-form"
                       onSubmit={handleCreateMemberSettlement}
                     >
-                      <button type="submit" disabled={loading}>
-                        {loading
+                      <button type="submit" disabled={createLoading}>
+                        {createLoading
                           ? appT.creating
                           : appT.createSettlement}
                       </button>
@@ -268,10 +272,10 @@ export default function SettlementsPage({
                     {canWrite && (
                       <button
                         type="button"
-                        disabled={loading}
+                        disabled={paymentLoading}
                         onClick={() => void handlePayMemberSettlement()}
                       >
-                        {loading ? appT.processing : appT.paySettlement}
+                        {paymentLoading ? appT.processing : appT.paySettlement}
                       </button>
                     )}
                   </section>

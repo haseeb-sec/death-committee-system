@@ -5,7 +5,10 @@ type DuesPageProps = {
   membersLoading: boolean
   error: string
   canWrite: boolean
-  loading: boolean
+  createLoading: boolean
+  duesLoading: boolean
+  outstandingLoading: boolean
+  paymentLoading: boolean
 
   dueMemberId: string
   setDueMemberId: (value: string) => void
@@ -46,7 +49,10 @@ export default function DuesPage({
   membersLoading,
   error,
   canWrite,
-  loading,
+  createLoading,
+  duesLoading,
+  outstandingLoading,
+  paymentLoading,
   dueMemberId,
   setDueMemberId,
   dueAmount,
@@ -194,8 +200,8 @@ export default function DuesPage({
                     </label>
 
                     <div className="form-actions">
-                      <button type="submit" disabled={loading}>
-                        {loading ? appT.recording : appT.recordDue}
+                      <button type="submit" disabled={createLoading}>
+                        {createLoading ? appT.recording : appT.recordDue}
                       </button>
                     </div>
                   </form>
@@ -270,8 +276,8 @@ export default function DuesPage({
                     </label>
 
                     <div className="form-actions form-actions-end">
-                      <button type="submit" disabled={loading}>
-                        {loading ? appT.loadingMembers : appT.loadDueHistory}
+                      <button type="submit" disabled={duesLoading}>
+                        {duesLoading ? appT.loadingMembers : appT.loadDueHistory}
                       </button>
                     </div>
                   </div>
@@ -396,8 +402,8 @@ export default function DuesPage({
                     </label>
 
                     <div className="form-actions form-actions-end">
-                      <button type="submit" disabled={loading}>
-                        {loading ? appT.checking : appT.checkOutstanding}
+                      <button type="submit" disabled={outstandingLoading}>
+                        {outstandingLoading ? appT.checking : appT.checkOutstanding}
                       </button>
                     </div>
                   </div>
@@ -477,8 +483,8 @@ export default function DuesPage({
                     </div>
 
                     <div className="form-actions">
-                      <button type="submit" disabled={loading}>
-                        {loading ? appT.updating : appT.applyPayment}
+                      <button type="submit" disabled={paymentLoading}>
+                        {paymentLoading ? appT.updating : appT.applyPayment}
                       </button>
                     </div>
                   </form>

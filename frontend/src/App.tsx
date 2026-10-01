@@ -214,7 +214,16 @@ function App() {
   const canWrite = isSelectedCommitteeAdmin
 
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [loadingOperations, setLoadingOperations] = useState<Set<string>>(new Set())
+  const setOperationLoading = (operation: string, isLoading: boolean) => {
+    setLoadingOperations((current) => {
+      const next = new Set(current)
+      if (isLoading) next.add(operation)
+      else next.delete(operation)
+      return next
+    })
+  }
+  const isOperationLoading = (operation: string) => loadingOperations.has(operation)
   const [activePage, setActivePage] = useState('Dashboard')
   const [committeeName, setCommitteeName] = useState('')
   const [createdCommittee, setCreatedCommittee] =
@@ -932,7 +941,7 @@ function App() {
       return
     }
 
-    setLoading(true)
+    setOperationLoading('issuePasswordReset', true)
 
     try {
       const data = await issuePasswordReset(token, userId)
@@ -946,7 +955,7 @@ function App() {
           : appT.errors.issueRecoveryToken,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('issuePasswordReset', false)
     }
   }
 
@@ -981,7 +990,7 @@ function App() {
       return
     }
 
-    setLoading(true)
+    setOperationLoading('changePassword', true)
 
     try {
       const data = await changeMyPassword(
@@ -1001,7 +1010,7 @@ function App() {
         err instanceof Error ? err.message : appT.errors.changePassword,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('changePassword', false)
     }
   }
 
@@ -1026,7 +1035,7 @@ function App() {
       return
     }
 
-    setLoading(true)
+    setOperationLoading('passwordRecovery', true)
 
     try {
       const data = await resetPassword(
@@ -1047,14 +1056,14 @@ function App() {
           : appT.errors.resetPassword,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('passwordRecovery', false)
     }
   }
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault()
     setError('')
-    setLoading(true)
+    setOperationLoading('login', true)
 
     try {
       const data = await login(username, password)
@@ -1071,7 +1080,7 @@ function App() {
     } catch {
       setError(appT.errors.invalidCredentials)
     } finally {
-      setLoading(false)
+      setOperationLoading('login', false)
     }
   }
 
@@ -1114,7 +1123,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('createCommitteeAsset', true)
 
     try {
       const data = await createCommitteeAsset(
@@ -1137,7 +1146,7 @@ function App() {
           : appT.errors.createCommitteeAsset,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('createCommitteeAsset', false)
     }
   }
 
@@ -1175,7 +1184,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('updateCommitteeAssetValue', true)
 
     try {
       const data = await updateCommitteeAssetValue(
@@ -1196,7 +1205,7 @@ function App() {
           : appT.errors.updateCommitteeAssetValue,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('updateCommitteeAssetValue', false)
     }
   }
 
@@ -1214,7 +1223,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('loadAssetValuations', true)
 
     try {
       const data = await getAssetValuations(assetId, token)
@@ -1226,7 +1235,7 @@ function App() {
           : appT.errors.loadAssetValuations,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('loadAssetValuations', false)
     }
   }
 
@@ -1244,7 +1253,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('loadAssetParticipation', true)
 
     try {
       const data = await getAssetParticipation(assetId, token)
@@ -1256,7 +1265,7 @@ function App() {
           : appT.errors.loadAssetParticipation,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('loadAssetParticipation', false)
     }
   }
 
@@ -1298,7 +1307,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('createMemberGood', true)
 
     try {
       const data = await createMemberGood(
@@ -1321,7 +1330,7 @@ function App() {
           : appT.errors.createMemberGood,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('createMemberGood', false)
     }
   }
 
@@ -1339,7 +1348,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('loadMemberGoods', true)
 
     try {
       const data = await getMemberGoods(memberId, token)
@@ -1351,7 +1360,7 @@ function App() {
           : appT.errors.loadMemberGoods,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('loadMemberGoods', false)
     }
   }
 
@@ -1369,7 +1378,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('loadMemberGoodsTotal', true)
 
     try {
       const data = await getMemberGoodsTotal(memberId, token)
@@ -1381,7 +1390,7 @@ function App() {
           : appT.errors.loadMemberGoodsTotal,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('loadMemberGoodsTotal', false)
     }
   }
 
@@ -1419,7 +1428,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('updateMemberGoodValue', true)
 
     try {
       const data = await updateMemberGoodValue(
@@ -1438,7 +1447,7 @@ function App() {
           : appT.errors.updateMemberGoodValue,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('updateMemberGoodValue', false)
     }
   }
 
@@ -1474,7 +1483,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('createMemberDue', true)
 
     try {
       const data = await createMemberDue(
@@ -1495,7 +1504,7 @@ function App() {
         err instanceof Error ? err.message : appT.errors.createMemberDue,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('createMemberDue', false)
     }
   }
 
@@ -1513,7 +1522,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('loadMemberDues', true)
 
     try {
       const data = await getMemberDues(memberId, token)
@@ -1523,7 +1532,7 @@ function App() {
         err instanceof Error ? err.message : appT.errors.loadMemberDues,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('loadMemberDues', false)
     }
   }
 
@@ -1541,7 +1550,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('loadOutstandingDues', true)
 
     try {
       const data = await getOutstandingDues(memberId, token)
@@ -1553,7 +1562,7 @@ function App() {
           : appT.errors.loadOutstandingDues,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('loadOutstandingDues', false)
     }
   }
 
@@ -1584,7 +1593,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('payMemberDue', true)
 
     try {
       const data = await payMemberDue(dueId, amount, token)
@@ -1623,7 +1632,7 @@ function App() {
         err instanceof Error ? err.message : appT.errors.payMemberDue,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('payMemberDue', false)
     }
   }
 
@@ -1643,7 +1652,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('loadMemberSettlement', true)
 
     try {
       const data = await getMemberSettlement(memberId, token)
@@ -1657,7 +1666,7 @@ function App() {
           : appT.errors.loadMemberSettlementPreview,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('loadMemberSettlement', false)
     }
   }
 
@@ -1687,7 +1696,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('createMemberSettlement', true)
 
     try {
       const data = await createMemberSettlement(
@@ -1706,7 +1715,7 @@ function App() {
           : appT.errors.createMemberSettlement,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('createMemberSettlement', false)
     }
   }
 
@@ -1730,7 +1739,7 @@ function App() {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('payMemberSettlement', true)
 
     try {
       const data = await payMemberSettlement(settlementId, token)
@@ -1744,7 +1753,7 @@ function App() {
           : appT.errors.payMemberSettlement,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('payMemberSettlement', false)
     }
   }
 
@@ -1837,7 +1846,7 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('createCommittee', true)
 
     try {
       const data = await createCommittee(name, token)
@@ -1848,7 +1857,7 @@ async function handleCreateCommittee(event: FormEvent) {
         err instanceof Error ? err.message : appT.errors.createCommittee,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('createCommittee', false)
     }
   }
 
@@ -1883,7 +1892,7 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('createContributionRate', true)
 
     try {
       const data = await createContributionRate(
@@ -1902,7 +1911,7 @@ async function handleCreateCommittee(event: FormEvent) {
           : appT.errors.createContributionRate,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('createContributionRate', false)
     }
   }
 
@@ -1931,7 +1940,7 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('createContribution', true)
 
     try {
       const data = await createContribution(
@@ -1950,7 +1959,7 @@ async function handleCreateCommittee(event: FormEvent) {
           : appT.errors.recordContribution,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('createContribution', false)
     }
   }
 
@@ -1970,7 +1979,7 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('loadMemberFinancialSummary', true)
 
     try {
       const data = await getMemberFinancialSummary(memberId, token)
@@ -1985,7 +1994,7 @@ async function handleCreateCommittee(event: FormEvent) {
           : appT.errors.loadMemberFinancialSummary,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('loadMemberFinancialSummary', false)
     }
   }
 
@@ -2025,7 +2034,7 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('createDeathSupport', true)
 
     try {
       const data = await createDeathSupport(
@@ -2048,7 +2057,7 @@ async function handleCreateCommittee(event: FormEvent) {
           : appT.errors.recordDeathSupport,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('createDeathSupport', false)
     }
   }
 
@@ -2066,7 +2075,7 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('loadDeathSupportStatus', true)
 
     try {
       const data = await getDeathSupportStatus(memberId, token)
@@ -2078,7 +2087,7 @@ async function handleCreateCommittee(event: FormEvent) {
           : appT.errors.loadDeathSupportStatus,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('loadDeathSupportStatus', false)
     }
   }
 
@@ -2096,7 +2105,7 @@ async function handleCreateCommittee(event: FormEvent) {
     const leavingDate = new Date().toISOString().slice(0, 10)
 
     setError('')
-    setLoading(true)
+    setOperationLoading('leaveMember', true)
 
     try {
       await leaveMember(memberId, leavingDate, token)
@@ -2114,7 +2123,7 @@ async function handleCreateCommittee(event: FormEvent) {
           : appT.errors.leaveMember,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('leaveMember', false)
     }
   }
 
@@ -2157,7 +2166,7 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('createMember', true)
 
     try {
       const data = await createMember(
@@ -2189,7 +2198,7 @@ async function handleCreateCommittee(event: FormEvent) {
         err instanceof Error ? err.message : appT.errors.createMember,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('createMember', false)
     }
   }
 
@@ -2266,7 +2275,7 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('assignUserToCommittee', true)
 
     try {
       await grantUserCommitteeAccess(
@@ -2296,7 +2305,7 @@ async function handleCreateCommittee(event: FormEvent) {
           : appT.errors.assignUserToCommittee,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('assignUserToCommittee', false)
     }
   }
 
@@ -2521,7 +2530,7 @@ async function handleCreateCommittee(event: FormEvent) {
     }
 
     setError('')
-    setLoading(true)
+    setOperationLoading('createUser', true)
 
     try {
       const data = await createUser(
@@ -2540,7 +2549,7 @@ async function handleCreateCommittee(event: FormEvent) {
         err instanceof Error ? err.message : appT.errors.createUser,
       )
     } finally {
-      setLoading(false)
+      setOperationLoading('createUser', false)
     }
   }
 
@@ -2739,9 +2748,9 @@ async function handleCreateCommittee(event: FormEvent) {
               <button
                 type="submit"
                 className="login-submit-button"
-                disabled={loading}
+                disabled={isOperationLoading('passwordRecovery')}
               >
-                {loading ? t.resetting : t.resetButton}
+                {isOperationLoading('passwordRecovery') ? t.resetting : t.resetButton}
               </button>
 
               <button
@@ -2810,9 +2819,9 @@ async function handleCreateCommittee(event: FormEvent) {
               <button
                 type="submit"
                 className="login-submit-button"
-                disabled={loading}
+                disabled={isOperationLoading('login')}
               >
-                {loading ? t.signingIn : t.signInButton}
+                {isOperationLoading('login') ? t.signingIn : t.signInButton}
               </button>
 
               <button
@@ -2896,8 +2905,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     />
                   </label>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.creating : appT.createCommittee}
+                  <button type="submit" disabled={isOperationLoading('createCommittee')}>
+                    {isOperationLoading('createCommittee') ? appT.creating : appT.createCommittee}
                   </button>
                 </form>
                 </section>
@@ -3157,8 +3166,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
                   </div>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.creating : appT.createMember}
+                  <button type="submit" disabled={isOperationLoading('createMember')}>
+                    {isOperationLoading('createMember') ? appT.creating : appT.createMember}
                   </button>
                 </form>
                 </section>
@@ -3304,8 +3313,8 @@ async function handleCreateCommittee(event: FormEvent) {
                     </select>
                   </label>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.loadingMembers : appT.loadSummary}
+                  <button type="submit" disabled={isOperationLoading('loadMemberFinancialSummary')}>
+                    {isOperationLoading('loadMemberFinancialSummary') ? appT.loadingMembers : appT.loadSummary}
                   </button>
                 </form>
               </section>
@@ -3559,7 +3568,8 @@ async function handleCreateCommittee(event: FormEvent) {
               membersLoading={membersLoading}
               error={error}
               canWrite={canWrite}
-              loading={loading}
+              contributionLoading={isOperationLoading('createContribution')}
+              rateLoading={isOperationLoading('createContributionRate')}
               contributionMemberId={contributionMemberId}
               setContributionMemberId={setContributionMemberId}
               contributionDate={contributionDate}
@@ -3582,7 +3592,8 @@ async function handleCreateCommittee(event: FormEvent) {
               members={members}
               error={error}
               canWrite={canWrite}
-              loading={loading}
+              createLoading={isOperationLoading('createDeathSupport')}
+              statusLoading={isOperationLoading('loadDeathSupportStatus')}
               formatPKR={formatPKR}
               setDeathSupportStatus={setDeathSupportStatus}
               deathSupportMemberId={deathSupportMemberId}
@@ -3650,14 +3661,20 @@ async function handleCreateCommittee(event: FormEvent) {
               handleGrantCommitteeAccess={handleGrantCommitteeAccess}
               handleDeactivateCommitteeAccess={handleDeactivateCommitteeAccess}
               committeeAccessStatus={committeeAccessStatus}
-              loading={loading}
+              changePasswordLoading={isOperationLoading('changePassword')}
+              createUserLoading={isOperationLoading('createUser')}
+              assignmentLoading={isOperationLoading('assignUserToCommittee')}
+              passwordResetLoading={isOperationLoading('issuePasswordReset')}
               />
 ) : activePage === 'Assets' ? (
             <AssetsPage
               error={error}
               appT={appT}
                 canWrite={canWrite}
-              loading={loading}
+              createLoading={isOperationLoading('createCommitteeAsset')}
+              updateValueLoading={isOperationLoading('updateCommitteeAssetValue')}
+              valuationsLoading={isOperationLoading('loadAssetValuations')}
+              participationLoading={isOperationLoading('loadAssetParticipation')}
               assetName={assetName}
               setAssetName={setAssetName}
               assetPurchaseDate={assetPurchaseDate}
@@ -3691,7 +3708,10 @@ async function handleCreateCommittee(event: FormEvent) {
           <GoodsPage
             appT={appT}
             canWrite={canWrite}
-            loading={loading}
+            createLoading={isOperationLoading('createMemberGood')}
+            goodsLoading={isOperationLoading('loadMemberGoods')}
+            totalLoading={isOperationLoading('loadMemberGoodsTotal')}
+            updateValueLoading={isOperationLoading('updateMemberGoodValue')}
             goodsMemberId={goodsMemberId}
             setGoodsMemberId={setGoodsMemberId}
             goodName={goodName}
@@ -3729,7 +3749,10 @@ async function handleCreateCommittee(event: FormEvent) {
               membersLoading={membersLoading}
               error={error}
               canWrite={canWrite}
-              loading={loading}
+              createLoading={isOperationLoading('createMemberDue')}
+              duesLoading={isOperationLoading('loadMemberDues')}
+              outstandingLoading={isOperationLoading('loadOutstandingDues')}
+              paymentLoading={isOperationLoading('payMemberDue')}
               dueMemberId={dueMemberId}
               setDueMemberId={setDueMemberId}
               dueAmount={dueAmount}
@@ -3766,7 +3789,9 @@ async function handleCreateCommittee(event: FormEvent) {
               committeeId={committeeId}
               members={members}
               membersLoading={membersLoading}
-              loading={loading}
+              settlementLoading={isOperationLoading('loadMemberSettlement')}
+              createLoading={isOperationLoading('createMemberSettlement')}
+              paymentLoading={isOperationLoading('payMemberSettlement')}
               canWrite={canWrite}
               formatPKR={formatPKR}
               settlementMemberId={settlementMemberId}
@@ -3895,7 +3920,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   setSummary(null)
                   setCommitteeId(nextCommitteeId)
                 }}
-                disabled={loading || committees.length === 0}
+                disabled={committees.length === 0}
               >
                 {committees.length === 0 ? (
                   <option value="">{appT.noCommitteeAvailable}</option>

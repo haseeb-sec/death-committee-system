@@ -5,7 +5,8 @@ type DeathSupportPageProps = {
   members: any[]
   error: string
   canWrite: boolean
-  loading: boolean
+  createLoading: boolean
+  statusLoading: boolean
   formatPKR: (value: number) => string
   setDeathSupportStatus: (
     value:
@@ -41,7 +42,8 @@ export default function DeathSupportPage({
   members,
   error,
   canWrite,
-  loading,
+  createLoading,
+  statusLoading,
   formatPKR,
   setDeathSupportStatus,
   deathSupportMemberId,
@@ -159,8 +161,8 @@ export default function DeathSupportPage({
                     />
                   </label>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.recording : appT.recordDeathSupportButton}
+                  <button type="submit" disabled={createLoading}>
+                    {createLoading ? appT.recording : appT.recordDeathSupportButton}
                   </button>
                 </form>
                 </section>
@@ -252,8 +254,8 @@ export default function DeathSupportPage({
                     </select>
                   </label>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.checking : appT.checkSupportStatus}
+                  <button type="submit" disabled={statusLoading}>
+                    {statusLoading ? appT.checking : appT.checkSupportStatus}
                   </button>
                 </form>
               </section>

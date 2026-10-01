@@ -45,7 +45,10 @@ type UsersPageProps = {
   handleGrantCommitteeAccess: any
   handleDeactivateCommitteeAccess: any
   committeeAccessStatus: Record<string, any>
-  loading: any
+  changePasswordLoading: boolean
+  createUserLoading: boolean
+  assignmentLoading: boolean
+  passwordResetLoading: boolean
 }
 
 export default function UsersPage(props: UsersPageProps) {
@@ -95,7 +98,10 @@ export default function UsersPage(props: UsersPageProps) {
     handleGrantCommitteeAccess,
     handleDeactivateCommitteeAccess,
     committeeAccessStatus,
-    loading,
+    changePasswordLoading,
+    createUserLoading,
+    assignmentLoading,
+    passwordResetLoading,
   } = props
 
   return (
@@ -185,8 +191,8 @@ export default function UsersPage(props: UsersPageProps) {
         <p className="form-help">{appT.usersPasswordRequirements}</p>
       </div>
 
-      <button type="submit" disabled={loading}>
-        {loading ? appT.ui.changing : appT.ui.changePasswordAction}
+      <button type="submit" disabled={changePasswordLoading}>
+        {changePasswordLoading ? appT.ui.changing : appT.ui.changePasswordAction}
       </button>
     </form>
   </section>
@@ -258,8 +264,8 @@ export default function UsersPage(props: UsersPageProps) {
         </label>
       </div>
 
-      <button type="submit" disabled={loading}>
-        {loading ? appT.creating : appT.usersCreateUserButton}
+      <button type="submit" disabled={createUserLoading}>
+        {createUserLoading ? appT.creating : appT.usersCreateUserButton}
       </button>
     </form>
   </section>
@@ -494,12 +500,12 @@ export default function UsersPage(props: UsersPageProps) {
           type="submit"
           className="users-access-grant-button"
           disabled={
-            loading ||
+            assignmentLoading ||
             !assignmentUserId ||
             !assignmentCommitteeId
           }
         >
-          {loading
+          {assignmentLoading
             ? appT.ui.assigning
             : appT.ui.assignToCommittee}
         </button>
@@ -614,7 +620,7 @@ export default function UsersPage(props: UsersPageProps) {
                       <button
                         type="button"
                         className="management-action management-action-secondary"
-                        disabled={loading}
+                        disabled={passwordResetLoading}
                         onClick={
                           canWrite
                             ? () =>

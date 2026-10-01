@@ -2,7 +2,10 @@ type AssetsPageProps = {
   appT: any
   error: any
   canWrite: any
-  loading: any
+  createLoading: boolean
+  updateValueLoading: boolean
+  valuationsLoading: boolean
+  participationLoading: boolean
 
   assetName: any
   setAssetName: any
@@ -40,7 +43,10 @@ export default function AssetsPage(props: AssetsPageProps) {
     appT,
     error,
     canWrite,
-    loading,
+    createLoading,
+    updateValueLoading,
+    valuationsLoading,
+    participationLoading,
     assetName,
     setAssetName,
     assetPurchaseDate,
@@ -152,8 +158,8 @@ export default function AssetsPage(props: AssetsPageProps) {
                     />
                   </label>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.creating : appT.createAsset}
+                  <button type="submit" disabled={createLoading}>
+                    {createLoading ? appT.creating : appT.createAsset}
                   </button>
                 </form>
               </section>              )}
@@ -247,8 +253,8 @@ export default function AssetsPage(props: AssetsPageProps) {
                     </label>
                   </div>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.updating : appT.updateValue}
+                  <button type="submit" disabled={updateValueLoading}>
+                    {updateValueLoading ? appT.updating : appT.updateValue}
                   </button>
                 </form>
               </section>              )}
@@ -310,8 +316,8 @@ export default function AssetsPage(props: AssetsPageProps) {
                     />
                   </label>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.loadingMembers : appT.loadValuations}
+                  <button type="submit" disabled={valuationsLoading}>
+                    {valuationsLoading ? appT.loadingMembers : appT.loadValuations}
                   </button>
                 </form>
               </section>
@@ -369,8 +375,8 @@ export default function AssetsPage(props: AssetsPageProps) {
                     />
                   </label>
 
-                  <button type="submit" disabled={loading}>
-                    {loading ? appT.loadingMembers : appT.loadParticipation}
+                  <button type="submit" disabled={participationLoading}>
+                    {participationLoading ? appT.loadingMembers : appT.loadParticipation}
                   </button>
                 </form>
               </section>
