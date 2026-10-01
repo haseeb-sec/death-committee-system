@@ -19,7 +19,15 @@ https://localhost {
         reverse_proxy backend:8000
     }
 
+    handle /committees {
+        reverse_proxy backend:8000
+    }
+
     handle /committees/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /members {
         reverse_proxy backend:8000
     }
 
