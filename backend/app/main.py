@@ -19,6 +19,10 @@ app = FastAPI(
     version="0.1.0",
 )
 
+@app.get("/health", include_in_schema=False)
+def health_check():
+    return {"status": "ok"}
+
 cors_origins = [
     origin.strip()
     for origin in settings.cors_origins.split(",")
