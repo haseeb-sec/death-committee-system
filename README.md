@@ -41,6 +41,20 @@ The backend is the security boundary. Frontend role checks and page visibility d
 | Committee Admin | Assigned committee administration |
 | Member | Permitted member functionality |
 
+### Authorization boundaries
+
+| Capability | Super Admin | Committee Admin | Member |
+| --- | --- | --- | --- |
+| System user administration | Yes | No | No |
+| Create/manage committees | Yes | No | No |
+| Grant/revoke committee administrator access | Yes | No | No |
+| Administer an assigned committee | Yes | Yes, assigned committees only | No |
+| Manage committee members and financial operations | Yes | Yes, assigned committees only | No |
+| Access own permitted member operations | Yes | Yes where applicable | Yes, own scope only |
+| Access another member's restricted data | Platform authorization rules | Assigned committee only | No |
+
+Committee access is enforced by the backend using authenticated role checks, committee assignments, and member ownership rules. Frontend visibility is not a substitute for these server-side checks.
+
 Security controls include:
 
 - JWT authentication
