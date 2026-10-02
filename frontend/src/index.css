@@ -418,25 +418,45 @@ input:focus-visible {
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  padding: 4px 8px;
-  border-radius: 999px;
+  min-height: 26px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--text-muted);
   font-size: 10px;
-  font-weight: 750;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .user-role-badge.member {
+  border-color: var(--border);
   background: var(--surface-soft);
   color: var(--text-muted);
 }
 
 .user-role-badge.administrator {
+  border-color: color-mix(in srgb, var(--primary) 24%, var(--border));
   background: var(--primary-soft);
   color: var(--primary);
 }
 
 .user-role-badge.system {
-  background: #f3e8ff;
-  color: #7e22ce;
+  border-color: #ddd6fe;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.assignment-status.active {
+  border-color: #bbf7d0;
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.assignment-status.revoked {
+  border-color: #fecaca;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .user-account-actions {
@@ -529,16 +549,6 @@ input:focus-visible {
 .user-assignment-row span {
   color: var(--text-muted);
   font-size: 11px;
-}
-
-.assignment-status.active {
-  background: #ecfdf3;
-  color: #15803d;
-}
-
-.assignment-status.revoked {
-  background: #fef2f2;
-  color: #b91c1c;
 }
 
 .user-account-current-access {
