@@ -215,7 +215,6 @@ export default function DeathSupportPage({
                     )}
                   </div>
 
-                  <span className="active-badge">{appT.recorded}</span>
                 </section>
               )}
 

@@ -3069,7 +3069,6 @@ async function handleCreateCommittee(event: FormEvent) {
                     )}
                   </div>
 
-                  <span className="active-badge">{appT.created}</span>
                 </section>
               )}
             </section>
@@ -3203,7 +3202,6 @@ async function handleCreateCommittee(event: FormEvent) {
                     )}
                   </div>
 
-                  <span className="active-badge">{appT.created}</span>
                 </section>
               )}
 

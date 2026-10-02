@@ -631,29 +631,6 @@
   letter-spacing: -0.4px;
 }
 
-.status-pill {
-  min-height: 34px;
-  padding: 0 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid #d1fae5;
-  border-radius: 999px;
-  background: var(--success-soft);
-  color: #047857;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.status-pill span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
-  animation: pulse 2s ease-in-out infinite;
-}
-
 .content {
   width: min(100%, 1180px);
   margin: 0 auto;
@@ -1073,10 +1050,6 @@
 
   .content {
     padding: 22px 16px 30px;
-  }
-
-  .status-pill {
-    display: none;
   }
 
   .committee-banner {
@@ -2984,7 +2957,6 @@
 
 /* Administrative status/action emphasis. */
 .module-page .status,
-.module-page .badge,
 .module-page .tag {
   display: inline-flex;
   align-items: center;

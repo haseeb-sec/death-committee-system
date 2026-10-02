@@ -164,7 +164,6 @@ export default function ContributionsPage({
                     )}
                   </div>
 
-                  <span className="active-badge">{appT.recorded}</span>
                 </section>
               )}
 
@@ -249,7 +248,6 @@ export default function ContributionsPage({
                     )}
                   </div>
 
-                  <span className="active-badge">{appT.created}</span>
                 </section>
               )}
             </>

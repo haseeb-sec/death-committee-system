@@ -284,7 +284,6 @@ export default function SettlementsPage({
                       )}
                     </p>
                   </div>
-                  <span className="active-badge">{appT.settlementCompleted}</span>
                 </section>
               )}
             </section>

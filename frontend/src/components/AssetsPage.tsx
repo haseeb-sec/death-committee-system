@@ -194,7 +194,6 @@ export default function AssetsPage(props: AssetsPageProps) {
                     </p>
                   </div>
 
-                  <span className="active-badge">{appT.created}</span>
                 </section>
               )}
 
@@ -286,7 +285,6 @@ export default function AssetsPage(props: AssetsPageProps) {
                     </p>
                   </div>
 
-                  <span className="active-badge">{appT.valuationUpdated}</span>
                 </section>
               )}
 

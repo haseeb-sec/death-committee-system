@@ -227,7 +227,6 @@ export default function DuesPage({
                     </p>
                   </div>
 
-                  <span className="active-badge">{appT.recorded}</span>
                 </section>
               )}
 
@@ -503,7 +502,6 @@ export default function DuesPage({
                         </p>
                       </div>
 
-                      <span className="active-badge">{appT.updated}</span>
                     </div>
                   )}
                 </section>
