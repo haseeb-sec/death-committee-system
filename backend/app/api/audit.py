@@ -24,6 +24,7 @@ router = APIRouter(
     response_model=list[AuditLogResponse],
 )
 def list_audit_logs(
+    action: str | None = Query(None),
     entity_type: str | None = Query(None),
     entity_id: int | None = Query(None, ge=1),
     user_id: int | None = Query(None, ge=1),
@@ -80,6 +81,7 @@ def list_audit_logs(
 
     return get_audit_logs(
         db,
+        action=action,
         entity_type=entity_type,
         entity_id=entity_id,
         user_id=user_id,

@@ -21,6 +21,7 @@ export default function AuditLogsPage({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [selectedCommitteeId, setSelectedCommitteeId] = useState('')
+  const [action, setAction] = useState('')
   const [entityType, setEntityType] = useState('')
   const [entityId, setEntityId] = useState('')
   const [userId, setUserId] = useState('')
@@ -41,6 +42,7 @@ export default function AuditLogsPage({
 
     try {
       const data = await getAuditLogs(token, {
+        action: action.trim() || undefined,
         committeeId: activeCommitteeId ? Number(activeCommitteeId) : undefined,
         entityType: entityType.trim() || undefined,
         entityId: entityId ? Number(entityId) : undefined,
@@ -64,6 +66,7 @@ export default function AuditLogsPage({
 
   function clearFilters() {
     setSelectedCommitteeId('')
+    setAction('')
     setEntityType('')
     setEntityId('')
     setUserId('')
@@ -98,7 +101,6 @@ export default function AuditLogsPage({
 
       <section className="information-card">
         <div>
-          <p className="eyebrow">{appT.auditLogsFilters}</p>
           <h3>{appT.auditLogsFilters}</h3>
         </div>
 
@@ -117,6 +119,20 @@ export default function AuditLogsPage({
             ) : (
               <input value={committeeName(Number(committeeId))} readOnly />
             )}
+          </label>
+
+          <label>
+            {appT.auditLogsActionFilter}
+            <select value={action} onChange={(event) => setAction(event.target.value)}>
+              <option value="">{appT.auditLogsAllActions}</option>
+              <option value="login">login</option>
+              <option value="create">create</option>
+              <option value="update">update</option>
+              <option value="delete">delete</option>
+              <option value="grant_access">grant_access</option>
+              <option value="revoke_access">revoke_access</option>
+              <option value="leave">leave</option>
+            </select>
           </label>
 
           <label>
@@ -160,7 +176,6 @@ export default function AuditLogsPage({
 
       <section className="information-card">
         <div>
-          <p className="eyebrow">{appT.auditLogsRecentActivity}</p>
           <h3>{appT.auditLogsRecentActivity}</h3>
         </div>
         <p className="form-help">{appT.auditLogsShowingLatest}</p>

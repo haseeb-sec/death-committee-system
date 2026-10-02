@@ -33,6 +33,7 @@ def record_audit(
 def get_audit_logs(
     db: Session,
     *,
+    action: str | None = None,
     entity_type: str | None = None,
     entity_id: int | None = None,
     user_id: int | None = None,
@@ -43,6 +44,9 @@ def get_audit_logs(
     limit: int = 100,
 ) -> list[AuditLog]:
     query = db.query(AuditLog)
+
+    if action is not None:
+        query = query.filter(AuditLog.action == action)
 
     if entity_type is not None:
         query = query.filter(AuditLog.entity_type == entity_type)

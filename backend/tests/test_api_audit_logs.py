@@ -137,6 +137,19 @@ def test_audit_logs_can_be_filtered(db):
 
         response = client.get(
             "/audit-logs",
+            params={"action": "update"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 200
+
+        data = response.json()
+
+        assert len(data) == 1
+        assert data[0]["action"] == "update"
+
+        response = client.get(
+            "/audit-logs",
             params={"entity_type": "committee"},
             headers={"Authorization": f"Bearer {token}"},
         )

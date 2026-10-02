@@ -531,6 +531,8 @@ export type AppTranslation = {
   auditLogsRecentActivity: string
   auditLogsCommittee: string
   auditLogsAllCommittees: string
+  auditLogsActionFilter: string
+  auditLogsAllActions: string
   auditLogsEntityType: string
   auditLogsEntityId: string
   auditLogsUserId: string
@@ -1172,6 +1174,8 @@ export const appTranslations: Record<Language, AppTranslation> = {
     auditLogsRecentActivity: 'Recent activity',
     auditLogsCommittee: 'Committee',
     auditLogsAllCommittees: 'All committees',
+    auditLogsActionFilter: 'Action',
+    auditLogsAllActions: 'All actions',
     auditLogsEntityType: 'Entity type',
     auditLogsEntityId: 'Entity ID',
     auditLogsUserId: 'User ID',
@@ -1799,6 +1803,8 @@ export const appTranslations: Record<Language, AppTranslation> = {
     auditLogsRecentActivity: 'حالیہ سرگرمی',
     auditLogsCommittee: 'کمیٹی',
     auditLogsAllCommittees: 'تمام کمیٹیاں',
+    auditLogsActionFilter: 'کارروائی',
+    auditLogsAllActions: 'تمام کارروائیاں',
     auditLogsEntityType: 'ریکارڈ کی قسم',
     auditLogsEntityId: 'ریکارڈ آئی ڈی',
     auditLogsUserId: 'صارف آئی ڈی',

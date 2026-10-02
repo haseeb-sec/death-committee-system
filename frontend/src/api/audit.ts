@@ -13,6 +13,7 @@ export type AuditLog = {
 }
 
 export type AuditLogFilters = {
+  action?: string
   committeeId?: number
   entityType?: string
   entityId?: number
@@ -27,6 +28,7 @@ export async function getAuditLogs(
 ): Promise<AuditLog[]> {
   const params = new URLSearchParams()
 
+  if (filters.action) params.set('action', filters.action)
   if (filters.committeeId !== undefined) params.set('committee_id', String(filters.committeeId))
   if (filters.entityType) params.set('entity_type', filters.entityType)
   if (filters.entityId !== undefined) params.set('entity_id', String(filters.entityId))
