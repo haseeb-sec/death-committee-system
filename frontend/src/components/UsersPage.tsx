@@ -114,11 +114,7 @@ export default function UsersPage(props: UsersPageProps) {
         {appT.usersDescription}
       </p>
     </div>
-    <div className="page-heading-meta">
-      <span className="active-badge">
-        {users.length} {users.length === 1 ? appT.usersAccountCountUser : appT.usersAccountCountUsers}
-      </span>
-    </div>
+
   </div>
 
   {error && <div className="error page-error">{error}</div>}
@@ -313,8 +309,8 @@ export default function UsersPage(props: UsersPageProps) {
 
       <span className="active-badge">
         {createdUser.is_active === false
-          ? 'Inactive'
-          : 'Active'}
+          ? appT.usersInactive
+          : appT.usersActive}
       </span>
     </section>
   )}
@@ -530,7 +526,7 @@ export default function UsersPage(props: UsersPageProps) {
         onClick={() => void handleLoadUsers()}
       >
         {usersLoading
-          ? 'Loading...'
+          ? appT.usersLoading
           : appT.ui.refreshUserList}
       </button>
     </div>
@@ -699,7 +695,7 @@ export default function UsersPage(props: UsersPageProps) {
                     >
                       {assignmentOverviewLoading ===
                       Number(user.id)
-                        ? 'Loading...'
+                        ? appT.usersLoading
                         : appT.ui.viewAccess}
                     </button>
                   )}
@@ -745,8 +741,8 @@ export default function UsersPage(props: UsersPageProps) {
                               }`}
                             >
                               {assignment.is_active
-                                ? 'Active'
-                                : 'Revoked'}
+                                ? appT.usersActive
+                                : appT.usersRevoked}
                             </span>
                           </div>
                         ),
@@ -785,9 +781,9 @@ export default function UsersPage(props: UsersPageProps) {
                         appT.ui.noCommitteeSelected}
                       {' · '}
                       {accessActive
-                        ? 'Access active'
+                        ? appT.usersAccessActive
                         : accessInactive
-                          ? 'Access inactive'
+                          ? appT.usersAccessInactive
                           : appT.ui.notChecked}
                     </span>
 
@@ -807,7 +803,7 @@ export default function UsersPage(props: UsersPageProps) {
                       >
                         {committeeAccessLoading &&
                         isCurrentAccessUser
-                          ? 'Checking...'
+                          ? appT.usersChecking
                           : appT.usersCheckAccess}
                       </button>
 

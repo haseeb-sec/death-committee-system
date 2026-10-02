@@ -5,6 +5,7 @@ import type { Language } from '../i18n'
 type AppShellTranslations = {
   appName: string
   systemName: string
+  committeeWorkspace: string
   navigation: Record<string, string>
   languageLabel: string
   languageEnglish: string
@@ -29,6 +30,7 @@ type AppShellProps = {
   isSelectedCommitteeAdmin: boolean
   userRole: string
   username: string
+  selectedCommitteeName: string
   language: Language
   setLanguage: (language: Language) => void
   logout: () => void | Promise<void>
@@ -43,6 +45,7 @@ export default function AppShell({
   isSelectedCommitteeAdmin,
   userRole,
   username,
+  selectedCommitteeName,
   language,
   setLanguage,
   logout,
@@ -152,13 +155,19 @@ export default function AppShell({
 
       <main className="main-content">
         <header className="topbar">
-          <div>
+          <div className="topbar-page-context">
             <p className="eyebrow">
               {appT.appName.toUpperCase()} {appT.systemName.toUpperCase()}
             </p>
             <h2>
               {appT.navigation[activePage] ?? getNavigationLabel(activePage)}
             </h2>
+            {selectedCommitteeName && activePage !== 'Committees' && (
+              <p className="topbar-workspace">
+                <span>{appT.committeeWorkspace}</span>
+                <strong>{selectedCommitteeName}</strong>
+              </p>
+            )}
           </div>
 
           <div className="topbar-account">

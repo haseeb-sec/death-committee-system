@@ -94,11 +94,6 @@ export default function DuesPage({
                   </p>
                 </div>
 
-                <div className="page-heading-meta">
-                  <span className="active-badge">
-                    {members.length} {members.length === 1 ? 'Member' : 'Members'}
-                  </span>
-                </div>
               </div>
 
               {error && <div className="error page-error">{error}</div>}
@@ -347,8 +342,8 @@ export default function DuesPage({
                                 due.amount ??
                                 0,
                             ) > 0
-                              ? 'Outstanding'
-                              : 'Paid'}
+                              ? appT.outstanding
+                              : appT.paid}
                           </span>
                         </div>
                       </div>

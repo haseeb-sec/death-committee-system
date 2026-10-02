@@ -527,6 +527,8 @@ export type AppTranslation = {
   outstandingDues: string
   auditLogs: string
   auditLogsDescription: string
+  auditLogsFilters: string
+  auditLogsRecentActivity: string
   auditLogsCommittee: string
   auditLogsAllCommittees: string
   auditLogsEntityType: string
@@ -1166,6 +1168,8 @@ export const appTranslations: Record<Language, AppTranslation> = {
     outstandingDues: 'Outstanding dues',
     auditLogs: 'Audit Logs',
     auditLogsDescription: 'Review recent administrative and financial activity recorded by the system.',
+    auditLogsFilters: 'Filters',
+    auditLogsRecentActivity: 'Recent activity',
     auditLogsCommittee: 'Committee',
     auditLogsAllCommittees: 'All committees',
     auditLogsEntityType: 'Entity type',
@@ -1791,6 +1795,8 @@ export const appTranslations: Record<Language, AppTranslation> = {
     outstandingDues: 'بقایا واجبات',
     auditLogs: 'آڈٹ لاگز',
     auditLogsDescription: 'سسٹم میں درج حالیہ انتظامی اور مالی سرگرمی کا ریکارڈ دیکھیں۔',
+    auditLogsFilters: 'فلٹرز',
+    auditLogsRecentActivity: 'حالیہ سرگرمی',
     auditLogsCommittee: 'کمیٹی',
     auditLogsAllCommittees: 'تمام کمیٹیاں',
     auditLogsEntityType: 'ریکارڈ کی قسم',

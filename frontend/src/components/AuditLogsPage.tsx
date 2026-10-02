@@ -98,8 +98,8 @@ export default function AuditLogsPage({
 
       <section className="information-card">
         <div>
-          <p className="eyebrow">{appT.auditLogs}</p>
-          <h3>{appT.auditLogsDescription}</h3>
+          <p className="eyebrow">{appT.auditLogsFilters}</p>
+          <h3>{appT.auditLogsFilters}</h3>
         </div>
 
         <div className="rate-form-grid">
@@ -159,6 +159,10 @@ export default function AuditLogsPage({
       </section>
 
       <section className="information-card">
+        <div>
+          <p className="eyebrow">{appT.auditLogsRecentActivity}</p>
+          <h3>{appT.auditLogsRecentActivity}</h3>
+        </div>
         <p className="form-help">{appT.auditLogsShowingLatest}</p>
 
         {loading ? (

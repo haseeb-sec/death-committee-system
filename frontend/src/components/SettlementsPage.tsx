@@ -2,9 +2,6 @@ import type { FormEvent } from 'react'
 
 type SettlementsPageProps = {
   appT: any
-  summary: any
-  committees: any[]
-  committeeId: string
   members: any[]
   membersLoading: boolean
   settlementLoading: boolean
@@ -31,9 +28,6 @@ type SettlementsPageProps = {
 
 export default function SettlementsPage({
   appT,
-  summary,
-  committees,
-  committeeId,
   members,
   membersLoading,
   settlementLoading,
@@ -68,16 +62,6 @@ export default function SettlementsPage({
                   </p>
                 </div>
 
-                <div className="page-heading-meta">
-                  <span className="active-badge">
-                    {summary?.committee_name ??
-                      committees.find(
-                        (committee) =>
-                          String(committee.id) === String(committeeId),
-                      )?.name ??
-                      appT.ui.selectedCommittee}
-                  </span>
-                </div>
               </div>
 
               <section className="information-card">

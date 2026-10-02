@@ -173,6 +173,12 @@ function App() {
   const [members, setMembers] = useState<Member[]>([])
   const [membersLoading, setMembersLoading] = useState(false)
 
+  const selectedCommittee = committees.find(
+    (committee) => Number(committee.id) === Number(committeeId),
+  )
+  const selectedCommitteeName =
+    selectedCommittee?.name ?? selectedCommittee?.committee_name ?? ''
+
   const [users, setUsers] = useState<Array<Record<string, any>>>([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [userUsername, setUserUsername] = useState('')
@@ -2851,6 +2857,7 @@ async function handleCreateCommittee(event: FormEvent) {
       isSelectedCommitteeAdmin={isSelectedCommitteeAdmin}
       userRole={userRole}
       username={username}
+      selectedCommitteeName={selectedCommitteeName}
       language={language}
       setLanguage={setLanguage}
       logout={logout}
@@ -3784,9 +3791,6 @@ async function handleCreateCommittee(event: FormEvent) {
 ) : activePage === 'Settlements' ? (
             <SettlementsPage
               appT={appT}
-              summary={summary}
-              committees={committees}
-              committeeId={committeeId}
               members={members}
               membersLoading={membersLoading}
               settlementLoading={isOperationLoading('loadMemberSettlement')}
@@ -3905,11 +3909,6 @@ async function handleCreateCommittee(event: FormEvent) {
             <div className="committee-loader">
               <label htmlFor="committee-id">{appT.committeeWorkspace}</label>
 
-              <div className="committee-context-help">
-                {committees.length > 1
-                    ? appT.chooseCommitteeWorkspace
-                    : appT.committeeAvailableToYou}
-              </div>
 
               <select
                 id="committee-id"
@@ -3935,9 +3934,6 @@ async function handleCreateCommittee(event: FormEvent) {
                 )}
               </select>
 
-              <p className="committee-context-note">
-                {appT.committeeScopeNote}
-              </p>
             </div>
           </div>
 
