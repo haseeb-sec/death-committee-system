@@ -108,7 +108,6 @@ export default function DuesPage({
                         {appT.createMemberDueDescription}
                       </p>
                     </div>
-                    <span className="active-badge">{appT.newDue}</span>
                   </div>
 
                   <form
