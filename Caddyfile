@@ -15,6 +15,10 @@ https://localhost {
         reverse_proxy backend:8000
     }
 
+    handle /users {
+        reverse_proxy backend:8000
+    }
+
     handle /users/* {
         reverse_proxy backend:8000
     }
@@ -35,17 +39,6 @@ https://localhost {
         reverse_proxy backend:8000
     }
 
-    handle /contributions/* {
-        reverse_proxy backend:8000
-    }
-
-    handle /settlements/* {
-        reverse_proxy backend:8000
-    }
-
-    handle /death-support/* {
-        reverse_proxy backend:8000
-    }
 
     handle /audit-logs {
         reverse_proxy backend:8000

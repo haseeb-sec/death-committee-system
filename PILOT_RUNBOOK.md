@@ -137,7 +137,7 @@ Do not use the old SQLite backup/restore scripts for the Compose pilot database.
 
 Caddy is the HTTPS entry point for the application.
 
-Current backend API prefixes are explicitly routed in `Caddyfile`. If a new backend route introduces a new top-level API prefix, update and validate `Caddyfile` before deploying it.
+Current backend API prefixes are explicitly routed in Caddyfile: /auth, /users, /committees, /members, and /audit-logs, including their bare prefix paths where applicable. Nested contribution, settlement, dues, goods, death-support, and asset endpoints are covered by the /committees/* or /members/* rules; do not add separate top-level proxy rules for those nested paths. /assets/* is frontend static content, not a backend API prefix. If a new backend route introduces a new top-level API prefix, update and validate Caddyfile before deploying it.
 
 Validate the configuration with:
 
