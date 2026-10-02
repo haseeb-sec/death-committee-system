@@ -157,7 +157,7 @@ The restore script:
 - Restores with `ON_ERROR_STOP`
 - Removes a partially restored isolated database if restoration fails
 
-A fresh PostgreSQL backup and isolated restore have been successfully verified during development.
+A fresh PostgreSQL backup and isolated restore have been successfully verified during development. Backups created by this script remain on the deployment host; production deployments should copy them to independent off-host storage and define retention/access controls appropriate to the hosting environment.
 
 ## CI and Security Scanning
 
