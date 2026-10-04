@@ -104,7 +104,7 @@ export default function DeathSupportPage({
                         <option value="">{appT.selectMember}</option>
                         {members.map((member) => (
                           <option key={member.id} value={member.id}>
-                            {member.name} · ID {member.id}
+                            {member.name} · {appT.member} #{member.id}
                           </option>
                         ))}
                       </select>
@@ -235,7 +235,7 @@ export default function DeathSupportPage({
                   }}
                 >
                   <label>
-                    Member
+                    {appT.member}
                     <select
                       value={deathSupportStatusMemberId}
                       onChange={(event) => {
@@ -247,7 +247,7 @@ export default function DeathSupportPage({
                       <option value="">{appT.selectMember}</option>
                       {members.map((member) => (
                         <option key={member.id} value={member.id}>
-                          {member.name} · ID {member.id}
+                          {member.name} · {appT.member} #{member.id}
                         </option>
                       ))}
                     </select>
@@ -270,7 +270,7 @@ export default function DeathSupportPage({
                     </h3>
 
                     <p className="created-id">
-                      Member ID: {deathSupportStatus.member_id}
+                      {appT.member} ID: {deathSupportStatus.member_id}
                     </p>
 
                     {deathSupportStatus.death_support_recorded && (
@@ -282,14 +282,20 @@ export default function DeathSupportPage({
                         </p>
 
                         <p className="created-id">
-                          Support date:{' '}
+                          {appT.supportDate}:{' '}
                           {deathSupportStatus.support_date ?? '—'}
                         </p>
                       </>
                     )}
                   </div>
 
-                  <span className="active-badge">
+                  <span
+                    className={
+                      deathSupportStatus.death_support_recorded
+                        ? "active-badge"
+                        : "inactive-badge"
+                    }
+                  >
                     {deathSupportStatus.death_support_recorded
                       ? appT.recorded
                       : appT.notRecorded}

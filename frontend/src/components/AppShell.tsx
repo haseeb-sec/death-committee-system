@@ -215,6 +215,24 @@ export default function AppShell({
           </div>
         </header>
 
+        <nav className="mobile-nav">
+          {navigation.map((page) => (
+            <button
+              key={page}
+              type="button"
+              className={`mobile-nav-item ${activePage === page ? "active" : ""}`}
+              onClick={() => {
+                if (page === "Users" && userRole !== "super_admin") return
+                setActivePage(page)
+              }}
+            >
+              {appT.navigation[page] ?? getNavigationLabel(page)}
+            </button>
+          ))}
+        </nav>
+
+
+
         <section className="content">
           {activePage === 'Users' && userRole !== 'super_admin' ? (
             <section className="module-placeholder">

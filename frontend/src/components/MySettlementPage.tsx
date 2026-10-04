@@ -42,7 +42,7 @@ export default function MySettlementPage({
                 !mySettlementError &&
                 members.length === 0 && (
                   <p className="form-help">
-                    No member record was found for you in this committee.
+                    {appT.noMemberRecordFound}
                   </p>
                 )}
 

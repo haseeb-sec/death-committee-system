@@ -101,7 +101,7 @@ export default function ContributionsPage({
                             key={member.id}
                             value={member.id}
                           >
-                            {member.name} · Member #{member.id}
+                            {member.name} · {appT.member} #{member.id}
                           </option>
                         ))}
                       </select>
@@ -222,7 +222,6 @@ export default function ContributionsPage({
               {createdContributionRate && (
                 <section className="committee-banner contribution-rate-result">
                   <div>
-                    <p className="eyebrow">{appT.created}</p>
                     <h3>
                       {createdContributionRate.amount !== undefined
                         ? `Rs. ${createdContributionRate.amount.toLocaleString(
@@ -232,7 +231,7 @@ export default function ContributionsPage({
                     </h3>
 
                     <p className="created-id">
-                      Committee ID:{' '}
+                      {appT.committeeId}:{' '}
                       {createdContributionRate.committee_id ??
                         committeeId}
                       {' · '}

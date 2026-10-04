@@ -1791,9 +1791,7 @@ async function handleCloseCommittee(committeeId: number) {
       return
     }
 
-    const confirmed = window.confirm(
-      'Close this committee? Closing a committee prevents further committee activity while preserving its historical records.',
-    )
+    const confirmed = window.confirm(appT.confirmCloseCommittee)
 
     if (!confirmed) {
       return
@@ -2105,6 +2103,12 @@ async function handleCreateCommittee(event: FormEvent) {
 
     if (!token) {
       setError(appT.errors.notAuthenticated)
+      return
+    }
+
+    const confirmed = window.confirm(appT.confirmMemberLeave)
+
+    if (!confirmed) {
       return
     }
 
@@ -2925,9 +2929,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     <p className="eyebrow">{appT.committeeManagement}</p>
                     <h3>{appT.committeeAdministrators}</h3>
                     <p className="form-help">
-                      Review which users administer each committee. Committee
-                      administration is granted through committee access and
-                      does not change the user's system-level role.
+                      {appT.committeeAdministratorsDescription}
                     </p>
                   </div>
 
@@ -2956,7 +2958,7 @@ async function handleCreateCommittee(event: FormEvent) {
                               <strong>
                                 {committee.is_active === false
                                   ? appT.errors.closed
-                                  : 'Active'}
+                                  : appT.active}
                               </strong>
 
                               {committeeLifecycleStatus[String(committee.id)] && (
@@ -3028,7 +3030,7 @@ async function handleCreateCommittee(event: FormEvent) {
                             >
                               {committeeAdministratorsLoading ===
                               committeeKey
-                                ? 'Loading...'
+                                ? appT.usersLoading
                                 : appT.ui.viewAdministrators}
                             </button>
 
@@ -3102,7 +3104,7 @@ async function handleCreateCommittee(event: FormEvent) {
                 >
                   <div className="rate-form-grid">
                     <label>
-                      Committee
+                      {appT.committee}
                       <select value={committeeId} disabled>
                         {committees
                           .filter(
@@ -3123,7 +3125,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Full name
+                      {appT.fullName}
                       <input
                         value={memberName}
                         onChange={(event) =>
@@ -3135,7 +3137,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Username
+                      {appT.username}
                       <input
                         value={memberUsername}
                         onChange={(event) =>
@@ -3147,7 +3149,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Password
+                      {appT.password}
                       <input
                         type="password"
                         value={memberPassword}
@@ -3160,7 +3162,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     </label>
 
                     <label>
-                      Joining date
+                      {appT.joiningDate}
                       <input
                         type="date"
                         value={memberJoinedOn}
@@ -3250,7 +3252,7 @@ async function handleCreateCommittee(event: FormEvent) {
                             className={
                               member.is_active
                                 ? 'active-badge'
-                                : 'status-badge'
+                                : 'inactive-badge'
                             }
                           >
                             {member.is_active ? appT.active : appT.inactive}
@@ -3261,7 +3263,7 @@ async function handleCreateCommittee(event: FormEvent) {
                               type="button"
                               onClick={() => void handleLeaveMember(member.id)}
                             >
-                              Leave
+                              {appT.leave}
                             </button>
                           )}
                         </div>
@@ -3288,7 +3290,7 @@ async function handleCreateCommittee(event: FormEvent) {
                   }}
                 >
                   <label>
-                    Member
+                    {appT.member}
                     <select
                       value={financialMemberId}
                       onChange={(event) => {
@@ -3301,7 +3303,7 @@ async function handleCreateCommittee(event: FormEvent) {
                     >
                       <option value="">
                         {membersLoading
-                          ? '{appT.loadingMembers}'
+                          ? appT.loadingMembers
                           : members.length === 0
                             ? appT.noMembersAvailable
                             : appT.selectMember}
@@ -3312,7 +3314,7 @@ async function handleCreateCommittee(event: FormEvent) {
                           key={member.id}
                           value={member.id}
                         >
-                          {member.name} · Member #{member.id}
+                          {member.name} · {appT.member} #{member.id}
                         </option>
                       ))}
                     </select>
@@ -3950,15 +3952,7 @@ async function handleCreateCommittee(event: FormEvent) {
           {summary && (
             <>
               <section className="dashboard-financial-section">
-                <div className="dashboard-section-heading">
-                  <div>
-                    <p className="eyebrow">{appT.financialPosition}</p>
-                    <h2>{appT.committeeFinances}</h2>
-                    <p>
-                      {appT.financialPositionDescription}
-                    </p>
-                  </div>
-                </div>
+                <h2>{appT.committeeFinances}</h2>
 
                 <div className="dashboard-hero">
                 <p className="dashboard-hero-label">

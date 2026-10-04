@@ -175,7 +175,6 @@ export default function GoodsPage(props: GoodsPageProps) {
               {createdMemberGood && (
                 <section className="committee-banner">
                   <div>
-                    <p className="eyebrow">{appT.recorded}</p>
                     <h3>
                       {createdMemberGood.name ?? appT.memberGoodCreated}
                     </h3>
@@ -227,7 +226,7 @@ export default function GoodsPage(props: GoodsPageProps) {
                   }}
                 >
                   <label>
-                    Member ID
+                    {appT.memberId}
                     <input
                       type="number"
                       min="1"
@@ -240,7 +239,7 @@ export default function GoodsPage(props: GoodsPageProps) {
                   </label>
 
                   <button type="submit" disabled={goodsLoading}>
-                    {goodsLoading ? appT.loadingMembers : appT.loadGoods}
+                    {goodsLoading ? appT.loadingData : appT.loadGoods}
                   </button>
                 </form>
               </section>
@@ -293,7 +292,7 @@ export default function GoodsPage(props: GoodsPageProps) {
                   }}
                 >
                   <label>
-                    Member ID
+                    {appT.memberId}
                     <input
                       type="number"
                       min="1"
@@ -306,7 +305,7 @@ export default function GoodsPage(props: GoodsPageProps) {
                   </label>
 
                   <button type="submit" disabled={totalLoading}>
-                    {totalLoading ? appT.loadingMembers : appT.loadTotal}
+                    {totalLoading ? appT.loadingData : appT.loadTotal}
                   </button>
                 </form>
               </section>

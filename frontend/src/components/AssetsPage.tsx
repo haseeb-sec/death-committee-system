@@ -168,15 +168,14 @@ export default function AssetsPage(props: AssetsPageProps) {
               {createdCommitteeAsset && (
                 <section className="committee-banner">
                   <div>
-                    <p className="eyebrow">{appT.created}</p>
-                    <h3>
+                            <h3>
                       {createdCommitteeAsset.name ?? appT.assetCreated}
                     </h3>
 
                     <p className="created-id">
                       {appT.assetId}: {createdCommitteeAsset.id}
                       {' · '}
-                      Committee ID:{' '}
+                      {appT.committeeId}:{' '}
                       {createdCommitteeAsset.committee_id ??
                         committeeId}
                     </p>
@@ -213,7 +212,7 @@ export default function AssetsPage(props: AssetsPageProps) {
                 >
                   <div className="rate-form-grid">
                     <label>
-                      Asset ID
+                      {appT.assetId}
                       <input
                         type="number"
                         min="1"
@@ -302,7 +301,7 @@ export default function AssetsPage(props: AssetsPageProps) {
                   }}
                 >
                   <label>
-                    Asset ID
+                    {appT.assetId}
                     <input
                       type="number"
                       min="1"
@@ -315,7 +314,7 @@ export default function AssetsPage(props: AssetsPageProps) {
                   </label>
 
                   <button type="submit" disabled={valuationsLoading}>
-                    {valuationsLoading ? appT.loadingMembers : appT.loadValuations}
+                    {valuationsLoading ? appT.loadingData : appT.loadValuations}
                   </button>
                 </form>
               </section>
@@ -361,7 +360,7 @@ export default function AssetsPage(props: AssetsPageProps) {
                   }}
                 >
                   <label>
-                    Asset ID
+                    {appT.assetId}
                     <input
                       type="number"
                       min="1"
@@ -374,7 +373,7 @@ export default function AssetsPage(props: AssetsPageProps) {
                   </label>
 
                   <button type="submit" disabled={participationLoading}>
-                    {participationLoading ? appT.loadingMembers : appT.loadParticipation}
+                    {participationLoading ? appT.loadingData : appT.loadParticipation}
                   </button>
                 </form>
               </section>

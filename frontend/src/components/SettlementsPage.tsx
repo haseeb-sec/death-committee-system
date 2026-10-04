@@ -69,15 +69,14 @@ export default function SettlementsPage({
                   <p className="eyebrow">{appT.settlementReview}</p>
                   <h3>{appT.selectMemberForSettlement}</h3>
                   <p className="form-help">
-                    The settlement is calculated from this member's financial
-                    position within the currently selected committee.
+                    {appT.selectMemberForSettlementDescription}
                   </p>
                 </div>
 
                 <div className="committee-create-form">
                   <div className="rate-form-grid">
                     <label>
-                      Member
+                      {appT.member}
                       <select
                         value={settlementMemberId}
                         onChange={(event) => {
@@ -97,7 +96,7 @@ export default function SettlementsPage({
                         </option>
                         {members.map((member) => (
                           <option key={member.id} value={member.id}>
-                            {member.name} · ID {member.id}
+                            {member.name} · {appT.member} #{member.id}
                           </option>
                         ))}
                       </select>
@@ -125,7 +124,7 @@ export default function SettlementsPage({
                     }
                     onClick={() => void handleLoadMemberSettlement()}
                   >
-                    {settlementLoading ? appT.loadingMembers : appT.previewSettlement}
+                    {settlementLoading ? appT.loadingData : appT.previewSettlement}
                   </button>
                 </div>
               </section>
@@ -141,7 +140,7 @@ export default function SettlementsPage({
                         )}
                       </h3>
                       <p className="form-help">
-                        Remaining contribution-based balance.
+                        {appT.settlementContributionBalanceDescription}
                       </p>
                     </div>
                   </section>
@@ -153,7 +152,7 @@ export default function SettlementsPage({
                         {formatPKR(settlementPreview.asset_share ?? 0)}
                       </h3>
                       <p className="form-help">
-                        Current refundable share of committee assets.
+                        {appT.settlementAssetShareDescription}
                       </p>
                     </div>
                   </section>
@@ -165,7 +164,7 @@ export default function SettlementsPage({
                         {formatPKR(settlementPreview.goods_value ?? 0)}
                       </h3>
                       <p className="form-help">
-                        Refundable value associated with member goods.
+                        {appT.settlementGoodsValueDescription}
                       </p>
                     </div>
                   </section>
@@ -179,7 +178,7 @@ export default function SettlementsPage({
                         )}
                       </h3>
                       <p className="form-help">
-                        Amount deducted before final settlement.
+                        {appT.settlementOutstandingDuesDescription}
                       </p>
                     </div>
                   </section>
@@ -194,10 +193,7 @@ export default function SettlementsPage({
                       {formatPKR(settlementPreview.final_amount ?? 0)}
                     </h3>
                     <p className="form-help">
-                      Gross amount:{' '}
-                      {formatPKR(settlementPreview.gross_amount ?? 0)}
-                      {' · '}
-                      Final refundable amount after outstanding dues.
+                      {appT.settlementFinalAmountDescription.replace('{gross}', formatPKR(settlementPreview.gross_amount ?? 0))}
                     </p>
                   </div>
 
@@ -225,17 +221,17 @@ export default function SettlementsPage({
                       {createdMemberSettlement.id ?? '—'}
                     </h3>
                     <p className="created-id">
-                      Member ID:{' '}
+                      {appT.memberId}:{' '}
                       {createdMemberSettlement.member_id ??
                         settlementMemberId}
                       {' · '}
-                      Final amount:{' '}
+                      {appT.finalAmount}:{' '}
                       {formatPKR(
                         createdMemberSettlement.final_amount ?? 0,
                       )}
                     </p>
                   </div>
-                  <span className="active-badge">
+                  <span className="neutral-badge">
                     {createdMemberSettlement.status ?? appT.created}
                   </span>
                 </section>
@@ -248,8 +244,7 @@ export default function SettlementsPage({
                       <p className="eyebrow">{appT.finalPaymentLabel}</p>
                       <h3>{appT.recordSettlementPayment}</h3>
                       <p className="form-help">
-                        This records the final settlement payment and closes
-                        the member's settlement.
+                        {appT.settlementPaymentDescription}
                       </p>
                     </div>
 
@@ -271,14 +266,14 @@ export default function SettlementsPage({
                     <p className="eyebrow">{appT.settlementPaid}</p>
                     <h3>{appT.settlementCompleted}</h3>
                     <p className="created-id">
-                      Settlement ID:{' '}
+                      {appT.settlementId}:{' '}
                       {paidMemberSettlement.id ?? '—'}
                       {' · '}
-                      Member ID:{' '}
+                      {appT.memberId}:{' '}
                       {paidMemberSettlement.member_id ??
                         settlementMemberId}
                       {' · '}
-                      Paid:{' '}
+                      {appT.paid}:{' '}
                       {formatPKR(
                         paidMemberSettlement.final_amount ?? 0,
                       )}

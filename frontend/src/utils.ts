@@ -31,7 +31,7 @@ export function formatPKR(amount: number) {
 
 export function getNavigationLabel(page: string): string {
   const labels: Record<string, string> = {
-    Dashboard: 'Overview',
+    Dashboard: 'Dashboard',
     'Death Support': 'Death Assistance',
     Dues: 'Outstanding Dues',
     Goods: 'Member Purchases',

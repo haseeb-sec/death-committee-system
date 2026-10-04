@@ -80,6 +80,27 @@ export default function AuditLogsPage({
     return committee?.name ?? committee?.committee_name ?? ('#' + id)
   }
 
+  function actionLabel(value: string) {
+    const labels: Record<string, string> = {
+      login: appT.auditLogsActionLogin,
+      create: appT.auditLogsActionCreate,
+      update_value: appT.auditLogsActionUpdateValue,
+      pay: appT.auditLogsActionPay,
+      leave: appT.auditLogsActionLeave,
+      grant_access: appT.auditLogsActionGrantAccess,
+      grant_committee_admin: appT.auditLogsActionGrantCommitteeAdmin,
+      revoke_access: appT.auditLogsActionRevokeAccess,
+      revoke_committee_admin: appT.auditLogsActionRevokeCommitteeAdmin,
+      close: appT.auditLogsActionClose,
+      change_password: appT.auditLogsActionChangePassword,
+      reset_password: appT.auditLogsActionResetPassword,
+      issue_password_reset: appT.auditLogsActionIssuePasswordReset,
+      deactivate: appT.auditLogsActionDeactivate,
+      activate: appT.auditLogsActionActivate,
+    }
+    return labels[value] ?? value
+  }
+
   function formatDate(value: string) {
     return new Date(value).toLocaleString('en-PK', {
       dateStyle: 'medium',
@@ -125,13 +146,21 @@ export default function AuditLogsPage({
             {appT.auditLogsActionFilter}
             <select value={action} onChange={(event) => setAction(event.target.value)}>
               <option value="">{appT.auditLogsAllActions}</option>
-              <option value="login">login</option>
-              <option value="create">create</option>
-              <option value="update">update</option>
-              <option value="delete">delete</option>
-              <option value="grant_access">grant_access</option>
-              <option value="revoke_access">revoke_access</option>
-              <option value="leave">leave</option>
+              <option value="login">{appT.auditLogsActionLogin}</option>
+              <option value="create">{appT.auditLogsActionCreate}</option>
+              <option value="update_value">{appT.auditLogsActionUpdateValue}</option>
+              <option value="pay">{appT.auditLogsActionPay}</option>
+              <option value="leave">{appT.auditLogsActionLeave}</option>
+              <option value="grant_access">{appT.auditLogsActionGrantAccess}</option>
+              <option value="grant_committee_admin">{appT.auditLogsActionGrantCommitteeAdmin}</option>
+              <option value="revoke_access">{appT.auditLogsActionRevokeAccess}</option>
+              <option value="revoke_committee_admin">{appT.auditLogsActionRevokeCommitteeAdmin}</option>
+              <option value="close">{appT.auditLogsActionClose}</option>
+              <option value="change_password">{appT.auditLogsActionChangePassword}</option>
+              <option value="reset_password">{appT.auditLogsActionResetPassword}</option>
+              <option value="issue_password_reset">{appT.auditLogsActionIssuePasswordReset}</option>
+              <option value="deactivate">{appT.auditLogsActionDeactivate}</option>
+              <option value="activate">{appT.auditLogsActionActivate}</option>
             </select>
           </label>
 
@@ -202,7 +231,7 @@ export default function AuditLogsPage({
                 {logs.map((log) => (
                   <tr key={log.id}>
                     <td>{formatDate(log.created_at)}</td>
-                    <td>{log.action}</td>
+                    <td>{actionLabel(log.action)}</td>
                     <td>{log.entity_type}</td>
                     <td>{log.entity_id ?? '-'}</td>
                     <td>{log.user_id ?? '-'}</td>

@@ -174,6 +174,7 @@ export type AppTranslation = {
   active: string
   closing: string
   closeCommittee: string
+  confirmCloseCommittee: string
   noActiveCommitteeAdministrator: string
   viewAdministrators: string
   manageAccess: string
@@ -202,6 +203,7 @@ export type AppTranslation = {
   contributionRateAutoSelected: string
   member: string
   loadingMembers: string
+  loadingData: string
   noMembersAvailable: string
   selectMember: string
   paymentDate: string
@@ -254,6 +256,7 @@ export type AppTranslation = {
   joined: string
   inactive: string
   leave: string
+  confirmMemberLeave: string
   financialSummary: string
   memberFinancialPosition: string
   loadMemberFinancialPosition: string
@@ -281,6 +284,12 @@ export type AppTranslation = {
   settlementReview: string
   selectMemberForSettlement: string
   selectMemberForSettlementDescription: string
+  settlementContributionBalanceDescription: string
+  settlementAssetShareDescription: string
+  settlementGoodsValueDescription: string
+  settlementOutstandingDuesDescription: string
+  settlementFinalAmountDescription: string
+  settlementPaymentDescription: string
   previewSettlement: string
   settlementCalculation: string
   createSettlement: string
@@ -553,6 +562,21 @@ export type AppTranslation = {
   auditLogsEntityIdColumn: string
   auditLogsUserIdColumn: string
   auditLogsCommitteeIdColumn: string
+  auditLogsActionLogin: string
+  auditLogsActionCreate: string
+  auditLogsActionUpdateValue: string
+  auditLogsActionPay: string
+  auditLogsActionLeave: string
+  auditLogsActionGrantAccess: string
+  auditLogsActionGrantCommitteeAdmin: string
+  auditLogsActionRevokeAccess: string
+  auditLogsActionRevokeCommitteeAdmin: string
+  auditLogsActionClose: string
+  auditLogsActionChangePassword: string
+  auditLogsActionResetPassword: string
+  auditLogsActionIssuePasswordReset: string
+  auditLogsActionDeactivate: string
+  auditLogsActionActivate: string
   loadingYourDues: string
   access: string
   module: string
@@ -698,7 +722,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
     systemName: 'System',
 
     navigation: {
-      Dashboard: 'Overview',
+      Dashboard: 'Dashboard',
       Committees: 'Committees',
       Users: 'Users',
       Members: 'Members',
@@ -804,6 +828,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
     active: 'Active',
     closing: 'Closing...',
     closeCommittee: 'Close Committee',
+    confirmCloseCommittee: 'Close this committee? Closing a committee prevents further committee activity while preserving its historical records.',
     noActiveCommitteeAdministrator:
       'No active Committee Administrator is assigned.',
     viewAdministrators: 'View Administrators',
@@ -836,6 +861,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
       'The applicable contribution rate is selected automatically from the contribution date.',
     member: 'Member',
     loadingMembers: 'Loading members...',
+    loadingData: 'Loading...',
     noMembersAvailable: 'No members available',
     selectMember: 'Select a member',
     paymentDate: 'Payment date',
@@ -896,6 +922,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
     joined: 'Joined',
     inactive: 'Inactive',
     leave: 'Leave',
+    confirmMemberLeave: "End this member's membership? This will create the member's settlement and make the member inactive.",
     financialSummary: 'FINANCIAL SUMMARY',
     memberFinancialPosition: 'Member financial position',
     loadMemberFinancialPosition:
@@ -1196,6 +1223,21 @@ export const appTranslations: Record<Language, AppTranslation> = {
     auditLogsEntityIdColumn: 'Entity ID',
     auditLogsUserIdColumn: 'User ID',
     auditLogsCommitteeIdColumn: 'Committee ID',
+    auditLogsActionLogin: 'Login',
+    auditLogsActionCreate: 'Create',
+    auditLogsActionUpdateValue: 'Update value',
+    auditLogsActionPay: 'Pay',
+    auditLogsActionLeave: 'Leave',
+    auditLogsActionGrantAccess: 'Grant access',
+    auditLogsActionGrantCommitteeAdmin: 'Grant committee admin',
+    auditLogsActionRevokeAccess: 'Revoke access',
+    auditLogsActionRevokeCommitteeAdmin: 'Revoke committee admin',
+    auditLogsActionClose: 'Close',
+    auditLogsActionChangePassword: 'Change password',
+    auditLogsActionResetPassword: 'Reset password',
+    auditLogsActionIssuePasswordReset: 'Issue password reset',
+    auditLogsActionDeactivate: 'Deactivate',
+    auditLogsActionActivate: 'Activate',
     loadingYourDues: 'Loading your dues...',
     invalidWholeNumber: 'New value must be a whole number greater than or equal to 0',
     onlySuperAdminCloseCommittees: 'Only Super Administrators can close committees',
@@ -1310,6 +1352,12 @@ export const appTranslations: Record<Language, AppTranslation> = {
   settlementReview: 'Settlement Review',
   selectMemberForSettlement: 'Select member',
   selectMemberForSettlementDescription: 'Select a member to review their refundable position and settlement.',
+  settlementContributionBalanceDescription: 'Remaining contribution-based balance.',
+  settlementAssetShareDescription: 'Current refundable share of committee assets.',
+  settlementGoodsValueDescription: 'Refundable value associated with member goods.',
+  settlementOutstandingDuesDescription: 'Amount deducted before final settlement.',
+  settlementFinalAmountDescription: 'Gross amount: {gross}. Final refundable amount after outstanding dues.',
+  settlementPaymentDescription: "This records the final settlement payment and closes the member's settlement.",
   previewSettlement: 'Preview Settlement',
   settlementCalculation: 'Settlement Calculation',
   createSettlement: 'Create Settlement',
@@ -1430,6 +1478,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
     active: 'فعال',
     closing: 'بند کی جا رہی ہے...',
     closeCommittee: 'کمیٹی بند کریں',
+    confirmCloseCommittee: 'کیا اس کمیٹی کو بند کرنا ہے؟ کمیٹی بند کرنے سے مزید سرگرمیاں رک جائیں گی جبکہ سابقہ ریکارڈ محفوظ رہیں گے۔',
     noActiveCommitteeAdministrator:
       'کوئی فعال کمیٹی منتظم مقرر نہیں ہے۔',
     viewAdministrators: 'منتظمین دیکھیں',
@@ -1463,6 +1512,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
       'چندے کی تاریخ کے مطابق قابل اطلاق چندے کی شرح خود منتخب ہو جاتی ہے۔',
     member: 'رکن',
     loadingMembers: 'ارکان لوڈ ہو رہے ہیں...',
+    loadingData: 'لوڈ ہو رہا ہے...',
     noMembersAvailable: 'کوئی رکن دستیاب نہیں',
     selectMember: 'رکن منتخب کریں',
     paymentDate: 'ادائیگی کی تاریخ',
@@ -1520,6 +1570,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
     joined: 'شامل ہوا',
     inactive: 'غیر فعال',
     leave: 'رکنیت ختم کریں',
+    confirmMemberLeave: 'کیا اس رکن کی رکنیت ختم کرنی ہے؟ اس سے رکن کا حتمی حساب بنے گا اور رکن غیر فعال ہو جائے گا۔',
     financialSummary: 'مالی خلاصہ',
     memberFinancialPosition: 'رکن کی مالی حیثیت',
     loadMemberFinancialPosition:
@@ -1825,6 +1876,21 @@ export const appTranslations: Record<Language, AppTranslation> = {
     auditLogsEntityIdColumn: 'ریکارڈ آئی ڈی',
     auditLogsUserIdColumn: 'صارف آئی ڈی',
     auditLogsCommitteeIdColumn: 'کمیٹی آئی ڈی',
+    auditLogsActionLogin: 'لاگ اِن',
+    auditLogsActionCreate: 'تخلیق',
+    auditLogsActionUpdateValue: 'رقم اپ ڈیٹ',
+    auditLogsActionPay: 'ادائیگی',
+    auditLogsActionLeave: 'علیحدہ ہونا',
+    auditLogsActionGrantAccess: 'رسائی دینا',
+    auditLogsActionGrantCommitteeAdmin: 'کمیٹی انتظامیہ دینا',
+    auditLogsActionRevokeAccess: 'رسائی واپس لینا',
+    auditLogsActionRevokeCommitteeAdmin: 'کمیٹی انتظامیہ واپس لینا',
+    auditLogsActionClose: 'بند کرنا',
+    auditLogsActionChangePassword: 'پاس ورڈ تبدیل کرنا',
+    auditLogsActionResetPassword: 'پاس ورڈ ری سیٹ کرنا',
+    auditLogsActionIssuePasswordReset: 'پاس ورڈ ری سیٹ جاری کرنا',
+    auditLogsActionDeactivate: 'غیر فعال کرنا',
+    auditLogsActionActivate: 'فعال کرنا',
     loadingYourDues: 'آپ کے واجبات لوڈ ہو رہے ہیں...',
     invalidWholeNumber: 'نئی رقم صفر یا اس سے زیادہ کی مکمل عدد ہونی چاہیے',
     onlySuperAdminCloseCommittees: 'صرف سپر ایڈمنسٹریٹر ہی کمیٹیاں بند کر سکتے ہیں',
@@ -1939,6 +2005,12 @@ export const appTranslations: Record<Language, AppTranslation> = {
   settlementReview: 'مکمل تصفیہ جائزہ',
   selectMemberForSettlement: 'رکن منتخب کریں',
   selectMemberForSettlementDescription: 'تصفیے کے لیے رکن کی قابل واپسی مالی پوزیشن دیکھیں۔',
+  settlementContributionBalanceDescription: 'چندے سے بننے والا باقی بیلنس۔',
+  settlementAssetShareDescription: 'کمیٹی کے اثاثوں میں موجودہ قابل واپسی حصہ۔',
+  settlementGoodsValueDescription: 'رکن کی اشیا سے متعلق قابل واپسی مالیت۔',
+  settlementOutstandingDuesDescription: 'حتمی تصفیے سے پہلے منہا کی جانے والی رقم۔',
+  settlementFinalAmountDescription: 'مجموعی رقم: {gross}۔ بقایا واجبات کے بعد حتمی قابل واپسی رقم۔',
+  settlementPaymentDescription: 'یہ حتمی تصفیے کی ادائیگی ریکارڈ کرکے رکن کا تصفیہ بند کرتا ہے۔',
   previewSettlement: 'تصفیہ دیکھیں',
   settlementCalculation: 'تصفیے کا حساب',
   createSettlement: 'تصفیہ بنائیں',

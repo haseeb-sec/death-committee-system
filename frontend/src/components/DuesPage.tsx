@@ -134,7 +134,7 @@ export default function DuesPage({
 
                           {members.map((member) => (
                             <option key={member.id} value={member.id}>
-                              {member.name} · ID {member.id}
+                              {member.name} · {appT.member} #{member.id}
                             </option>
                           ))}
                         </select>
@@ -251,7 +251,7 @@ export default function DuesPage({
                 >
                   <div className="rate-form-grid">
                     <label>
-                      Member
+                      {appT.member}
                       <select
                         value={duesListMemberId}
                         onChange={(event) =>
@@ -262,7 +262,7 @@ export default function DuesPage({
                         <option value="">{appT.selectMember}</option>
                         {members.map((member) => (
                           <option key={member.id} value={member.id}>
-                            {member.name} · ID {member.id}
+                            {member.name} · {appT.member} #{member.id}
                           </option>
                         ))}
                       </select>
@@ -270,7 +270,7 @@ export default function DuesPage({
 
                     <div className="form-actions form-actions-end">
                       <button type="submit" disabled={duesLoading}>
-                        {duesLoading ? appT.loadingMembers : appT.loadDueHistory}
+                        {duesLoading ? appT.loadingData : appT.loadDueHistory}
                       </button>
                     </div>
                   </div>
@@ -292,7 +292,7 @@ export default function DuesPage({
                             <span>
                               {appT.dueDate}: {due.due_date ?? '—'}
                               {due.reference
-                                ? ` · Ref: ${due.reference}`
+                                ?  ` · ${appT.reference}: ${due.reference}`
                                 : ''}
                             </span>
                           </div>
@@ -377,7 +377,7 @@ export default function DuesPage({
                 >
                   <div className="rate-form-grid">
                     <label>
-                      Member
+                      {appT.member}
                       <select
                         value={outstandingDuesMemberId}
                         onChange={(event) =>
@@ -388,7 +388,7 @@ export default function DuesPage({
                         <option value="">{appT.selectMember}</option>
                         {members.map((member) => (
                           <option key={member.id} value={member.id}>
-                            {member.name} · ID {member.id}
+                            {member.name} · {appT.member} #{member.id}
                           </option>
                         ))}
                       </select>
