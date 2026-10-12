@@ -19,6 +19,7 @@ class ContributionRateResponse(BaseModel):
 
 class ContributionCreate(BaseModel):
     contribution_date: date
+    amount: int | None = Field(default=None, gt=0)
     reference: str | None = None
 
 
@@ -26,6 +27,7 @@ class ContributionResponse(BaseModel):
     journal_entry_id: int
     member_id: int
     contribution_date: date
+    amount: int
     reference: str | None = None
     description: str
 

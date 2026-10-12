@@ -207,6 +207,7 @@ export type AppTranslation = {
   noMembersAvailable: string
   selectMember: string
   paymentDate: string
+  amountReceived: string
   reference: string
   referencePlaceholder: string
   recording: string
@@ -865,6 +866,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
     noMembersAvailable: 'No members available',
     selectMember: 'Select a member',
     paymentDate: 'Payment date',
+    amountReceived: 'Amount received (PKR)',
     reference: 'Reference',
     referencePlaceholder: 'e.g. August contribution',
     recording: 'Recording...',
@@ -1516,6 +1518,7 @@ export const appTranslations: Record<Language, AppTranslation> = {
     noMembersAvailable: 'کوئی رکن دستیاب نہیں',
     selectMember: 'رکن منتخب کریں',
     paymentDate: 'ادائیگی کی تاریخ',
+    amountReceived: 'وصول شدہ رقم (روپے)',
     reference: 'حوالہ',
     referencePlaceholder: 'مثلاً اگست کا چندہ',
     recording: 'درج کیا جا رہا ہے...',

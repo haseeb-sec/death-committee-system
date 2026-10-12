@@ -1,6 +1,6 @@
 type UsersPageProps = {
-  username: any,
-  setUsername: any,
+  userUsername: any,
+  setUserUsername: any,
   issuedResetToken: any,
   issuedResetExpiry: any,
   appT: any
@@ -53,8 +53,8 @@ type UsersPageProps = {
 
 export default function UsersPage(props: UsersPageProps) {
   const {
-    username,
-    setUsername,
+    userUsername,
+    setUserUsername,
     issuedResetToken,
     issuedResetExpiry,
     appT,
@@ -217,11 +217,12 @@ export default function UsersPage(props: UsersPageProps) {
           {appT.usersUsername}
           <input
             type="text"
-            value={username}
+            value={userUsername}
             onChange={(event) =>
-              setUsername(event.target.value)
+              setUserUsername(event.target.value)
             }
             placeholder={appT.usersUsernamePlaceholder}
+            autoComplete="off"
             required
           />
         </label>

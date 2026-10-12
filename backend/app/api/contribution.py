@@ -164,6 +164,12 @@ def create_contribution(
             member_id=member_id,
             contribution_date=data.contribution_date,
             reference=data.reference,
+            amount=data.amount,
+        )
+        contribution_amount = next(
+            -line.amount
+            for line in entry.lines
+            if line.account_id == member.account.id and line.amount < 0
         )
 
         record_audit(
@@ -174,8 +180,8 @@ def create_contribution(
             entity_type="contribution",
             entity_id=entry.id,
             description=(
-                f"Recorded contribution for member {member_id} "
-                f"on {data.contribution_date}"
+                f"Recorded contribution of {contribution_amount} "
+                f"for member {member_id} on {data.contribution_date}"
             ),
         )
 
@@ -186,6 +192,7 @@ def create_contribution(
             "journal_entry_id": entry.id,
             "member_id": member_id,
             "contribution_date": data.contribution_date,
+            "amount": contribution_amount,
             "reference": entry.reference,
             "description": entry.description,
         }

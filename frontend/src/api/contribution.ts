@@ -41,6 +41,7 @@ export async function createContributionRate(
 export async function createContribution(
   memberId: number,
   contributionDate: string,
+  amount: number,
   reference: string,
   token: string,
 ): Promise<CreatedContribution> {
@@ -54,6 +55,7 @@ export async function createContribution(
       },
       body: JSON.stringify({
         contribution_date: contributionDate,
+        amount,
         reference: reference.trim() || null,
       }),
     },

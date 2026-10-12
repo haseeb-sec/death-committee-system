@@ -12,6 +12,8 @@ type ContributionsPageProps = {
   setContributionMemberId: (value: string) => void
   contributionDate: string
   setContributionDate: (value: string) => void
+  contributionPaymentAmount: string
+  setContributionPaymentAmount: (value: string) => void
   contributionReference: string
   setContributionReference: (value: string) => void
   createdContribution: Record<string, any> | null
@@ -37,6 +39,8 @@ export default function ContributionsPage({
   setContributionMemberId,
   contributionDate,
   setContributionDate,
+  contributionPaymentAmount,
+  setContributionPaymentAmount,
   contributionReference,
   setContributionReference,
   createdContribution,
@@ -120,6 +124,20 @@ export default function ContributionsPage({
                     </label>
 
                     <label>
+                      {appT.amountReceived}
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={contributionPaymentAmount}
+                        onChange={(event) =>
+                          setContributionPaymentAmount(event.target.value)
+                        }
+                        required
+                      />
+                    </label>
+
+                    <label>
                       {appT.reference}
                       <input
                         value={contributionReference}
@@ -149,6 +167,13 @@ export default function ContributionsPage({
                       {' · '}
                       {appT.date}: {createdContribution.contribution_date}
                     </p>
+
+                    {createdContribution.amount !== undefined && (
+                      <p className="created-id">
+                        {appT.amountReceived}: Rs.{' '}
+                        {createdContribution.amount.toLocaleString('en-PK')}
+                      </p>
+                    )}
 
                     {createdContribution.reference && (
                       <p className="created-id">

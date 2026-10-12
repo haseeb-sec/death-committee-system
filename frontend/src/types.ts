@@ -25,6 +25,7 @@ export type CreatedContribution = {
   journal_entry_id?: number
   member_id?: number
   contribution_date?: string
+  amount?: number
   reference?: string | null
   description?: string
 }

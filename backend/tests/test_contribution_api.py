@@ -338,3 +338,87 @@ def test_duplicate_contribution_rate_effective_date_rejected(db):
 
     finally:
         app.dependency_overrides.clear()
+
+
+def test_record_contribution_accepts_overpayment_and_tracks_actual_amount(db):
+    committee, member = _build_committee_with_member(
+        db,
+        committee_name="Contribution Overpayment Committee",
+        member_name="Overpayment Member",
+        rate_amount=1000,
+    )
+    admin = _admin_for_committee(
+        db,
+        committee,
+        username="overpayment_admin",
+    )
+
+    app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_current_user] = lambda: admin
+
+    try:
+        client = TestClient(app)
+        response = client.post(
+            f"/members/{member.id}/contributions",
+            json={
+                "contribution_date": "2026-06-01",
+                "amount": 1500,
+                "reference": "OVERPAYMENT-TEST",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["amount"] == 1500
+        assert response.json()["reference"] == "OVERPAYMENT-TEST"
+
+        history = client.get(f"/members/{member.id}/contributions")
+        assert history.status_code == 200
+        assert len(history.json()) == 1
+        assert history.json()[0]["amount"] == 1500
+
+        total = client.get(f"/members/{member.id}/contributions/total")
+        assert total.status_code == 200
+        assert total.json()["total_contributed"] == 1500
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_record_contribution_rejects_amount_below_rate_without_recording(db):
+    committee, member = _build_committee_with_member(
+        db,
+        committee_name="Contribution Underpayment Committee",
+        member_name="Underpayment Member",
+        rate_amount=1000,
+    )
+    admin = _admin_for_committee(
+        db,
+        committee,
+        username="underpayment_admin",
+    )
+
+    app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_current_user] = lambda: admin
+
+    try:
+        client = TestClient(app)
+        response = client.post(
+            f"/members/{member.id}/contributions",
+            json={
+                "contribution_date": "2026-06-01",
+                "amount": 900,
+                "reference": "UNDERPAYMENT-TEST",
+            },
+        )
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == (
+            "Contribution amount cannot be less than the applicable contribution rate."
+        )
+
+        history = client.get(f"/members/{member.id}/contributions")
+        assert history.status_code == 200
+        assert history.json() == []
+
+    finally:
+        app.dependency_overrides.clear()

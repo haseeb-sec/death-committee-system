@@ -326,6 +326,8 @@ function App() {
   const [contributionDate, setContributionDate] = useState(
     new Date().toISOString().slice(0, 10),
   )
+  const [contributionPaymentAmount, setContributionPaymentAmount] =
+    useState('')
   const [contributionReference, setContributionReference] =
     useState('')
   const [createdContribution, setCreatedContribution] =
@@ -1943,6 +1945,12 @@ async function handleCreateCommittee(event: FormEvent) {
       return
     }
 
+    const paymentAmount = Number(contributionPaymentAmount)
+    if (!Number.isSafeInteger(paymentAmount) || paymentAmount <= 0) {
+      setError(appT.errors.contributionAmountPositive)
+      return
+    }
+
     setError('')
     setOperationLoading('createContribution', true)
 
@@ -1950,11 +1958,13 @@ async function handleCreateCommittee(event: FormEvent) {
       const data = await createContribution(
         memberId,
         contributionDate,
+        paymentAmount,
         contributionReference,
         token,
       )
 
       setCreatedContribution(data)
+      setContributionPaymentAmount('')
       setContributionReference('')
     } catch (err) {
       setError(
@@ -3581,6 +3591,8 @@ async function handleCreateCommittee(event: FormEvent) {
               setContributionMemberId={setContributionMemberId}
               contributionDate={contributionDate}
               setContributionDate={setContributionDate}
+              contributionPaymentAmount={contributionPaymentAmount}
+              setContributionPaymentAmount={setContributionPaymentAmount}
               contributionReference={contributionReference}
               setContributionReference={setContributionReference}
               createdContribution={createdContribution}
@@ -3623,8 +3635,8 @@ async function handleCreateCommittee(event: FormEvent) {
           ) : activePage === 'Users' ? (
               <UsersPage
               error={error}
-              username={username}
-              setUsername={setUsername}
+              userUsername={userUsername}
+              setUserUsername={setUserUsername}
               issuedResetToken={issuedResetToken}
               issuedResetExpiry={issuedResetExpiry}
               appT={appT}

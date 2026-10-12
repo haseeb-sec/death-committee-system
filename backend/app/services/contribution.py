@@ -20,6 +20,7 @@ def record_contribution(
     member_id: int,
     contribution_date: date,
     reference: str | None = None,
+    amount: int | None = None,
 ):
     """
     Record a member contribution using the applicable contribution rate.
@@ -122,6 +123,13 @@ def record_contribution(
             "Committee cash account not found."
         )
 
+    contribution_amount = rate.amount if amount is None else amount
+
+    if contribution_amount < rate.amount:
+        raise AccountingError(
+            "Contribution amount cannot be less than the applicable contribution rate."
+        )
+
     entry = create_journal_entry(
         db,
         description=f"Member contribution: {member.name}",
@@ -131,8 +139,8 @@ def record_contribution(
         ),
         reference=reference,
         lines=[
-            (cash_account.id, rate.amount),
-            (member.account.id, -rate.amount),
+            (cash_account.id, contribution_amount),
+            (member.account.id, -contribution_amount),
         ],
     )
 
