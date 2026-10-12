@@ -15,9 +15,11 @@ Scope: Controlled single-committee pilot; not public SaaS certification.
 - Contribution API tests passed: 7 tests.
 - Authorization regression tests passed: 35 tests.
 - Contribution amount UI was built and deployed; no extra live payment was recorded.
-- SQL backup checksum verified: 57d251869278254fa30d589c0641c3271b3f0dcad84be8871d092359f848705b.
-- Isolated restore succeeded; 19 tables and sampled row counts were verified.
-- Restored journal entries had zero unbalanced entries; no unvalidated foreign-key or check constraints were found.
-- Temporary recovery database was removed; both live databases remained present.
+- Pre-reset SQL backup checksum retained for reference: 57d251869278254fa30d589c0641c3271b3f0dcad84be8871d092359f848705b.
+- Fresh SQL backup created at `backend/backups/death_committee_20261012_222248.sql`; SHA-256: `8fd4a806e78fd2fb696e09ea08b088937574141f2439d6d8131db977ff6776e5`.
+- Fresh backup restored successfully into isolated database `pilot_restore_20261012_222248`.
+- All 19 table row counts matched between the live database and isolated restore.
+- The checked restore queries found no unbalanced journal entries or orphaned journal lines; this was not an exhaustive audit of all database constraints.
+- The earlier temporary recovery database was removed after its separate verification; the fresh restore database was also removed after the 2026-10-12 verification. The live `death_committee` database was retained.
 - Full end-to-end pilot workflow and external-device access have not been claimed as verified here.
 - Remaining operational work: off-host backup retention, hosting-specific TLS/secrets, and monitoring.
