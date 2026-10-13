@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from app.api.auth import get_current_user
 from app.api.dependencies import get_db
 from app.main import app
+from app.models.asset_valuation import AssetValuation
 from app.models import (
     CommitteeAsset,
     ContributionRate,
@@ -317,5 +318,80 @@ def test_asset_valuation_duplicate_date_rejected(db):
         assert valuation_data[1]["valuation_date"] == "2026-08-18"
         assert valuation_data[1]["value"] == 9000
 
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_regular_member_cannot_update_committee_asset_valuation(db):
+    committee = create_committee(
+        db,
+        name="Asset Valuation Authorization Committee",
+    )
+    db.flush()
+
+    member = add_member(
+        db,
+        committee_id=committee.id,
+        username="asset_valuation_regular_member",
+        password="asset-valuation-test-password",
+        name="Regular Asset Member",
+        joined_on=date(2026, 1, 1),
+    )
+    db.flush()
+
+    member_user = db.get(User, member.user_id)
+
+    asset = CommitteeAsset(
+        committee_id=committee.id,
+        name="Protected Committee Asset",
+        purchase_date=date(2026, 1, 1),
+        purchase_price=10000,
+        current_value=10000,
+        description="Authorization regression test",
+        is_active=True,
+    )
+    db.add(asset)
+    db.commit()
+    db.refresh(asset)
+
+    asset_id = asset.id
+    original_value = asset.current_value
+    original_valuation_count = (
+        db.query(AssetValuation)
+        .filter(AssetValuation.asset_id == asset_id)
+        .count()
+    )
+
+    def override_get_db():
+        yield db
+
+    def override_get_current_user():
+        return member_user
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+    try:
+        client = TestClient(app)
+
+        response = client.patch(
+            f"/committees/assets/{asset_id}/value",
+            json={
+                "valuation_date": "2026-10-13",
+                "new_value": 999999,
+            },
+        )
+
+        assert response.status_code == 404, response.text
+
+        db.refresh(asset)
+        assert asset.current_value == original_value
+
+        valuation_count_after = (
+            db.query(AssetValuation)
+            .filter(AssetValuation.asset_id == asset_id)
+            .count()
+        )
+        assert valuation_count_after == original_valuation_count
     finally:
         app.dependency_overrides.clear()

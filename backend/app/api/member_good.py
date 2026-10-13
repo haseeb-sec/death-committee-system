@@ -25,6 +25,7 @@ from app.services.member_good import (
 )
 from app.services.audit import record_audit
 from app.services.access_control import (
+    require_committee_admin_access,
     require_member_access,
     require_member_good_access,
 )
@@ -51,6 +52,11 @@ def create_member_good(
             db,
             user=current_user,
             member_id=member_id,
+        )
+        require_committee_admin_access(
+            db,
+            user=current_user,
+            committee_id=member.committee_id,
         )
 
         good = add_member_good(
@@ -121,6 +127,12 @@ def create_member_good(
             "qarz_e_hasana_amount": qarz_e_hasana_amount,
         }
 
+    except AuthorizationError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
     except AccountingError as exc:
         db.rollback()
         raise HTTPException(
@@ -299,10 +311,15 @@ def update_good_value(
 ):
     try:
         try:
-            require_member_good_access(
+            good = require_member_good_access(
                 db,
                 user=current_user,
                 good_id=good_id,
+            )
+            require_committee_admin_access(
+                db,
+                user=current_user,
+                committee_id=good.member.committee_id,
             )
         except AuthorizationError as exc:
             raise HTTPException(
@@ -338,7 +355,7 @@ def update_good_value(
         qarz_due = db.scalar(
             select(MemberDue).where(
                 MemberDue.reference == f"MEMBER-GOOD-{good.id}-QARZ",
-                MemberDue.member_id == member_id,
+                MemberDue.member_id == good.member_id,
             )
         )
 
@@ -368,6 +385,12 @@ def update_good_value(
             "qarz_e_hasana_amount": qarz_e_hasana_amount,
         }
 
+    except AuthorizationError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
     except AccountingError as exc:
         db.rollback()
         raise HTTPException(

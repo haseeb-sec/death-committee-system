@@ -422,3 +422,87 @@ def test_record_contribution_rejects_amount_below_rate_without_recording(db):
 
     finally:
         app.dependency_overrides.clear()
+
+
+def test_member_cannot_create_contribution_for_self(db):
+    from sqlalchemy import select
+
+    from app.models import JournalEntry, JournalLine
+
+    committee, member = _build_committee_with_member(
+        db,
+        committee_name="Member Contribution Denial Committee",
+        member_name="Unauthorized Contribution Member",
+        rate_amount=1000,
+    )
+    member_user = db.get(User, member.user_id)
+
+    app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_current_user] = lambda: member_user
+
+    try:
+        client = TestClient(app)
+        response = client.post(
+            f"/members/{member.id}/contributions",
+            json={
+                "contribution_date": "2026-06-01",
+                "amount": 1000,
+                "reference": "UNAUTHORIZED-MEMBER-TEST",
+            },
+        )
+
+        assert response.status_code == 404
+
+        entries = db.scalars(select(JournalEntry)).all()
+        lines = db.scalars(select(JournalLine)).all()
+
+        assert entries == []
+        assert lines == []
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_member_cannot_create_contribution_rate(db):
+    from sqlalchemy import select
+
+    committee, member = _build_committee_with_member(
+        db,
+        committee_name="Member Rate Denial Committee",
+        member_name="Rate Denial Member",
+        rate_amount=1000,
+    )
+    member_user = db.get(User, member.user_id)
+
+    rates_before = db.scalars(
+        select(ContributionRate).where(
+            ContributionRate.committee_id == committee.id
+        )
+    ).all()
+    assert len(rates_before) == 1
+
+    app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_current_user] = lambda: member_user
+
+    try:
+        client = TestClient(app)
+        response = client.post(
+            f"/committees/{committee.id}/contribution-rates",
+            json={
+                "amount": 2000,
+                "effective_from": "2026-06-01",
+            },
+        )
+
+        assert response.status_code == 404
+
+        rates_after = db.scalars(
+            select(ContributionRate).where(
+                ContributionRate.committee_id == committee.id
+            )
+        ).all()
+        assert len(rates_after) == 1
+        assert rates_after[0].amount == 1000
+
+    finally:
+        app.dependency_overrides.clear()

@@ -125,10 +125,15 @@ def update_committee_asset_value(
     current_user = Depends(require_authenticated),
 ):
     try:
-        require_asset_access(
+        asset = require_asset_access(
             db,
             user=current_user,
             asset_id=asset_id,
+        )
+        require_committee_admin_access(
+            db,
+            user=current_user,
+            committee_id=asset.committee_id,
         )
     except AuthorizationError as exc:
         raise HTTPException(

@@ -278,6 +278,7 @@ def deactivate_user(
         )
 
     user.is_active = False
+    user.token_version += 1
 
     record_audit(
         db,
@@ -329,6 +330,7 @@ def activate_user(
         )
 
     user.is_active = True
+    user.token_version += 1
 
     record_audit(
         db,

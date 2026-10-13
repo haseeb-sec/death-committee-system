@@ -2112,3 +2112,80 @@ def test_successful_login_does_not_record_failed_attempt(db):
     finally:
         login_attempts.clear()
         app.dependency_overrides.clear()
+
+
+def test_old_token_stays_invalid_after_user_reactivation(db):
+    super_admin = make_user(
+        db,
+        "reactivation_super_admin",
+        "super-password",
+        UserRole.SUPER_ADMIN.value,
+    )
+    target_user = make_user(
+        db,
+        "reactivation_target",
+        "target-password",
+        UserRole.MEMBER.value,
+    )
+
+    app.dependency_overrides[get_db] = override_db(db)
+
+    try:
+        client = TestClient(app)
+
+        target_login = login(
+            client,
+            "reactivation_target",
+            "target-password",
+        )
+        assert target_login.status_code == 200
+        old_token = target_login.json()["access_token"]
+
+        admin_login = login(
+            client,
+            "reactivation_super_admin",
+            "super-password",
+        )
+        assert admin_login.status_code == 200
+        admin_headers = {
+            "Authorization": f"Bearer {admin_login.json()['access_token']}"
+        }
+
+        deactivate = client.patch(
+            f"/users/{target_user.id}/deactivate",
+            headers=admin_headers,
+        )
+        assert deactivate.status_code == 200
+
+        activate = client.patch(
+            f"/users/{target_user.id}/activate",
+            headers=admin_headers,
+        )
+        assert activate.status_code == 200
+
+        db.refresh(target_user)
+        assert target_user.is_active is True
+
+        old_token_response = client.get(
+            "/users/me/committees/access",
+            headers={"Authorization": f"Bearer {old_token}"},
+        )
+        assert old_token_response.status_code == 401
+
+        new_login = login(
+            client,
+            "reactivation_target",
+            "target-password",
+        )
+        assert new_login.status_code == 200
+
+        new_token_response = client.get(
+            "/users/me/committees/access",
+            headers={
+                "Authorization": f"Bearer {new_login.json()['access_token']}"
+            },
+        )
+        assert new_token_response.status_code == 200
+
+    finally:
+        app.dependency_overrides.clear()
