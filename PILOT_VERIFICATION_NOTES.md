@@ -23,3 +23,15 @@ Scope: Controlled single-committee pilot; not public SaaS certification.
 - The earlier temporary recovery database was removed after its separate verification; the fresh restore database was also removed after the 2026-10-12 verification. The live `death_committee` database was retained.
 - Full end-to-end pilot workflow and external-device access have not been claimed as verified here.
 - Remaining operational work: off-host backup retention, hosting-specific TLS/secrets, and monitoring.
+
+## Verification update — 2026-10-13
+
+- Authorization commit `0604cbb` pushed to `origin/main`.
+- Backend rebuilt and redeployed from the committed code.
+- Backend container reported healthy; `/health` returned HTTP 200 with `{"status":"ok"}`.
+- Post-deployment backend test suite: 137 passed in 39.97 seconds.
+- Windows Tailscale Serve hostname and local proxy checked; local application returned HTTP 200.
+- Realme C61 appeared online in the committee Tailscale network.
+- Committee application opened on Android over Tailscale HTTPS.
+- Committee administrator login and dashboard/committee data were confirmed by the administrator.
+- Full genuine committee workflow and member use remain unverified.
