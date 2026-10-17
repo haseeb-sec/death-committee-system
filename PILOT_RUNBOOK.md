@@ -152,7 +152,17 @@ After changing Caddy routing, verify the affected endpoint through the real HTTP
 - Keep real financial data out of source control.
 - Do not expose PostgreSQL port 5432 publicly.
 - Do not expose backend port 8000 publicly.
-- Use the Caddy HTTPS endpoint for pilot access.
+- For local access on the host, use `https://localhost`.
+- For remote access in the current private pilot, use the verified
+  Tailscale Serve HTTPS hostname documented in `PILOT_VERIFICATION_NOTES.md`.
+  Tailscale access is tailnet-only; remote devices must be connected to the
+  authorized tailnet.
+- The current Compose Caddy ports are published on loopback only:
+  `127.0.0.1:80:80`, `127.0.0.1:443:443`, and `127.0.0.1:8080:8080`.
+  Preserve these bindings when using the Tailscale Serve proxy.
+- Do not treat a failed request to the host's LAN IP as proof of complete
+  network isolation. Recheck host listeners and access paths after networking
+  or Docker configuration changes.
 - Keep verified PostgreSQL backups separate from the application where practical.
 
 ## 10. Pilot Boundary
