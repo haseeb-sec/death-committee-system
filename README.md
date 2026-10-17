@@ -138,7 +138,7 @@ The migration chain currently has a single head. Pending migrations are automati
 
 ## Testing
 
-The current verified backend suite contains **122 passing tests** covering authentication, authorization, audit logging, financial integrity, contributions, dues, death support, goods, assets, settlements, password security, and related security regressions.
+The current verified backend suite contains **137 passing tests** covering authentication, authorization, audit logging, financial integrity, contributions, dues, death support, goods, assets, settlements, password security, and related security regressions.
 
 Frontend verification includes successful production builds and lint checks during development and CI.
 
@@ -280,7 +280,7 @@ Implemented and verified areas include:
 - PostgreSQL backup and isolated restore procedures
 - Responsive UI
 - English/Urdu localization
-- 122 verified backend tests
+- 137 verified backend tests
 
 This is an active portfolio/development project rather than a managed production SaaS service. Deployment-specific secrets, infrastructure monitoring, external backup storage, and operational procedures still depend on the target hosting environment.
 
