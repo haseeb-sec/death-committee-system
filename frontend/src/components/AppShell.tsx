@@ -233,7 +233,7 @@ export default function AppShell({
 
 
 
-        <section className="content">
+        <section className={`content${activePage === "Dashboard" ? " dashboard-content" : ""}`}>
           {activePage === 'Users' && userRole !== 'super_admin' ? (
             <section className="module-placeholder">
               <div className="module-placeholder-icon">DC</div>

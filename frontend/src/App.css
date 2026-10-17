@@ -10,15 +10,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(
-    -45deg,
-    #0f766e,
-    #14b8a6,
-    #115e59,
-    #0d9488
-  );
-  background-size: 300% 300%;
-  animation: loginGradientShift 14s ease infinite;
+  background:
+    radial-gradient(
+      circle at top right,
+      color-mix(in srgb, var(--primary) 6%, transparent),
+      transparent 30%
+    ),
+    #f5f7fb;
+  animation: none;
 }
 
 @keyframes loginGradientShift {
@@ -103,7 +102,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  color: #ffffff;
+  color: var(--text);
   margin-bottom: 14px;
   animation: loginFadeSlideUp 0.5s ease 0.08s both;
 }
@@ -112,12 +111,12 @@
   font-size: 22px;
   font-weight: 700;
   margin: 0 0 6px;
-  text-shadow: 0 1px 8px rgba(16, 24, 40, 0.25);
+  text-shadow: none;
 }
 
 .login-brand-tagline {
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--text-muted);
   margin: 0;
   max-width: 360px;
   line-height: 1.45;
@@ -2297,20 +2296,46 @@
    ========================================================= */
 
 .dashboard-financial-section > h2 {
-  margin: 0 0 14px;
+  margin: 0 0 12px;
   color: var(--text);
-  font-size: 22px;
-  line-height: 1.25;
-  letter-spacing: -0.3px;
+  font-size: 20px;
+  font-weight: 750;
+  line-height: 1.3;
+  letter-spacing: -0.25px;
+}
+
+.dashboard-financial-section .finpos-grid {
+  gap: 12px;
+  margin-bottom: 0;
+}
+
+/* Keep secondary Dashboard metrics visually quiet. */
+.dashboard-financial-section .finpos-stat-card {
+  border: 1px solid var(--border);
+  box-shadow: none;
+  animation: none;
+  transition: none;
+}
+
+.dashboard-financial-section .finpos-stat-card--positive,
+.dashboard-financial-section .finpos-stat-card--warning,
+.dashboard-financial-section .finpos-stat-card--neutral {
+  border-top: 1px solid var(--border);
+}
+
+.dashboard-financial-section .finpos-stat-card:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--border);
 }
 
 .dashboard-hero {
   background: var(--primary);
   border-radius: var(--radius-lg);
-  padding: 26px 24px;
+  padding: 23px 24px;
   color: #ffffff;
-  margin-bottom: 18px;
-  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-sm);
   animation: finposFadeUp 0.4s ease both;
 }
 
@@ -2404,6 +2429,141 @@
   .dashboard-hero-amount {
     font-size: 30px;
   }
+}
+
+/* Compact member account overview on the shared Dashboard. */
+.dashboard-personal-account {
+  margin-top: 18px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.dashboard-personal-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.dashboard-personal-heading h2 {
+  margin: 0 0 5px;
+  color: var(--text);
+  font-size: 19px;
+  line-height: 1.35;
+}
+
+.dashboard-personal-heading p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.dashboard-personal-link {
+  flex: 0 0 auto;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--primary-dark);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.dashboard-personal-link:hover {
+  border-color: var(--primary);
+}
+
+.dashboard-personal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-personal-card {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background, var(--surface));
+}
+
+.dashboard-personal-card--primary {
+  border-top: 3px solid var(--primary);
+}
+
+.dashboard-personal-amount {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(15px, 1.5vw, 21px);
+  font-weight: 750;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-personal-status {
+  margin: 12px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.dashboard-personal-error {
+  margin-bottom: 12px;
+}
+
+@media (max-width: 600px) {
+  .dashboard-personal-account {
+    margin-top: 18px;
+    padding: 14px;
+  }
+
+  .dashboard-personal-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .dashboard-personal-heading h2 {
+    font-size: 17px;
+  }
+
+  .dashboard-personal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .dashboard-personal-card {
+    padding: 12px;
+  }
+
+  .dashboard-personal-card:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-personal-card .finpos-stat-label {
+    font-size: 12px;
+  }
+
+  .dashboard-personal-amount {
+    font-size: 16px;
+  }
+}
+
+[dir='rtl'] .dashboard-personal-heading {
+  text-align: start;
+}
+
+[dir='rtl'] .dashboard-personal-link span {
+  display: inline-block;
+  transform: scaleX(-1);
 }
 
 /* =========================================================
@@ -3406,13 +3566,14 @@ body,
 .product-logo--sidebar {
   width: 38px;
   height: 38px;
+  color: #f8fafc;
 }
 
 .product-logo--login {
   width: 46px;
   height: 46px;
-  color: #ffffff;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.18));
+  color: var(--primary);
+  filter: none;
 }
 
 @media (max-width: 420px) {
@@ -3456,15 +3617,16 @@ body,
 
 /* Main application rhythm */
 .main-content {
-  padding-top: 30px;
+  padding-top: 20px;
 }
 
 .topbar {
-  margin-bottom: 30px;
+  margin-bottom: 12px;
 }
 
 .content {
   width: min(100%, 1280px);
+  padding-top: 0;
 }
 
 /* Page headings */
@@ -3550,7 +3712,11 @@ body,
   }
 
   .topbar {
-    margin-bottom: 24px;
+    margin-bottom: 10px;
+  }
+
+  .content {
+    padding-top: 8px;
   }
 
   .content > .page-heading,
@@ -3565,7 +3731,11 @@ body,
   }
 
   .topbar {
-    margin-bottom: 20px;
+    margin-bottom: 8px;
+  }
+
+  .content {
+    padding-top: 6px;
   }
 
   .content > .page-heading,
@@ -3578,6 +3748,28 @@ body,
   }
 }
 
+
+/* Dashboard-only desktop heading composition */
+@media (min-width: 901px) {
+  .dashboard-content > .page-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+    align-items: end;
+    column-gap: 32px;
+    row-gap: 12px;
+    margin-bottom: 22px;
+  }
+
+  .dashboard-content > .page-heading > div:first-child {
+    min-width: 0;
+  }
+
+  .dashboard-content > .page-heading .committee-loader {
+    width: 100%;
+    max-width: 320px;
+    justify-self: end;
+  }
+}
 
 /* Dashboard workspace selector */
 .page-heading .committee-loader {
@@ -3932,4 +4124,1204 @@ body,
     width: 100%;
     min-width: 0;
   }
+}
+
+/* Compact, predictable mobile application header */
+@media (max-width: 600px) {
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    min-height: 0;
+    padding: 14px 16px 12px;
+  }
+
+  .topbar-page-context {
+    width: 100%;
+  }
+
+  .topbar-page-context .eyebrow {
+    margin-top: 0;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .topbar-page-context h2 {
+    margin-top: 3px;
+    font-size: 20px;
+    line-height: 1.25;
+  }
+
+  .topbar-workspace {
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .topbar-account {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .app-language-switcher button {
+    min-height: 34px;
+  }
+
+  .topbar-signout {
+    min-height: 36px;
+  }
+}
+
+/* Keep the full committee name readable on mobile */
+@media (max-width: 600px) {
+  .topbar-workspace {
+    display: flex;
+    flex-wrap: wrap;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+
+  .topbar-workspace strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Page titles belong to page content, not the application header */
+.topbar-page-context > h2 {
+  display: none;
+}
+
+
+/* Keep multi-field forms full-width within their outer grid */
+.committee-create-form > .rate-form-grid {
+  grid-column: 1 / -1;
+}
+
+.committee-create-form > .rate-form-grid + button,
+.committee-create-form > .rate-form-grid ~ .form-actions {
+  grid-column: 1 / -1;
+}
+
+.committee-create-form > .rate-form-grid + button {
+  justify-self: start;
+}
+
+
+/* Improve form comfort on narrow mobile screens */
+@media (max-width: 600px) {
+  .module-page form {
+    padding: 16px;
+  }
+
+  .rate-form-grid {
+    gap: 16px;
+  }
+
+  .rate-form-grid label,
+  .committee-create-form label {
+    gap: 8px;
+  }
+
+  .module-page form + form {
+    margin-top: 16px;
+  }
+}
+
+
+/* Mobile form layout: prioritize readable fields over side-by-side columns */
+@media (max-width: 700px) {
+  .module-page .rate-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    gap: 16px;
+  }
+
+  .module-page .rate-form-grid > label {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .module-page .rate-form-grid input,
+  .module-page .rate-form-grid select {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .module-page .committee-create-form > button {
+    width: 100%;
+  }
+}
+
+
+/* Mobile record layout: give phone-sized screens room to read */
+@media (max-width: 600px) {
+  .member-list-row,
+  .transaction-row,
+  .goods-row,
+  .due-row,
+  .support-row,
+  .settlement-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .finpos-history-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .finpos-history-amount {
+    max-width: 100%;
+    text-align: start;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .mydues-due-row,
+  .mygoods-item-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .mydues-due-amounts,
+  .mygoods-item-amounts {
+    align-items: flex-start;
+    text-align: start;
+  }
+}
+
+/* Consistent mobile forms and record rows across module pages */
+@media (max-width: 700px) {
+  .rate-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    gap: 16px;
+  }
+
+  .rate-form-grid > label {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .rate-form-grid input,
+  .rate-form-grid select,
+  .rate-form-grid textarea {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .committee-create-form {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .committee-create-form > .rate-form-grid,
+  .committee-create-form > button,
+  .committee-create-form > .form-actions {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .assets-module,
+  .death-support-module,
+  .module-content,
+  .module-page {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .information-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .position-row {
+    flex-wrap: wrap;
+    gap: 8px;
+    overflow-wrap: anywhere;
+  }
+
+  .position-row > span,
+  .position-row > strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* =========================================================
+   CONSISTENT MOBILE LAYOUT — ALL MODULE SECTIONS
+   Keep desktop styling unchanged.
+   ========================================================= */
+
+@media (max-width: 600px) {
+  /* Prevent module wrappers and cards from exceeding the viewport. */
+  .assets-module,
+  .death-support-module,
+  .module-content,
+  .module-page,
+  .module-page > section,
+  .information-card,
+  .asset-create-card,
+  .asset-valuation-card,
+  .asset-history-card,
+  .asset-participation-card,
+  .contribution-rate-card,
+  .death-support-record-card,
+  .death-support-status-card,
+  .goods-create-card,
+  .goods-list-card,
+  .goods-total-card,
+  .goods-valuation-card,
+  .dues-create-card,
+  .dues-history-card,
+  .dues-outstanding-card,
+  .dues-payment-card {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Give module cards consistent, comfortable inner spacing. */
+  .information-card,
+  .asset-create-card,
+  .asset-valuation-card,
+  .asset-history-card,
+  .asset-participation-card,
+  .contribution-rate-card,
+  .death-support-record-card,
+  .death-support-status-card,
+  .goods-create-card,
+  .goods-list-card,
+  .goods-total-card,
+  .goods-valuation-card,
+  .dues-create-card,
+  .dues-history-card,
+  .dues-outstanding-card,
+  .dues-payment-card {
+    padding: 16px;
+  }
+
+  /* Keep all form controls inside their card and easy to use. */
+  .assets-module form,
+  .death-support-module form,
+  .module-content form,
+  .module-page form {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    gap: 14px;
+  }
+
+  .assets-module input,
+  .assets-module select,
+  .assets-module textarea,
+  .death-support-module input,
+  .death-support-module select,
+  .death-support-module textarea,
+  .module-content input,
+  .module-content select,
+  .module-content textarea,
+  .module-page input,
+  .module-page select,
+  .module-page textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 44px;
+  }
+
+  .assets-module label,
+  .death-support-module label,
+  .module-content label,
+  .module-page label {
+    min-width: 0;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .assets-module .committee-create-form > button,
+  .death-support-module .committee-create-form > button,
+  .module-content .committee-create-form > button,
+  .module-page .committee-create-form > button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    justify-self: stretch;
+  }
+
+  /* Separate stacked sections without creating excessive gaps. */
+  .assets-module > section,
+  .death-support-module > section,
+  .module-content > section,
+  .module-page > section {
+    margin-bottom: 16px;
+  }
+
+  .assets-module > section:last-child,
+  .death-support-module > section:last-child,
+  .module-content > section:last-child,
+  .module-page > section:last-child {
+    margin-bottom: 0;
+  }
+
+  .information-card > h3,
+  .asset-create-card > h3,
+  .asset-valuation-card > h3,
+  .asset-history-card > h3,
+  .asset-participation-card > h3,
+  .contribution-rate-card > h3,
+  .death-support-record-card > h3,
+  .death-support-status-card > h3,
+  .goods-create-card > h3,
+  .goods-list-card > h3,
+  .goods-total-card > h3,
+  .goods-valuation-card > h3 {
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+  }
+
+  /* Stack financial summaries so values remain legible. */
+  .contribution-summary,
+  .dues-summary,
+  .goods-summary,
+  .death-support-summary,
+  .settlement-summary,
+  .settlement-summary-grid,
+  .finpos-grid {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .contribution-summary > *,
+  .dues-summary > *,
+  .goods-summary > *,
+  .death-support-summary > *,
+  .settlement-summary > *,
+  .settlement-summary-grid > *,
+  .finpos-grid > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Keep asset values, goods details and record rows readable. */
+  .position-row {
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .position-row > span,
+  .position-row > strong {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .member-list-row,
+  .transaction-row,
+  .goods-row,
+  .due-row,
+  .support-row,
+  .settlement-row,
+  .user-assignment-row {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    align-items: stretch;
+    overflow-wrap: anywhere;
+  }
+
+  .member-list-row > *,
+  .transaction-row > *,
+  .goods-row > *,
+  .due-row > *,
+  .support-row > *,
+  .settlement-row > *,
+  .user-assignment-row > * {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  /* Make user-management forms and permission choices fit phones. */
+  .users-form,
+  .users-access-form,
+  .users-access-step {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .users-form .rate-form-grid,
+  .users-access-form .rate-form-grid,
+  .users-access-step .rate-form-grid,
+  .users-access-form .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .access-level-options {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .user-account-card {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  /* Preserve wide tables, but confine horizontal scrolling to the table. */
+  .module-page .table-wrap,
+  .module-page .table-container,
+  .module-page .table-responsive {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .module-page .table-wrap table,
+  .module-page .table-container table,
+  .module-page .table-responsive table {
+    min-width: 640px;
+  }
+
+  /* Allow filters and action groups to wrap rather than compress. */
+  .module-page .toolbar,
+  .module-page .page-actions,
+  .module-page .action-row,
+  .module-page .button-group {
+    width: 100%;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .module-page .toolbar > *,
+  .module-page .page-actions > *,
+  .module-page .action-row > *,
+  .module-page .button-group > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+
+/* Audit log activity cards: responsive desktop and mobile layout */
+.audit-logs-table-wrap {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.audit-logs-table-wrap .audit-logs-table {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+}
+
+.audit-logs-table-wrap .audit-logs-table thead {
+  display: none;
+}
+
+.audit-logs-table-wrap .audit-logs-table tbody {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+  width: 100%;
+}
+
+.audit-logs-table-wrap .audit-logs-table tbody tr {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.audit-logs-table-wrap .audit-logs-table tbody td {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.75fr) minmax(0, 1.25fr);
+  align-items: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.audit-logs-table-wrap .audit-logs-table tbody td::before {
+  content: attr(data-label);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.audit-logs-table-wrap .audit-logs-table tbody td:last-child {
+  display: block;
+  border-bottom: 0;
+}
+
+.audit-logs-table-wrap .audit-logs-table tbody td:last-child::before {
+  display: block;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 900px) {
+  .audit-logs-table-wrap .audit-logs-table tbody {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .audit-logs-table-wrap .audit-logs-table tbody td {
+    grid-template-columns: minmax(92px, 0.75fr) minmax(0, 1.25fr);
+    gap: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .audit-logs-table-wrap .audit-logs-table tbody td::before {
+    font-size: 11px;
+  }
+}
+
+/* Dashboard financial summary: clearer hierarchy, less visual weight */
+.dashboard-financial-section > h2 {
+  margin-bottom: 14px;
+  font-size: 19px;
+  letter-spacing: -0.3px;
+}
+
+.dashboard-financial-section .dashboard-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 24px;
+  row-gap: 4px;
+  padding: 18px 22px;
+  margin-bottom: 12px;
+  background: var(--primary-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-inline-start: 4px solid var(--primary);
+  box-shadow: none;
+  animation: none;
+}
+
+.dashboard-financial-section .dashboard-hero-label {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+}
+
+.dashboard-financial-section .dashboard-hero-amount {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  margin: 0;
+  color: var(--primary-dark);
+  font-size: clamp(26px, 2.4vw, 32px);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-financial-section .dashboard-hero-note {
+  grid-column: 1;
+  grid-row: 2;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.dashboard-financial-section .finpos-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 0;
+}
+
+.dashboard-financial-section .finpos-stat-card {
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: none;
+  animation: none;
+  transition: none;
+}
+
+.dashboard-financial-section .finpos-stat-card--positive,
+.dashboard-financial-section .finpos-stat-card--warning,
+.dashboard-financial-section .finpos-stat-card--neutral {
+  border-top: 1px solid var(--border);
+}
+
+.dashboard-financial-section .finpos-stat-card:hover {
+  transform: none;
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.dashboard-financial-section .finpos-stat-label {
+  margin-bottom: 6px;
+  font-size: 12.5px;
+}
+
+.dashboard-financial-section .finpos-stat-amount {
+  font-size: 21px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .dashboard-financial-section .dashboard-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    padding: 17px 16px;
+  }
+
+  .dashboard-financial-section .dashboard-hero-label,
+  .dashboard-financial-section .dashboard-hero-amount,
+  .dashboard-financial-section .dashboard-hero-note {
+    grid-column: 1;
+  }
+
+  .dashboard-financial-section .dashboard-hero-label {
+    grid-row: 1;
+  }
+
+  .dashboard-financial-section .dashboard-hero-amount {
+    grid-row: 2;
+    font-size: clamp(25px, 7vw, 30px);
+  }
+
+  .dashboard-financial-section .dashboard-hero-note {
+    grid-row: 3;
+  }
+
+  .dashboard-financial-section .finpos-stat-card {
+    padding: 13px 12px;
+  }
+
+  .dashboard-financial-section .finpos-stat-amount {
+    font-size: 18px;
+  }
+}
+
+/* Unique rules retained from the former neutral-card section. */
+
+.information-card h3 {
+  letter-spacing: -0.015em;
+}
+
+/* Preserve the dashboard's specific financial hierarchy. */
+.dashboard-financial-section .dashboard-hero {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--primary);
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.dashboard-financial-section .dashboard-hero-label,
+.dashboard-financial-section .dashboard-hero-note {
+  color: var(--text-muted);
+}
+
+.dashboard-financial-section .dashboard-hero-amount {
+  color: var(--text);
+  font-weight: 750;
+}
+
+/* Keep settlement text readable and its action button consistent. */
+.settlement-final-card .eyebrow,
+.settlement-final-card h3,
+.settlement-final-card .form-help {
+  color: var(--text);
+  opacity: 1;
+}
+
+.settlement-final-card .committee-create-form button {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.settlement-final-card .committee-create-form button:hover {
+  background: var(--primary-dark);
+}
+
+
+/* MEMBER FINANCIAL POSITION: QUIET, CONSISTENT SURFACES */
+
+
+
+/* Keep the member identity area informative, not decorative. */
+.finpos-member-banner {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  animation: none;
+}
+
+.finpos-member-banner .eyebrow {
+  color: var(--text-muted);
+}
+
+.finpos-member-banner h3 {
+  color: var(--text);
+}
+
+.finpos-member-banner > div > p:not(.eyebrow) {
+  color: var(--text-muted);
+}
+
+/* A compact neutral status label, scoped to this page only. */
+.finpos-member-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  min-height: 25px;
+  padding: 3px 8px;
+  border: 1px solid #dbe2ea;
+  border-radius: 5px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.finpos-member-status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: #64748b;
+}
+
+.finpos-member-status--inactive {
+  color: var(--text-muted);
+  background: var(--surface-soft);
+}
+
+.finpos-member-status--inactive::before {
+  background: #a1aab7;
+}
+
+/* The balance panel should match the white financial cards. */
+.finpos-member-banner + .dashboard-hero {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--primary);
+  border-radius: 10px;
+  box-shadow: none;
+  animation: none;
+}
+
+.finpos-member-banner + .dashboard-hero .dashboard-hero-label,
+.finpos-member-banner + .dashboard-hero .dashboard-hero-note {
+  color: var(--text-muted);
+}
+
+.finpos-member-banner + .dashboard-hero .dashboard-hero-amount {
+  color: var(--text);
+  font-weight: 750;
+}
+
+/* Keep all financial metrics consistent and free of promotional effects. */
+.finpos-stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: none;
+  animation: none;
+  transition: none;
+}
+
+.finpos-stat-card--positive,
+.finpos-stat-card--warning,
+.finpos-stat-card--neutral {
+  border-top: 1px solid var(--border);
+}
+
+.finpos-stat-card:hover {
+  transform: none;
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+@media (max-width: 600px) {
+  .finpos-member-status {
+    align-self: flex-start;
+  }
+}
+
+
+
+/* APP-WIDE CONSISTENT NEUTRAL CARD SYSTEM */
+
+/*
+ * Shared visual standard:
+ * white surface, subtle border, restrained radius,
+ * no decorative shadows, hover lift, or entrance animation.
+ */
+
+.information-card,
+.stat-card,
+.status-card,
+.committee-banner,
+.finpos-member-banner,
+.finpos-stat-card,
+.finpos-hero,
+.finpos-section,
+.dashboard-hero,
+.dashboard-personal-account,
+.dashboard-personal-card,
+.dashboard-card,
+.card,
+.panel,
+.info-card,
+.settlement-summary-card,
+.settlement-final-card,
+.contribution-rate-card,
+.contribution-rate-result,
+.death-support-record-card,
+.death-support-status-card,
+.asset-create-card,
+.asset-valuation-card,
+.asset-history-card,
+.asset-participation-card,
+.goods-create-card,
+.goods-list-card,
+.goods-total-card,
+.goods-valuation-card,
+.dues-create-card,
+.dues-history-card,
+.dues-outstanding-card,
+.dues-payment-card,
+.user-account-card,
+.module-page .data-card,
+.module-page .summary-card,
+.module-page .member-card,
+.module-page .detail-card {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+  box-shadow: none;
+  animation: none;
+}
+
+/* Consistent geometry for actual card surfaces. */
+.information-card,
+.stat-card,
+.status-card,
+.committee-banner,
+.finpos-member-banner,
+.finpos-stat-card,
+.finpos-hero,
+.dashboard-hero,
+.dashboard-personal-account,
+.dashboard-personal-card,
+.dashboard-card,
+.card,
+.panel,
+.info-card,
+.settlement-summary-card,
+.settlement-final-card,
+.contribution-rate-card,
+.contribution-rate-result,
+.death-support-record-card,
+.death-support-status-card,
+.asset-create-card,
+.asset-valuation-card,
+.asset-history-card,
+.asset-participation-card,
+.goods-create-card,
+.goods-list-card,
+.goods-total-card,
+.goods-valuation-card,
+.dues-create-card,
+.dues-history-card,
+.dues-outstanding-card,
+.dues-payment-card,
+.user-account-card,
+.module-page .data-card,
+.module-page .summary-card,
+.module-page .member-card,
+.module-page .detail-card {
+  border-radius: 10px;
+}
+
+/* Remove promotional colored edges and hover effects from ordinary cards. */
+.information-card,
+.stat-card,
+.finpos-stat-card,
+.dashboard-personal-card,
+.contribution-rate-card,
+.death-support-record-card,
+.asset-create-card,
+.asset-valuation-card,
+.asset-participation-card,
+.goods-create-card,
+.goods-valuation-card,
+.dues-create-card,
+.goods-total-card,
+.contribution-rate-result {
+  border-top: 1px solid var(--border);
+  border-inline-start: 1px solid var(--border);
+}
+
+.stat-card:hover,
+.finpos-stat-card:hover,
+.module-page .data-card:hover,
+.module-page .summary-card:hover,
+.module-page .member-card:hover,
+.module-page .detail-card:hover {
+  transform: none;
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+/* Financial amounts and headings use one consistent text hierarchy. */
+.information-card h3,
+.stat-card h3,
+.stat-card h4,
+.settlement-summary-card h3,
+.settlement-final-card h3 {
+  color: var(--text);
+}
+
+.finpos-stat-label,
+.dashboard-hero-label,
+.dashboard-personal-card .finpos-stat-label {
+  color: var(--text-muted);
+}
+
+/* Keep the main balance panels neutral rather than using a dark fill. */
+.dashboard-hero,
+.finpos-hero,
+.settlement-final-card {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.dashboard-hero .dashboard-hero-label,
+.dashboard-hero .dashboard-hero-note,
+.finpos-hero .dashboard-hero-label,
+.finpos-hero .dashboard-hero-note {
+  color: var(--text-muted);
+}
+
+.dashboard-hero .dashboard-hero-amount,
+.finpos-hero .dashboard-hero-amount {
+  color: var(--text);
+}
+
+/* Status cards remain white; semantic status is conveyed by the edge. */
+.status-card.success {
+  border-inline-start: 3px solid var(--success);
+}
+
+.status-card.warning {
+  border-inline-start: 3px solid var(--warning);
+}
+
+.status-card.danger {
+  border-inline-start: 3px solid var(--danger);
+}
+
+/* Buttons keep their own action styling; do not recolor them as cards. */
+
+
+
+/* APP-WIDE CONSISTENT STATUS BADGE SYSTEM */
+
+/*
+ * Shared badge standard:
+ * compact, light neutral surface, thin border,
+ * restrained typography, no pill-shaped decoration.
+ */
+
+.neutral-badge,
+.active-badge,
+.inactive-badge,
+.status-badge,
+.mydues-status-badge,
+.mygoods-inactive-badge,
+.user-role-badge,
+.finpos-member-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: fit-content;
+  min-height: 25px;
+  padding: 3px 8px;
+  border: 1px solid #dbe2ea;
+  border-radius: 5px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  box-shadow: none;
+}
+
+/* Active, recorded, and successful states. */
+.active-badge,
+.status-badge {
+  border-color: #dbe2ea;
+  background: #f8fafc;
+  color: #475569;
+}
+
+/* Inactive and not-recorded states remain readable, not alarming. */
+.inactive-badge,
+.mygoods-inactive-badge {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+/* Payment states retain restrained semantic differences. */
+.mydues-status-badge--paid {
+  border-color: #bbdfc5;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.mydues-status-badge--partial {
+  border-color: #ead7a7;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.mydues-status-badge--unpaid {
+  border-color: #e5caca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+/* Roles use neutral styling; role text still identifies access level. */
+.user-role-badge,
+.user-role-badge.member,
+.user-role-badge.administrator,
+.user-role-badge.system {
+  border-color: #dbe2ea;
+  background: #f8fafc;
+  color: #475569;
+  border-radius: 5px;
+  box-shadow: none;
+}
+
+/* Align the financial-position status with the shared badge geometry. */
+.finpos-member-status {
+  min-height: 25px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Keep badge hover states static and professional. */
+.neutral-badge:hover,
+.active-badge:hover,
+.inactive-badge:hover,
+.status-badge:hover,
+.mydues-status-badge:hover,
+.mygoods-inactive-badge:hover,
+.user-role-badge:hover,
+.finpos-member-status:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+
+/* LOGIN LANGUAGE SWITCHER AND BRAND-ALIGNED BORDER */
+
+/* Keep both language choices readable on the light login background. */
+.login-language-options {
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+  backdrop-filter: none;
+}
+
+.login-language-option {
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  min-height: 34px;
+  padding: 6px 14px;
+  font-weight: 600;
+}
+
+.login-language-option:hover:not(.active) {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.login-language-option.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+.login-language-option:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Use a subtle version of the system's slate brand color for the card border. */
+.login-card {
+  border: 1px solid
+    color-mix(in srgb, var(--primary) 24%, var(--border));
 }

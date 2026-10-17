@@ -11,9 +11,9 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --primary: #0f766e;
-  --primary-dark: #115e59;
-  --primary-soft: #f0fdfa;
+  --primary: #334155;
+  --primary-dark: #1e293b;
+  --primary-soft: #f1f5f9;
 
   --success: #15803d;
   --success-soft: #f0fdf4;

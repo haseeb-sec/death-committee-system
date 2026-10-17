@@ -652,10 +652,21 @@ function App() {
   }, [committeeId, token])
 
   useEffect(() => {
-    if (activePage !== 'My Financial Position') return
-    if (!token || members.length === 0) return
+    const shouldLoadPersonalSummary =
+      activePage === 'My Financial Position' ||
+      (activePage === 'Dashboard' && userRole === 'member')
 
-    const ownMemberId = members[0].id
+    if (!shouldLoadPersonalSummary) return
+    if (!token || !authenticatedUser) return
+
+    const ownMember = members.find(
+      (member) => Number(member.user_id) === authenticatedUser.userId,
+    )
+
+    if (!ownMember) return
+
+    const ownMemberId = ownMember.id
+    const shouldLoadStatement = activePage === 'My Financial Position'
 
     let cancelled = false
 
@@ -673,14 +684,16 @@ function App() {
 
         setMyFinancialSummary(summaryData)
 
-        const statementData = await getMemberStatement(
-          ownMemberId,
-          token,
-        )
+        if (shouldLoadStatement) {
+          const statementData = await getMemberStatement(
+            ownMemberId,
+            token,
+          )
 
-        if (cancelled) return
+          if (cancelled) return
 
-        setMyStatement(statementData)
+          setMyStatement(statementData)
+        }
       } catch (err) {
         if (cancelled) return
 
@@ -696,12 +709,12 @@ function App() {
       }
     }
 
-    loadMyFinancialPosition()
+    void loadMyFinancialPosition()
 
     return () => {
       cancelled = true
     }
-  }, [activePage, token, members])
+  }, [activePage, token, members, userRole, authenticatedUser?.userId])
 
   useEffect(() => {
     if (activePage !== 'My Contributions') return
@@ -4000,6 +4013,74 @@ async function handleCreateCommittee(event: FormEvent) {
                 </div>
               </section>
             </>
+          )}
+
+          {userRole === 'member' && (
+            <section
+              className="dashboard-personal-account"
+              aria-labelledby="dashboard-personal-account-title"
+            >
+              <div className="dashboard-personal-heading">
+                <div>
+                  <h2 id="dashboard-personal-account-title">
+                    {appT.yourAccount}
+                  </h2>
+                  <p>{appT.myFinancialPositionDescription}</p>
+                </div>
+
+                <button
+                  type="button"
+                  className="dashboard-personal-link"
+                  onClick={() => setActivePage('My Financial Position')}
+                >
+                  {appT.financialPosition}
+                  <span aria-hidden="true"> →</span>
+                </button>
+              </div>
+
+              {myFinancialSummaryLoading && !myFinancialSummary && (
+                <p className="dashboard-personal-status" role="status">
+                  {appT.loadingFinancialPosition}
+                </p>
+              )}
+
+              {myFinancialSummaryError && (
+                <div className="error dashboard-personal-error" role="alert">
+                  {myFinancialSummaryError}
+                </div>
+              )}
+
+              {myFinancialSummary && (
+                <div className="dashboard-personal-grid">
+                  <div className="dashboard-personal-card dashboard-personal-card--primary">
+                    <p className="finpos-stat-label">
+                      {appT.whatYouWouldReceiveToday}
+                    </p>
+                    <p className="dashboard-personal-amount">
+                      {formatPKR(myFinancialSummary.current_final_value)}
+                    </p>
+                  </div>
+
+                  <div className="dashboard-personal-card">
+                    <p className="finpos-stat-label">
+                      {appT.totalContributionsPaid}
+                    </p>
+                    <p className="dashboard-personal-amount">
+                      {formatPKR(myFinancialSummary.total_contributions)}
+                    </p>
+                  </div>
+
+                  <div className="dashboard-personal-card">
+                    <p className="finpos-stat-label">
+                      {appT.totalYouCurrentlyOwe}
+                    </p>
+                    <p className="dashboard-personal-amount">
+                      {formatPKR(myFinancialSummary.outstanding_dues)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </section>
           )}
           </>
           )}

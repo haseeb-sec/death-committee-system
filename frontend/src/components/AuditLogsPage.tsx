@@ -214,8 +214,8 @@ export default function AuditLogsPage({
         ) : logs.length === 0 ? (
           <p>{appT.auditLogsEmpty}</p>
         ) : (
-          <div className="table-wrap">
-            <table>
+          <div className="table-wrap audit-logs-table-wrap">
+            <table className="audit-logs-table">
               <thead>
                 <tr>
                   <th>{appT.auditLogsCreatedAt}</th>
@@ -230,13 +230,13 @@ export default function AuditLogsPage({
               <tbody>
                 {logs.map((log) => (
                   <tr key={log.id}>
-                    <td>{formatDate(log.created_at)}</td>
-                    <td>{actionLabel(log.action)}</td>
-                    <td>{log.entity_type}</td>
-                    <td>{log.entity_id ?? '-'}</td>
-                    <td>{log.user_id ?? '-'}</td>
-                    <td>{committeeName(log.committee_id)}</td>
-                    <td>{log.description ?? '-'}</td>
+                    <td data-label={appT.auditLogsCreatedAt}>{formatDate(log.created_at)}</td>
+                    <td data-label={appT.auditLogsAction}>{actionLabel(log.action)}</td>
+                    <td data-label={appT.auditLogsEntity}>{log.entity_type}</td>
+                    <td data-label={appT.auditLogsEntityIdColumn}>{log.entity_id ?? '-'}</td>
+                    <td data-label={appT.auditLogsUserIdColumn}>{log.user_id ?? '-'}</td>
+                    <td data-label={appT.auditLogsCommitteeColumn}>{committeeName(log.committee_id)}</td>
+                    <td data-label={appT.auditLogsDescriptionColumn}>{log.description ?? '-'}</td>
                   </tr>
                 ))}
               </tbody>

@@ -62,11 +62,11 @@ export default function MyFinancialPositionPage({
                     </div>
 
                     <span
-                      className={
+                      className={`finpos-member-status ${
                         myFinancialSummary.is_active
-                          ? 'active-badge'
-                          : 'inactive-badge'
-                      }
+                          ? 'finpos-member-status--active'
+                          : 'finpos-member-status--inactive'
+                      }`}
                     >
                       {myFinancialSummary.is_active ? appT.active : appT.inactive}
                     </span>
