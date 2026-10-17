@@ -8,8 +8,11 @@ from app.main import app
 from app.models import (
     Account,
     AccountType,
+    AuditLog,
     Committee,
     ContributionRate,
+    JournalEntry,
+    JournalLine,
     Member,
     User,
     UserCommitteeAccess,
@@ -368,8 +371,58 @@ def test_record_contribution_accepts_overpayment_and_tracks_actual_amount(db):
         )
 
         assert response.status_code == 200
-        assert response.json()["amount"] == 1500
-        assert response.json()["reference"] == "OVERPAYMENT-TEST"
+        result = response.json()
+        assert result["amount"] == 1500
+        assert result["reference"] == "OVERPAYMENT-TEST"
+        assert result["member_id"] == member.id
+        assert result["contribution_date"] == "2026-06-01"
+
+        # Verify the persisted journal entry and its double-entry accounting.
+        entry = db.get(JournalEntry, result["journal_entry_id"])
+        assert entry is not None
+        assert entry.reference == "OVERPAYMENT-TEST"
+
+        lines = (
+            db.query(JournalLine)
+            .filter(JournalLine.journal_entry_id == entry.id)
+            .all()
+        )
+        assert len(lines) == 2
+        assert sum(line.amount for line in lines) == 0
+
+        cash_account = (
+            db.query(Account)
+            .filter(
+                Account.committee_id == committee.id,
+                Account.account_type == AccountType.CASH,
+            )
+            .one()
+        )
+        member_account = (
+            db.query(Account)
+            .filter(Account.member_id == member.id)
+            .one()
+        )
+        assert {
+            line.account_id: line.amount for line in lines
+        } == {
+            cash_account.id: 1500,
+            member_account.id: -1500,
+        }
+
+        # Verify the audit record points to the same contribution entry.
+        audit = (
+            db.query(AuditLog)
+            .filter(
+                AuditLog.committee_id == committee.id,
+                AuditLog.entity_type == "contribution",
+                AuditLog.entity_id == entry.id,
+                AuditLog.action == "create",
+            )
+            .one()
+        )
+        assert audit.user_id == admin.id
+        assert "1500" in audit.description
 
         history = client.get(f"/members/{member.id}/contributions")
         assert history.status_code == 200

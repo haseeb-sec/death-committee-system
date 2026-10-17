@@ -85,6 +85,49 @@ and production-specific TLS and secret management remain operational tasks.
   not rebuilt or redeployed because no frontend source change was part of this
   verification step.
 
+### Contribution write-path regression — 2026-10-17
+
+- The successful contribution API test was expanded to verify persisted
+  accounting and audit effects in the isolated test database.
+- Test scenario: an authorized administrator records a PKR 1,500 contribution
+  against a configured PKR 1,000 rate, using test reference
+  `OVERPAYMENT-TEST` and test date `2026-06-01`.
+- The API response identifies the created journal entry. The test verifies
+  that the entry contains exactly two journal lines: cash +PKR 1,500 and the
+  member account -PKR 1,500. Their sum is zero.
+- The test also verifies a linked contribution audit record with action
+  `create`, the same committee and journal-entry ID, the administrator as
+  actor, and a description containing the recorded amount.
+- Focused test: passed (1 test). Full backend regression suite: 137 passed
+  in 37.98 seconds. `git diff --check` passed.
+- Evidence scope: this is an automated API test using the isolated in-memory
+  SQLite test database. It verifies the tested contribution write, journal
+  balance, and audit linkage in that environment. It does not establish that
+  a new contribution was submitted through the live browser UI or persisted
+  to the live PostgreSQL database.
+- The existing live pilot contribution remains the previously documented
+  entry 17. No additional live payment was recorded as part of this test.
+
+### Isolated PostgreSQL contribution integration check — 2026-10-17
+
+- The contribution write endpoint was exercised through FastAPI against the
+  migrated, isolated PostgreSQL database `death_committee_write_test`.
+  The connected database name was checked before test records were created.
+- Scenario: an authorized committee administrator recorded PKR 1,500 against
+  a configured PKR 1,000 contribution rate, dated `2026-06-01`.
+- The API returned HTTP 200 with the expected amount, member ID, date, and
+  reference. The committed journal entry was then verified in PostgreSQL.
+- Persisted accounting verification passed: exactly two journal lines,
+  cash +PKR 1,500 and member account -PKR 1,500, net zero.
+- Persisted audit verification passed: the contribution audit record links to
+  the expected journal-entry ID and committee, records action `create`, and
+  identifies the test administrator as actor.
+- Read API verification passed: contribution history includes the persisted
+  entry, and the member contribution total is PKR 1,500.
+- Evidence scope: this confirms the isolated PostgreSQL API write/read path.
+  It does not demonstrate a browser-submitted contribution or a new write to
+  the live pilot database. The live pilot was not used for this test.
+
 ### Backup restore integrity verification — 2026-10-17
 
 - Backup: `backend/backups/death_committee_20261017_182855.sql`.
