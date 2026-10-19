@@ -126,7 +126,7 @@ The deployed architecture is:
 - Caddy → Backend (FastAPI/Uvicorn)
 - Backend → PostgreSQL 17
 
-Caddy terminates HTTPS and routes application requests to the frontend or backend.
+Caddy terminates HTTPS and routes application requests to the frontend or backend. HTTPS and private-access checks have been exercised in the documented local/pilot setup; these checks do not certify production TLS configuration or prove that every network access path is blocked.
 
 PostgreSQL is internal to the Docker Compose network and is not exposed directly to the host.
 
@@ -138,7 +138,7 @@ The migration chain currently has a single head. Pending migrations are automati
 
 ## Testing
 
-The current verified backend suite contains **137 passing tests** covering authentication, authorization, audit logging, financial integrity, contributions, dues, death support, goods, assets, settlements, password security, and related security regressions.
+The last recorded full backend suite run on **2026-10-17** passed **137 tests**, covering authentication, authorization, audit logging, financial integrity, contributions, dues, death support, goods, assets, settlements, password security, and related security regressions. This is a recorded result, not a claim that the suite was rerun today.
 
 Frontend verification includes successful production builds and lint checks during development and CI.
 
@@ -171,7 +171,7 @@ The restore script:
 - Restores with `ON_ERROR_STOP`
 - Removes a partially restored isolated database if restoration fails
 
-A fresh PostgreSQL backup and isolated restore have been successfully verified during development. Backups created by this script remain on the deployment host; production deployments should copy them to independent off-host storage and define retention/access controls appropriate to the hosting environment.
+PostgreSQL backup and isolated-restore procedures have been exercised during development. In the documented 2026-10-17 restore comparison, the live database had two audit-log rows (IDs 255 and 256) that were absent from the restored snapshot; the reason was not conclusively established. See [PILOT_VERIFICATION_NOTES.md](PILOT_VERIFICATION_NOTES.md) for the recorded scope and findings. Backups created by this script remain on the deployment host; production deployments should copy them to independent off-host storage and define retention/access controls appropriate to the hosting environment.
 
 ## CI and Security Scanning
 
@@ -280,7 +280,7 @@ Implemented and verified areas include:
 - PostgreSQL backup and isolated restore procedures
 - Responsive UI
 - English/Urdu localization
-- 137 verified backend tests
+- 137 backend tests passed in the recorded full-suite run on 2026-10-17
 
 This is an active portfolio/development project rather than a managed production SaaS service. Deployment-specific secrets, infrastructure monitoring, external backup storage, and operational procedures still depend on the target hosting environment.
 
